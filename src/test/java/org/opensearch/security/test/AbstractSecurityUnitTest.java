@@ -67,6 +67,7 @@ import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.rest.RestStatus;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
@@ -187,7 +188,14 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
 
             SearchResponse sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
-            sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
+            int maxRetries = 3;
+            int nRetries = 0;
+            while (nRetries < maxRetries) {
+                if (sr.status() != RestStatus.OK) {
+                    sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
+                }
+                nRetries += 1;
+            }
         }
     }
 
