@@ -17,7 +17,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
-import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.rest.RestHelper;
 
@@ -28,7 +27,7 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
             "\"backend_roles\":[\"starfleet*\",\"ambassador\"],\"and_backend_roles\":[],\"description\":\"Migrated " +
             "from v6\"}";
     private final String BASE_ENDPOINT;
-    private final String ENDPOINT; 
+    private final String ENDPOINT;
     protected String getEndpointPrefix() {
         return PLUGINS_PREFIX;
     }
@@ -45,22 +44,16 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
 
         rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT);
-            Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-        }, 0);
+        RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT);
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
         rh.sendAdminCertificate = false;
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT);
-            Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
-        }, 0);
+        response = rh.executeGetRequest(ENDPOINT);
+        Assert.assertEquals(HttpStatus.SC_UNAUTHORIZED, response.getStatusCode());
 
         rh.sendHTTPClientCredentials = true;
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT);
-            Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
-        }, 0);
+        response = rh.executeGetRequest(ENDPOINT);
+        Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
     }
 
     @Test
@@ -72,21 +65,15 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
         rh.sendAdminCertificate = true;
 
         //update security config
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executePatchRequest(BASE_ENDPOINT + "/api/securityconfig", "[{\"op\": \"add\",\"path\": \"/config/dynamic/kibana/opendistro_role\"," +
-                    "\"value\": \"opendistro_security_internal\"}]", new Header[0]);
-            Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-        }, 0);
+        RestHelper.HttpResponse response = rh.executePatchRequest(BASE_ENDPOINT + "/api/securityconfig", "[{\"op\": \"add\",\"path\": \"/config/dynamic/kibana/opendistro_role\"," +
+                "\"value\": \"opendistro_security_internal\"}]", new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executePutRequest(BASE_ENDPOINT + "/api/rolesmapping/opendistro_security_internal", payload, new Header[0]);
-            Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-        }, 0);
+        response = rh.executePutRequest(BASE_ENDPOINT + "/api/rolesmapping/opendistro_security_internal", payload, new Header[0]);
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
 
         rh.sendAdminCertificate = false;
-        TestAuditlogImpl.doThenWaitForMessages(() -> {
-            RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT);
-            Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
-        }, 0);
+        response = rh.executeGetRequest(ENDPOINT);
+        Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
     }
 }
