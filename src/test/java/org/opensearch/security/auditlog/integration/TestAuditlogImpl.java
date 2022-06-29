@@ -73,7 +73,7 @@ public class TestAuditlogImpl extends AuditLogSink {
                 throw new MessagesNotFoundException(expectedCount, (int)latch.getCount());
             }
             if (messages.size() != expectedCount) {
-                throw new RuntimeException("Unexpected number of messages, was expecting " + expectedCount + ", recieved " + messages.size());
+                throw new RuntimeException("Unexpected number of messages, was expecting " + expectedCount + ", received " + messages.size());
             }
         } catch (final InterruptedException e) {
             throw new RuntimeException("Unexpected exception", e);
@@ -97,7 +97,7 @@ public class TestAuditlogImpl extends AuditLogSink {
         private final int expectedCount;
         private final int missingCount;
         public MessagesNotFoundException(final int expectedCount, final int missingCount) {
-            super("Did not recieve all " + expectedCount +" audit messages after a short wait, missing " + missingCount + " messages");
+            super("Did not receive all " + expectedCount +" audit messages after a short wait, missing " + missingCount + " messages");
             this.expectedCount = expectedCount;
             this.missingCount = missingCount;
         }

@@ -12,6 +12,9 @@
 package org.opensearch.security.dlic.rest.api;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -59,27 +62,45 @@ public class AllowlistApiTest extends AbstractRestApiUnitTest {
      *
      * @throws Exception
      */
-    private void checkGetAndPutAllowlistPermissions(final int expectedStatus, final boolean sendAdminCertificate, final Header... headers) throws Exception {
+    private List<AuditMessage> checkGetAndPutAllowlistPermissions(final int expectedStatus, final boolean sendAdminCertificate, final Header... headers) throws Exception {
 
         final boolean prevSendAdminCertificate = rh.sendAdminCertificate;
         rh.sendAdminCertificate = sendAdminCertificate;
+        List<AuditMessage> responseMessages = new ArrayList<>();
+
+        int expectedMessageCount = 0;
+        if (expectedStatus != HttpStatus.SC_FORBIDDEN) {
+            expectedMessageCount = 1;
+        }
 
         //CHECK GET REQUEST
-        response = rh.executeGetRequest(ENDPOINT, headers);
-        assertThat(response.getBody(), response.getStatusCode(), equalTo(expectedStatus));
-        if (expectedStatus == HttpStatus.SC_OK) {
-            //Note: the response has no whitespaces, so the .json file does not have whitespaces
-            Assert.assertEquals(FileHelper.loadFile("restapi/whitelist_response_success.json"), FileHelper.loadFile("restapi/whitelist_response_success.json"));
-        }
-        //FORBIDDEN FOR NON SUPER ADMIN
-        if (expectedStatus == HttpStatus.SC_FORBIDDEN) {
-            assertTrue(response.getBody().contains("API allowed only for super admin."));
-        }
+        List<AuditMessage> reqGetMessages = TestAuditlogImpl.doThenWaitForMessages(() -> {
+            final RestHelper.HttpResponse response = rh.executeGetRequest(ENDPOINT, headers);
+            assertThat(response.getBody(), response.getStatusCode(), equalTo(expectedStatus));
+
+            if (expectedStatus == HttpStatus.SC_OK) {
+                //Note: the response has no whitespaces, so the .json file does not have whitespaces
+                try {
+                    Assert.assertEquals(FileHelper.loadFile("restapi/whitelist_response_success.json"), FileHelper.loadFile("restapi/whitelist_response_success.json"));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            //FORBIDDEN FOR NON SUPER ADMIN
+            if (expectedStatus == HttpStatus.SC_FORBIDDEN) {
+                assertTrue(response.getBody().contains("API allowed only for super admin."));
+            }
+        }, expectedMessageCount);
+        responseMessages.addAll(reqGetMessages);
         //CHECK PUT REQUEST
-        response = rh.executePutRequest(ENDPOINT, "{\"enabled\": true, \"requests\": {\"/_cat/nodes\": [\"GET\"],\"/_cat/indices\": [\"GET\"] }}", headers);
-        assertThat(response.getBody(), response.getStatusCode(), equalTo(expectedStatus));
+        List<AuditMessage> reqPutMessages = TestAuditlogImpl.doThenWaitForMessages(() -> {
+            response = rh.executePutRequest(ENDPOINT, "{\"enabled\": true, \"requests\": {\"/_cat/nodes\": [\"GET\"],\"/_cat/indices\": [\"GET\"] }}", headers);
+            assertThat(response.getBody(), response.getStatusCode(), equalTo(expectedStatus));
+        }, expectedMessageCount);
+        responseMessages.addAll(reqPutMessages);
 
         rh.sendAdminCertificate = prevSendAdminCertificate;
+        return responseMessages;
     }
 
     @Test
@@ -142,7 +163,11 @@ public class AllowlistApiTest extends AbstractRestApiUnitTest {
      */
     @Test
     public void testAllowlistApi() throws Exception {
-        setupWithRestRoles(null);
+        Settings settings = Settings.builder()
+                .put("plugins.security.audit.type", TestAuditlogImpl.class.getName())
+                .put(ConfigConstants.SECURITY_COMPLIANCE_HISTORY_INTERNAL_CONFIG_ENABLED, true)
+                .build();
+        setupWithRestRoles(settings);
         // No creds, no admin certificate - UNAUTHORIZED
         checkGetAndPutAllowlistPermissions(HttpStatus.SC_UNAUTHORIZED, false);
 
@@ -170,16 +195,15 @@ public class AllowlistApiTest extends AbstractRestApiUnitTest {
                 .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_REST_CATEGORIES, "authenticated,GRANTED_PRIVILEGES")
                 .build();
         setupWithRestRoles(settings);
-        TestAuditlogImpl.clear();
 
         // any creds, admin certificate - OK
-        checkGetAndPutAllowlistPermissions(HttpStatus.SC_OK, true, nonAdminCredsHeader);
+        List<AuditMessage> responseMessages = checkGetAndPutAllowlistPermissions(HttpStatus.SC_OK, true, nonAdminCredsHeader);
 
         //TESTS THAT 1 READ AND 1 WRITE HAPPENS IN testGetAndPut()
         final Map<AuditCategory, Long> expectedCategoryCounts = ImmutableMap.of(
                 AuditCategory.COMPLIANCE_INTERNAL_CONFIG_READ, 1L,
                 AuditCategory.COMPLIANCE_INTERNAL_CONFIG_WRITE, 1L);
-        Map<AuditCategory, Long> actualCategoryCounts = TestAuditlogImpl.messages.stream().collect(Collectors.groupingBy(AuditMessage::getCategory, Collectors.counting()));
+        Map<AuditCategory, Long> actualCategoryCounts = responseMessages.stream().collect(Collectors.groupingBy(AuditMessage::getCategory, Collectors.counting()));
 
         assertThat(actualCategoryCounts, equalTo(expectedCategoryCounts));
     }
