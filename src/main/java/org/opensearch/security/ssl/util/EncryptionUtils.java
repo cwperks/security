@@ -11,8 +11,6 @@
 
 package org.opensearch.security.ssl.util;
 
-import org.apache.commons.codec.binary.Base64;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,6 +22,8 @@ import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
+
+import org.apache.commons.codec.binary.Base64;
 
 public class EncryptionUtils {
     private static final String PKCS_1_PEM_HEADER = "-----BEGIN RSA PRIVATE KEY-----";
