@@ -25,6 +25,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessController;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PrivilegedActionException;
@@ -74,6 +75,7 @@ import org.opensearch.security.ssl.util.CertFileProps;
 import org.opensearch.security.ssl.util.CertFromFile;
 import org.opensearch.security.ssl.util.CertFromKeystore;
 import org.opensearch.security.ssl.util.CertFromTruststore;
+import org.opensearch.security.ssl.util.EncryptionUtils;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.ssl.util.KeystoreProps;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
@@ -893,9 +895,11 @@ public class DefaultSecurityKeyStore implements SecurityKeyStore {
 
     private SslContext buildSSLServerContext(final File _key, final File _cert, final File _trustedCerts,
                                              final String pwd, final Iterable<String> ciphers, final SslProvider sslProvider, final ClientAuth authMode)
-        throws SSLException {
+            throws IOException, GeneralSecurityException {
 
-        final SslContextBuilder _sslContextBuilder = SslContextBuilder.forServer(_cert, _key, pwd).ciphers(ciphers)
+        PrivateKey pKey = EncryptionUtils.loadKey(_key);
+        File pKeyFile = EncryptionUtils.privateKeyToFile(pKey);
+        final SslContextBuilder _sslContextBuilder = SslContextBuilder.forServer(_cert, pKeyFile, pwd).ciphers(ciphers)
             .applicationProtocolConfig(ApplicationProtocolConfig.DISABLED)
             .clientAuth(Objects.requireNonNull(authMode)) // https://github.com/netty/netty/issues/4722
             .sessionCacheSize(0).sessionTimeout(0).sslProvider(sslProvider);
