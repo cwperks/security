@@ -83,7 +83,7 @@ import org.opensearch.threadpool.ThreadPool;
 
 /*
  * There are real thread leaks during test execution, not all threads are 
- * properly waited on or interupted.  While this normally doesn't create test
+ * properly waited on or interrupted.  While this normally doesn't create test
  * failures, retries mitigate this.  Remove this attribute to explore these
  * issues.
  */ 

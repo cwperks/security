@@ -28,10 +28,13 @@ package org.opensearch.security.test;
 
 import java.io.File;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.After;
 import org.junit.Assert;
 
+import org.opensearch.OpenSearchSecurityException;
+import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration;
@@ -133,6 +136,27 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         Assert.assertNull("No cluster", clusterInfo);
         clusterInfo = clusterHelper.startCluster(genericMinimumSecuritySettings(nodeOverride, sslOnly),
                 clusterConfiguration);
+    }
+
+    //Wait for the security plugin to load roles.
+    public void waitForInit(Client client) throws Exception {
+        int maxRetries = 3;
+        Optional<Exception> exc = Optional.empty();
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                client.admin().cluster().health(new ClusterHealthRequest()).actionGet();
+                exc = Optional.empty();
+                return;
+            } catch (OpenSearchSecurityException ex) {
+                if(ex.getMessage().contains("OpenSearch Security not initialized")) {
+                    exc = Optional.of(ex);
+                    Thread.sleep(500);
+                }
+            }
+        }
+        if (exc.isPresent()) {
+            throw exc.get();
+        }
     }
 
     protected RestHelper restHelper() {

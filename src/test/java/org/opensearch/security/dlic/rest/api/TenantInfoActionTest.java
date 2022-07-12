@@ -16,6 +16,7 @@ import org.apache.http.HttpStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.rest.RestHelper;
@@ -41,6 +42,9 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
     public void testTenantInfoAPIAccess() throws Exception {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
         setup(settings);
+        try (Client tc = getClient()) {
+            waitForInit(tc);
+        }
 
         rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
@@ -60,6 +64,10 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
     public void testTenantInfoAPIUpdate() throws Exception {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
         setup(settings);
+        try (Client tc = getClient()) {
+            waitForInit(tc);
+        }
+        
         rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendHTTPClientCredentials = true;
         rh.sendAdminCertificate = true;
