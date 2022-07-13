@@ -42,9 +42,6 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
     public void testTenantInfoAPIAccess() throws Exception {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
         setup(settings);
-        try (Client tc = getClient()) {
-            waitForInit(tc);
-        }
 
         rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendAdminCertificate = true;
@@ -64,10 +61,7 @@ public class TenantInfoActionTest extends AbstractRestApiUnitTest {
     public void testTenantInfoAPIUpdate() throws Exception {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_RESTAPI_ALLOW_SECURITYCONFIG_MODIFICATION, true).build();
         setup(settings);
-        try (Client tc = getClient()) {
-            waitForInit(tc);
-        }
-        
+
         rh.keystore = "restapi/kirk-keystore.jks";
         rh.sendHTTPClientCredentials = true;
         rh.sendAdminCertificate = true;

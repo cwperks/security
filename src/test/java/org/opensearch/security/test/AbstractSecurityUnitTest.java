@@ -34,6 +34,7 @@ import java.security.KeyStore;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.ssl.SSLContext;
@@ -57,6 +58,8 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.junit.rules.TestWatcher;
 
+import org.opensearch.OpenSearchSecurityException;
+import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
@@ -164,6 +167,33 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
         }
     }
 
+    //Wait for the security plugin to load roles.
+    public void waitForInit(Client client) {
+        int maxRetries = 3;
+        Optional<Exception> retainedException = Optional.empty();
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                client.admin().cluster().health(new ClusterHealthRequest()).actionGet();
+                retainedException = Optional.empty();
+                return;
+            } catch (OpenSearchSecurityException ex) {
+                if(ex.getMessage().contains("OpenSearch Security not initialized")) {
+                    retainedException = Optional.of(ex);
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) { /* ignored */ }
+                } else {
+                    // plugin is initialized, but another error received.
+                    // Example could be user does not have permissions for cluster:monitor/health
+                    retainedException = Optional.empty();
+                }
+            }
+        }
+        if (retainedException.isPresent()) {
+            throw new RuntimeException(retainedException.get());
+        }
+    }
+
     protected void initialize(ClusterHelper clusterHelper, ClusterInfo clusterInfo, DynamicSecurityConfig securityConfig) throws IOException {
         try (Client tc = clusterHelper.nodeClient()) {
             Assert.assertEquals(clusterInfo.numNodes,
@@ -186,8 +216,7 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
             Assert.assertFalse(cur.failures().toString(), cur.hasFailures());
             Assert.assertEquals(clusterInfo.numNodes, cur.getNodes().size());
 
-            SearchResponse sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
-            sr = tc.search(new SearchRequest(".opendistro_security")).actionGet();
+            waitForInit(tc);
         }
     }
 

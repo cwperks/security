@@ -80,7 +80,7 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
     protected void restart(Settings initTransportClientSettings, DynamicSecurityConfig dynamicSecuritySettings, Settings nodeOverride, boolean initOpendistroSecurityIndex) throws Exception {
         clusterInfo = clusterHelper.startCluster(minimumSecuritySettings(ccs(nodeOverride)), ClusterConfiguration.DEFAULT);
         if(initOpendistroSecurityIndex && dynamicSecuritySettings != null) {
-            initialize(clusterHelper, clusterInfo, dynamicSecuritySettings);
+            initialize(clusterHelper, clusterInfo, dynamicSecuritySettings);;
         }
     }
 
@@ -136,31 +136,6 @@ public abstract class SingleClusterTest extends AbstractSecurityUnitTest {
         Assert.assertNull("No cluster", clusterInfo);
         clusterInfo = clusterHelper.startCluster(genericMinimumSecuritySettings(nodeOverride, sslOnly),
                 clusterConfiguration);
-    }
-
-    //Wait for the security plugin to load roles.
-    public void waitForInit(Client client) throws Exception {
-        int maxRetries = 3;
-        Optional<Exception> retainedException = Optional.empty();
-        for (int i = 0; i < maxRetries; i++) {
-            try {
-                client.admin().cluster().health(new ClusterHealthRequest()).actionGet();
-                retainedException = Optional.empty();
-                return;
-            } catch (OpenSearchSecurityException ex) {
-                if(ex.getMessage().contains("OpenSearch Security not initialized")) {
-                    retainedException = Optional.of(ex);
-                    Thread.sleep(500);
-                } else {
-                    // plugin is initialized, but another error received.
-                    // Example could be user does not have permissions for cluster:monitor/health
-                    retainedException = Optional.empty();
-                }
-            }
-        }
-        if (retainedException.isPresent()) {
-            throw retainedException.get();
-        }
     }
 
     protected RestHelper restHelper() {
