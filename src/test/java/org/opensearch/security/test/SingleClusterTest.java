@@ -28,13 +28,10 @@ package org.opensearch.security.test;
 
 import java.io.File;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.After;
 import org.junit.Assert;
 
-import org.opensearch.OpenSearchSecurityException;
-import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.helper.cluster.ClusterConfiguration;

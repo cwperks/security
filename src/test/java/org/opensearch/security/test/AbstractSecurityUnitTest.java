@@ -63,8 +63,6 @@ import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.client.RestClient;
 import org.opensearch.client.RestClientBuilder;
