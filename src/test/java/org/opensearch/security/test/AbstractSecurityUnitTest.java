@@ -165,9 +165,9 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
         }
     }
 
-    //Wait for the security plugin to load roles.
+    /** Wait for the security plugin to load roles. */
     public void waitForInit(Client client) {
-        int maxRetries = 3;
+        int maxRetries = 5;
         Optional<Exception> retainedException = Optional.empty();
         for (int i = 0; i < maxRetries; i++) {
             try {
