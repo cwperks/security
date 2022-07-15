@@ -212,7 +212,8 @@ public class CCReplicationTest extends AbstractDlsFlsTest {
         // Set roles for the user
         MockReplicationPlugin.injectedRoles = "ccr_user|opendistro_security_human_resources_trainee";
         try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class, MockReplicationPlugin.class).start()) {
-            waitOrThrow(node.client(), "hr-dls");
+            waitForInit(node.client());
+            node.client().execute(MockReplicationAction.INSTANCE, new MockReplicationRequest("hr-dls")).actionGet();
             Assert.fail("Expecting exception");
         } catch (OpenSearchSecurityException ex) {
             log.warn(ex.getMessage());
@@ -222,7 +223,8 @@ public class CCReplicationTest extends AbstractDlsFlsTest {
         }
 
         try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class, MockReplicationPlugin.class).start()) {
-            waitOrThrow(node.client(), "hr-fls");
+            waitForInit(node.client());
+            node.client().execute(MockReplicationAction.INSTANCE, new MockReplicationRequest("hr-fls")).actionGet();
             Assert.fail("Expecting exception");
         } catch (OpenSearchSecurityException ex) {
             log.warn(ex.getMessage());
@@ -232,7 +234,8 @@ public class CCReplicationTest extends AbstractDlsFlsTest {
         }
 
         try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class, MockReplicationPlugin.class).start()) {
-            waitOrThrow(node.client(), "hr-masking");
+            waitForInit(node.client());
+            node.client().execute(MockReplicationAction.INSTANCE, new MockReplicationRequest("hr-masking")).actionGet();
             Assert.fail("Expecting exception");
         } catch (OpenSearchSecurityException ex) {
             log.warn(ex.getMessage());
@@ -242,7 +245,8 @@ public class CCReplicationTest extends AbstractDlsFlsTest {
         }
 
         try (Node node = new PluginAwareNode(false, tcSettings, Netty4Plugin.class, OpenSearchSecurityPlugin.class, MockReplicationPlugin.class).start()) {
-            waitOrThrow(node.client(), "hr-normal");
+            waitForInit(node.client());
+            node.client().execute(MockReplicationAction.INSTANCE, new MockReplicationRequest("hr-normal")).actionGet();
             AcknowledgedResponse res = node.client().execute(MockReplicationAction.INSTANCE, new MockReplicationRequest("hr-normal")).actionGet();
             Assert.assertTrue(res.isAcknowledged());
         }
