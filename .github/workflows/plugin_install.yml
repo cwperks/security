@@ -108,6 +108,7 @@ jobs:
       - name: Run OpenSearch with plugin
         run: |
           cd ..
+          runas /showtrustlevels
           runas /trustlevel:0x20000 ".\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
