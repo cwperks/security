@@ -108,7 +108,6 @@ jobs:
       - name: Run OpenSearch with plugin
         run: |
           cd ..
-          mkdir .\Opensearch\logs
           runas /showtrustlevels
           runas /trustlevel:0x20000 ".\Opensearch\bin\opensearch.bat"
 
