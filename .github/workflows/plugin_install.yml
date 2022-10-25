@@ -110,6 +110,7 @@ jobs:
           cd ..
           echo Current Directory
           echo ${GITHUB_WORKSPACE}
+          echo "$env:GITHUB_WORKSPACE"
           runas /showtrustlevels
           runas /trustlevel:0x20000 ".\Opensearch\bin\opensearch.bat"
 
