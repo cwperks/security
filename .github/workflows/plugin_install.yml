@@ -108,8 +108,7 @@ jobs:
       - name: Run OpenSearch with plugin
         run: |
           cd ..
-          runas /showtrustlevels
-          runas /trustlevel:0x20000 ".\Opensearch\bin\opensearch.bat"
+          powershell "Start-Process -Verb Runas '.\Opensearch\bin\opensearch.bat' -Wait"
 
       - name: Sleep while OpenSearch finishes starting up
         run: Start-Sleep -s 30
