@@ -98,7 +98,7 @@ jobs:
           icacls $env:USERPROFILE /grant opensearch:F
           icacls .\Opensearch /grant opensearch:F
           ls C:\Users
-          move Opensearch C:\Users\opensearch\Opensearch
+          move Opensearch C:\Users\opensearch\
 
       - name: Build Security Plugin with Gradle
         run: |
@@ -113,6 +113,7 @@ jobs:
       - name: Install the plugin
         run: |
           cd C:\Users\opensearch
+          ls .
           'y' | .\Opensearch\bin\opensearch-plugin.bat install opensearch-security.zip
           'y', 'y', 'N' | .\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
 
