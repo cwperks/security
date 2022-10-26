@@ -121,7 +121,7 @@ jobs:
         run: |
           ls $env:GITHUB_WORKSPACE
           ls C:\Users\opensearch
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start C:\Users\opensearch\Opensearch\bin\opensearch.bat}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
