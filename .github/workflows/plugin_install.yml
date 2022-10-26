@@ -94,7 +94,7 @@ jobs:
           del opensearch-3.0.0.zip
           echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
-          psexec -accepteula -d -user opensearch "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
 
       - name: Build Security Plugin with Gradle
         run: |
@@ -117,7 +117,7 @@ jobs:
           ls $env:GITHUB_WORKSPACE
           net user "opensearch" "P@ssw0rd" /add
           icacls .\Opensearch\bin\opensearch.bat /grant opensearch:F
-          psexec -accepteula -d -user opensearch "P@ssw0rd" powershell "&{start $env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start $env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat}"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
