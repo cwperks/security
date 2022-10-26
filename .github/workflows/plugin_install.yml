@@ -88,7 +88,6 @@ jobs:
 
       - name: Download OpenSearch Core
         run: |
-          cd ..
           Invoke-WebRequest https://artifacts.opensearch.org/snapshots/core/opensearch/3.0.0-SNAPSHOT/opensearch-min-3.0.0-SNAPSHOT-windows-x64-latest.zip -Outfile opensearch-3.0.0.zip
           tar -xzf opensearch-3.0.0.zip 
           del opensearch-3.0.0.zip
@@ -96,8 +95,7 @@ jobs:
           Rename-Item opensearch-* Opensearch
           net user "opensearch" "P@ssw0rd" /add
           icacls $env:USERPROFILE /grant opensearch:F
-          icacls $env:USERPROFILE\Opensearch /grant opensearch:F
-          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
+          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch}"
 
       - name: Build Security Plugin with Gradle
         run: |
@@ -106,27 +104,25 @@ jobs:
           _JAVA_OPTIONS: -Xmx4096M
 
       - name: Move and rename security plugin
-        run: move build\distributions\opensearch-security-*.zip ..\opensearch-security.zip
+        run: |
+          move build\distributions\opensearch-security-*.zip ..\opensearch-security.zip
+          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move build\distributions\opensearch-security-*.zip $env:USERPROFILE\opensearch-security.zip}"
 
       - name: Install the plugin
         run: |
-          cd ..
-          'y' | .\Opensearch\bin\opensearch-plugin.bat install file:\a\security\opensearch-security.zip
-          'y', 'y', 'N' | .\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
+          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{'y' | $env:USERPROFILE\Opensearch\bin\opensearch-plugin.bat install $env:USERPROFILE\opensearch-security.zip}"
+          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{'y', 'y', 'N' | $env:USERPROFILE\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat}"
 
       - name: Run OpenSearch with plugin
         run: |
-          cd ..
           ls $env:GITHUB_WORKSPACE
-          icacls .\Opensearch\bin\opensearch.bat /grant opensearch:F
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start $env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start $env:USERPROFILE\Opensearch\bin\opensearch.bat}"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
           Start-Sleep -s 30
-          cd ..
-          ls .\Opensearch\logs
-          Get-Content .\Opensearch\logs\opensearch.log
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{ls $env:USERPROFILE\Opensearch\logs}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{Get-Content $env:USERPROFILE\Opensearch\logs\opensearch.log}"
 
       - name: Check OpenSearch Running
         run: |
