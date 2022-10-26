@@ -109,9 +109,10 @@ jobs:
         run: |
           cd ..
           ls $env:GITHUB_WORKSPACE
-          choco install psexec
-          net user "opensearch" /add
-          psexec -accepteula -d -user opensearch "\Opensearch\bin\opensearch.bat"
+          choco install -y psexec
+          net user "opensearch" "P@ssw0rd" /add
+          icacls .\Opensearch\bin\opensearch.bat /grant opensearch:F
+          psexec -accepteula -d -user opensearch "P@ssw0rd" ".\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
