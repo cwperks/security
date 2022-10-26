@@ -95,7 +95,7 @@ jobs:
           Rename-Item opensearch-* Opensearch
           net user "opensearch" "P@ssw0rd" /add
           icacls $env:USERPROFILE /grant opensearch:F
-          icacls $env:USERPROFILE\Opensearch /grant opensearch:F
+          icacls .\Opensearch /grant opensearch:F
           ls C:\Users
           psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch}"
 
