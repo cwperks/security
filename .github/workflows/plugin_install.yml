@@ -112,7 +112,7 @@ jobs:
           choco install -y psexec
           net user "opensearch" "P@ssw0rd" /add
           icacls .\Opensearch\bin\opensearch.bat /grant opensearch:F
-          psexec -accepteula -d -user opensearch "P@ssw0rd" ".\Opensearch\bin\opensearch.bat"
+          psexec -accepteula -d -user opensearch "P@ssw0rd" powershell "&{start $env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat}"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
