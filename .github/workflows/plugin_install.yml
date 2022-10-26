@@ -110,7 +110,7 @@ jobs:
           cd ..
           ls $env:GITHUB_WORKSPACE
           runas /showtrustlevels
-          runas /trustlevel:0x20000 "$env:GITHUB_WORKSPACE\Opensearch\bin\opensearch.bat"
+          runas /trustlevel:0x20000 "$env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
