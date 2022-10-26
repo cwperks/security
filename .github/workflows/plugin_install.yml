@@ -93,11 +93,12 @@ jobs:
           del opensearch-3.0.0.zip
           echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
+          mkdir C:\Users\opensearch
           net user "opensearch" "P@ssw0rd" /add /homedir:"C:\Users\opensearch"
           icacls $env:USERPROFILE /grant opensearch:F
           icacls .\Opensearch /grant opensearch:F
           ls C:\Users
-          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch}"
+          move Opensearch C:\Users\opensearch\Opensearch
 
       - name: Build Security Plugin with Gradle
         run: |
@@ -107,25 +108,24 @@ jobs:
 
       - name: Move and rename security plugin
         run: |
-          move build\distributions\opensearch-security-*.zip ..\opensearch-security.zip
-          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move build\distributions\opensearch-security-*.zip $env:USERPROFILE\opensearch-security.zip}"
+          move build\distributions\opensearch-security-*.zip C:\Users\opensearch\opensearch-security.zip
 
       - name: Install the plugin
         run: |
-          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{'y' | $env:USERPROFILE\Opensearch\bin\opensearch-plugin.bat install $env:USERPROFILE\opensearch-security.zip}"
-          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{'y', 'y', 'N' | $env:USERPROFILE\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat}"
+          'y' | C:\Users\opensearch\Opensearch\bin\opensearch-plugin.bat install C:\Users\opensearch\opensearch-security.zip
+          'y', 'y', 'N' | C:\Users\opensearch\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
 
       - name: Run OpenSearch with plugin
         run: |
           ls $env:GITHUB_WORKSPACE
           ls C:\Users\opensearch
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start $env:USERPROFILE\Opensearch\bin\opensearch.bat}"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start C:\Users\opensearch\Opensearch\bin\opensearch.bat}"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
           Start-Sleep -s 30
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{ls $env:USERPROFILE\Opensearch\logs}"
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{Get-Content $env:USERPROFILE\Opensearch\logs\opensearch.log}"
+          ls C:\Users\opensearch\Opensearch\logs
+          Get-Content C:\Users\opensearch\Opensearch\logs\opensearch.log
 
       - name: Check OpenSearch Running
         run: |
