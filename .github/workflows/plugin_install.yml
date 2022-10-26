@@ -82,13 +82,19 @@ jobs:
         with:
           java-version: 11
 
+      - name: Download PSExec
+        run: |
+          choco install -y psexec
+
       - name: Download OpenSearch Core
         run: |
           cd ..
           Invoke-WebRequest https://artifacts.opensearch.org/snapshots/core/opensearch/3.0.0-SNAPSHOT/opensearch-min-3.0.0-SNAPSHOT-windows-x64-latest.zip -Outfile opensearch-3.0.0.zip
           tar -xzf opensearch-3.0.0.zip 
           del opensearch-3.0.0.zip
+          echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
+          psexec -accepteula -d -user opensearch "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
 
       - name: Build Security Plugin with Gradle
         run: |
@@ -109,7 +115,6 @@ jobs:
         run: |
           cd ..
           ls $env:GITHUB_WORKSPACE
-          choco install -y psexec
           net user "opensearch" "P@ssw0rd" /add
           icacls .\Opensearch\bin\opensearch.bat /grant opensearch:F
           psexec -accepteula -d -user opensearch "P@ssw0rd" powershell "&{start $env:GITHUB_WORKSPACE\..\Opensearch\bin\opensearch.bat}"
