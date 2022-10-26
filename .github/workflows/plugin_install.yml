@@ -111,6 +111,7 @@ jobs:
           ls $env:GITHUB_WORKSPACE
           choco install psexec
           net user "opensearch" /add
+          psexec -accepteula
           psexec -user opensearch "\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
