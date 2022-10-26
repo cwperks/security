@@ -109,9 +109,8 @@ jobs:
         run: |
           cd ..
           ls $env:GITHUB_WORKSPACE
-          SETLOCAL
-          set "__COMPAT_LAYER=RunAsInvoker"
-          start ".\Opensearch\bin\opensearch.bat"
+          net user "opensearch" /add
+          runas /user:opensearch ".\Opensearch\bin\opensearch.bat"
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
