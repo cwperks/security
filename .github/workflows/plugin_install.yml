@@ -122,7 +122,8 @@ jobs:
           ls $env:GITHUB_WORKSPACE
           ls C:\Users\opensearch
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat>C:\Users\opensearch\output.log"
+          Get-Content C:\Users\opensearch\output.log
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
