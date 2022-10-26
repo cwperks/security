@@ -95,7 +95,9 @@ jobs:
           echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
           net user "opensearch" "P@ssw0rd" /add
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
+          icacls $env:USERPROFILE /grant opensearch:F
+          icacls $env:USERPROFILE\Opensearch /grant opensearch:F
+          psexec -accepteula -u opensearch -p "P@ssw0rd" powershell "&{move Opensearch $env:USERPROFILE\Opensearch; ls $env:USERPROFILE}"
 
       - name: Build Security Plugin with Gradle
         run: |
