@@ -93,7 +93,7 @@ jobs:
           del opensearch-3.0.0.zip
           echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
-          net user "opensearch" "P@ssw0rd" /add
+          net user "opensearch" "P@ssw0rd" /add /homedir:"C:\Users\opensearch"
           icacls $env:USERPROFILE /grant opensearch:F
           icacls .\Opensearch /grant opensearch:F
           ls C:\Users
@@ -118,6 +118,7 @@ jobs:
       - name: Run OpenSearch with plugin
         run: |
           ls $env:GITHUB_WORKSPACE
+          ls C:\Users\opensearch
           psexec -accepteula -d -u opensearch -p "P@ssw0rd" powershell "&{start $env:USERPROFILE\Opensearch\bin\opensearch.bat}"
 
       - name: Sleep while OpenSearch finishes starting up
