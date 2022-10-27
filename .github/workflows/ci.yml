@@ -31,11 +31,11 @@ jobs:
 
     - name: Package Windows
       if: runner.os == 'Windows'
-      run: ./gradlew clean build -Dbuild.snapshot=false -x test -x integrationTest
+      run: ./gradlew.bat clean build -Dbuild.snapshot=false -x test -x integrationTest
 
     - name: Package
       if: runner.os != 'Windows'
-      run: ./gradlew.bat clean build -Dbuild.snapshot=false -x test -x integrationTest
+      run: ./gradlew clean build -Dbuild.snapshot=false -x test -x integrationTest
 
     - name: Test Windows
       if: runner.os == 'Windows'
