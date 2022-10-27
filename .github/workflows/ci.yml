@@ -29,16 +29,31 @@ jobs:
       if: runner.os == 'Windows'
       run: choco install -y openssl
 
-    - name: Build and Test
-      uses: gradle/gradle-build-action@v2
-      with:
-        arguments: |
-          build test -Dbuild.snapshot=false
+    - name: Package
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ./gradlew.bat clean build -Dbuild.snapshot=false -x test -x integrationTest
+        else
+          ./gradlew clean build -Dbuild.snapshot=false -x test -x integrationTest
+        fi
+
+    - name: Test
+      run: |
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          OPENDISTRO_SECURITY_TEST_OPENSSL_OPT=true ./gradlew.bat test -Dbuild.snapshot=false
           -x integrationTest
           -x spotlessCheck
           -x checkstyleMain
           -x checkstyleTest
           --tests OpenSSLTest
+        else
+          OPENDISTRO_SECURITY_TEST_OPENSSL_OPT=true ./gradlew test -Dbuild.snapshot=false
+          -x integrationTest
+          -x spotlessCheck
+          -x checkstyleMain
+          -x checkstyleTest
+          --tests OpenSSLTest
+        fi
 
     - name: Coverage
       uses: codecov/codecov-action@v1
