@@ -25,6 +25,10 @@ jobs:
     - name: Checkout security
       uses: actions/checkout@v2
 
+    - name: Install OpenSSL on Windows
+      if: runner.os == 'Windows'
+      run: choco install -y openssl
+
     - name: Build and Test
       uses: gradle/gradle-build-action@v2
       with:
@@ -34,6 +38,7 @@ jobs:
           -x spotlessCheck
           -x checkstyleMain
           -x checkstyleTest
+          org.opensearch.security.ssl.OpenSSLTest
 
     - name: Coverage
       uses: codecov/codecov-action@v1

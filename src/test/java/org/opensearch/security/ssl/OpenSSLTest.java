@@ -1,10 +1,10 @@
 /*
  * Copyright 2015-2017 floragunn GmbH
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -12,7 +12,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  */
 
 package org.opensearch.security.ssl;
@@ -66,13 +66,21 @@ public class OpenSSLTest extends SSLTest {
 
     @Before
     public void setup() {
-        Assume.assumeFalse(PlatformDependent.isWindows());
         allowOpenSSL = true;
     }
 
     @Test
     public void testEnsureOpenSSLAvailability() {
-        Assert.assertTrue("OpenSSL not available: "+String.valueOf(OpenSsl.unavailabilityCause()), OpenSsl.isAvailable());
+        //Assert.assertTrue("OpenSSL not available: "+String.valueOf(OpenSsl.unavailabilityCause()), OpenSsl.isAvailable());
+
+        final String openSSLOptional = System.getenv("OPENDISTRO_SECURITY_TEST_OPENSSL_OPT");
+        System.out.println("OPENDISTRO_SECURITY_TEST_OPENSSL_OPT "+openSSLOptional);
+        if(!Boolean.parseBoolean(openSSLOptional)) {
+            System.out.println("OpenSSL must be available");
+            Assert.assertTrue("OpenSSL not available: "+String.valueOf(OpenSsl.unavailabilityCause()), OpenSsl.isAvailable());
+        } else {
+            System.out.println("OpenSSL can be available");
+        }
     }
 
     @Override
@@ -117,14 +125,14 @@ public class OpenSSLTest extends SSLTest {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testNodeClientSSL();
     }
-    
+
     @Override
     @Test
     public void testHttpsOptionalAuth() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testHttpsOptionalAuth();
     }
-    
+
     @Test
     public void testAvailCiphersOpenSSL() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
@@ -145,7 +153,7 @@ public class OpenSSLTest extends SSLTest {
         System.out.println("OpenSSL secure ciphers: " + openSSLSecureCiphers);
         Assert.assertTrue(openSSLSecureCiphers.size() > 0);
     }
-    
+
     @Test
     public void testHttpsEnforceFail() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
@@ -163,22 +171,22 @@ public class OpenSSLTest extends SSLTest {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testHttpsAndNodeSSLFailedCipher();
     }
-    
+
     @Test
     public void testHttpsAndNodeSSLPem() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testHttpsAndNodeSSLPKCS8Pem();
     }
-    
+
     @Test
     public void testHttpsAndNodeSSLPemEnc() throws Exception {
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable());
         super.testHttpsAndNodeSSLPemEnc();
     }
-    
+
     @Test
     public void testNodeClientSSLwithOpenSslTLSv13() throws Exception {
-        
+
         Assume.assumeTrue(OpenSearchSecuritySSLPlugin.OPENSSL_SUPPORTED && OpenSsl.isAvailable() && OpenSsl.version() > 0x10101009L);
 
         final Settings settings = Settings.builder().put("plugins.security.ssl.transport.enabled", true)
@@ -196,10 +204,10 @@ public class OpenSSLTest extends SSLTest {
                 .build();
 
         setupSslOnlyMode(settings);
-        
+
         RestHelper rh = nonSslRestHelper();
 
-        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false)
                 .put("cluster.name", clusterInfo.clustername).put("path.home", "/tmp")
                 .put("node.name", "client_node_" + new Random().nextInt())
                 .put("path.data", "./target/data/" + clusterInfo.clustername + "/ssl/data")
