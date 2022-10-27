@@ -38,7 +38,7 @@ jobs:
           -x spotlessCheck
           -x checkstyleMain
           -x checkstyleTest
-          org.opensearch.security.ssl.OpenSSLTest
+          --tests OpenSSLTest
 
     - name: Coverage
       uses: codecov/codecov-action@v1
