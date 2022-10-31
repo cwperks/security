@@ -25,8 +25,22 @@ jobs:
     - name: Checkout security
       uses: actions/checkout@v2
 
+    - name: Build and Test Windows
+      uses: gradle/gradle-build-action@v2
+      if: ${{ matrix.os == 'windows-latest' }}
+      with:
+        arguments: |
+          build test -Dbuild.snapshot=false
+          -x integrationTest
+          -x spotlessCheck
+          -x checkstyleMain
+          -x checkstyleTest
+
     - name: Build and Test
       uses: gradle/gradle-build-action@v2
+      if: ${{ matrix.os != 'windows-latest' }}
+      env:
+        OPENDISTRO_SECURITY_TEST_OPENSSL_OPT: trust
       with:
         arguments: |
           build test -Dbuild.snapshot=false
