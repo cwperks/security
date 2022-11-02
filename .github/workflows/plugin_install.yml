@@ -116,7 +116,7 @@ jobs:
           ls .
           'y' | .\Opensearch\bin\opensearch-plugin.bat remove opensearch-security
           del .\Opensearch\config\opensearch.yml
-          echo. 2> .\Opensearch\config\opensearch.yml
+          copy NUL .\Opensearch\config\opensearch.yml
           'y' | .\Opensearch\bin\opensearch-plugin.bat install file:"C:\Users\opensearch\opensearch-security.zip"
           'y', 'y', 'N' | .\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
 
