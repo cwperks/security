@@ -114,6 +114,7 @@ jobs:
         run: |
           cd C:\Users\opensearch
           ls .
+          'y' | .\Opensearch\bin\opensearch-plugin.bat remove opensearch-security
           'y' | .\Opensearch\bin\opensearch-plugin.bat install file:"C:\Users\opensearch\opensearch-security.zip"
           'y', 'y', 'N' | .\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
 
