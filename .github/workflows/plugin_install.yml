@@ -127,6 +127,10 @@ jobs:
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           New-Item C:\Users\opensearch\output.log -type file
           psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat>C:\Users\opensearch\output.log"
+
+      - name: Check the logs
+        if: always()
+        run: |
           Get-Content C:\Users\opensearch\output.log
 
       - name: Sleep while OpenSearch finishes starting up
