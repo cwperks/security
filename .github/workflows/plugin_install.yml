@@ -88,7 +88,7 @@ jobs:
 
       - name: Download OpenSearch Core
         run: |
-          Invoke-WebRequest https://artifacts.opensearch.org/snapshots/core/opensearch/3.0.0-SNAPSHOT/opensearch-min-3.0.0-SNAPSHOT-windows-x64-latest.zip -Outfile opensearch-3.0.0.zip
+          Invoke-WebRequest https://ci.opensearch.org/ci/dbc/distribution-build-opensearch/3.0.0/6322/windows/x64/zip/dist/opensearch/opensearch-3.0.0-windows-x64.zip -Outfile opensearch-3.0.0.zip
           tar -xzf opensearch-3.0.0.zip 
           del opensearch-3.0.0.zip
           echo $env:USERPROFILE
