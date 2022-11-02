@@ -124,6 +124,12 @@ jobs:
         run: |
           ls $env:GITHUB_WORKSPACE
           ls C:\Users\opensearch
+          $Acl = Get-Acl "C:\Users\opensearch\Opensearch"
+
+          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+
+          $Acl.SetAccessRule($Ar)
+          Set-Acl "C:\Users\opensearch\Opensearch" $Acl
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           New-Item C:\Users\opensearch\output.log -type file
           psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat>C:\Users\opensearch\output.log"
