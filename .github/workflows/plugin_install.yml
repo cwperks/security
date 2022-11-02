@@ -125,6 +125,7 @@ jobs:
           ls $env:GITHUB_WORKSPACE
           ls C:\Users\opensearch
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
+          New-Item C:\Users\opensearch\output.log -type file
           psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat>C:\Users\opensearch\output.log"
           Get-Content C:\Users\opensearch\output.log
 
