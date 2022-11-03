@@ -109,6 +109,9 @@ jobs:
 
       - name: Move and rename security plugin
         run: |
+          echo $env:COMPUTERNAME
+          echo $env:USERNAME
+          echo $env:USERDNSDOMAIN
           move build\distributions\opensearch-security-*.zip C:\Users\opensearch\opensearch-security.zip
 
       - name: Install the plugin
@@ -127,18 +130,18 @@ jobs:
           ls C:\Users\opensearch
           $Acl = Get-Acl "C:\Users\opensearch\Opensearch"
 
-          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "Allow")
 
           $Acl.SetAccessRule($Ar)
           Set-Acl "C:\Users\opensearch\Opensearch" $Acl
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
-          New-Item C:\Users\opensearch\output.log -type file
-          paexec -u opensearch -p "P@ssw0rd" -lo "C:\Users\opensearch\output.log" -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
+          New-Item C:\Users\opensearch\Opensearch\logs\output.log -type file
+          paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
 
       - name: Check the logs
         if: always()
         run: |
-          Get-Content C:\Users\opensearch\output.log
+          Get-Content C:\Users\opensearch\Opensearch\logs\output.log
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
