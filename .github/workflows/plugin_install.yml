@@ -132,7 +132,8 @@ jobs:
           New-Item $env:USERPROFILE\Opensearch\logs\opensearch.log -type file
           New-Item $env:USERPROFILE\Opensearch\logs\paexec.log -type file
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
-          paexec -u opensearch -p "P@ssw0rd" -lo $env:USERPROFILE\Opensearch\logs\paexec.log cmd /c "$env:USERPROFILE\Opensearch\bin\opensearch.bat"
+          Rename-Item -Path "$env:USERPROFILE\Opensearch\bin\opensearch.bat" -NewName "opensearch.cmd"
+          paexec -u opensearch -p "P@ssw0rd" -lo $env:USERPROFILE\Opensearch\logs\paexec.log "$env:USERPROFILE\Opensearch\bin\opensearch.cmd"
 
       - name: Check the logs
         if: always()
