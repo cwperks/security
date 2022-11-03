@@ -95,7 +95,7 @@ jobs:
           echo $env:USERPROFILE
           Rename-Item opensearch-* Opensearch
           mkdir C:\Users\opensearch
-          net user "opensearch" "P@ssw0rd" /add /homedir:"C:\Users\opensearch"
+          net user opensearch P@ssw0rd /add /homedir:C:\Users\opensearch
           move Opensearch C:\Users\opensearch\
 
       - name: Build Security Plugin with Gradle
