@@ -115,7 +115,7 @@ jobs:
           'y' | .\Opensearch\bin\opensearch-plugin.bat remove opensearch-security
           del .\Opensearch\config\opensearch.yml
           New-Item .\Opensearch\config\opensearch.yml -type file
-          'y' | .\Opensearch\bin\opensearch-plugin.bat install file:"C:\Users\opensearch\opensearch-security.zip"
+          'y' | .\Opensearch\bin\opensearch-plugin.bat install file:"$env:USERPROFILE\opensearch-security.zip"
           'y', 'y', 'N' | .\Opensearch\plugins\opensearch-security\tools\install_demo_configuration.bat
 
       - name: Run OpenSearch with plugin
