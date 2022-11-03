@@ -84,7 +84,8 @@ jobs:
 
       - name: Download PSExec
         run: |
-          choco install -y psexec
+          choco install wget --no-progress 
+          wget -q https://www.poweradmin.com/paexec/paexec.exe -P C:\Windows\System32
 
       - name: Download OpenSearch Core
         run: |
@@ -132,7 +133,7 @@ jobs:
           Set-Acl "C:\Users\opensearch\Opensearch" $Acl
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           New-Item C:\Users\opensearch\output.log -type file
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat>C:\Users\opensearch\output.log"
+          paexec -u opensearch -p "P@ssw0rd" -lo C:\Users\opensearch\output.log" -w "C:\Users\opensearch\" "\Opensearch\bin\opensearch.bat"
 
       - name: Check the logs
         if: always()
