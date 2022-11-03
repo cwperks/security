@@ -84,8 +84,7 @@ jobs:
 
       - name: Download PSExec
         run: |
-          choco install wget --no-progress 
-          wget -q https://www.poweradmin.com/paexec/paexec.exe -P C:\Windows\System32
+          choco install -y psexec
 
       - name: Download OpenSearch Core
         run: |
@@ -96,6 +95,9 @@ jobs:
           Rename-Item opensearch-* Opensearch
           mkdir C:\Users\opensearch
           net user "opensearch" "P@ssw0rd" /add /homedir:"C:\Users\opensearch"
+          icacls $env:USERPROFILE /grant opensearch:F
+          icacls .\Opensearch /grant opensearch:F
+          ls C:\Users
           move Opensearch C:\Users\opensearch\
 
       - name: Build Security Plugin with Gradle
@@ -111,6 +113,7 @@ jobs:
       - name: Install the plugin
         run: |
           cd C:\Users\opensearch
+          ls .
           'y' | .\Opensearch\bin\opensearch-plugin.bat remove opensearch-security
           del .\Opensearch\config\opensearch.yml
           New-Item .\Opensearch\config\opensearch.yml -type file
@@ -119,26 +122,29 @@ jobs:
 
       - name: Run OpenSearch with plugin
         run: |
-          $Acl = Get-Acl "C:\Users\opensearch"
+          ls $env:GITHUB_WORKSPACE
+          ls C:\Users\opensearch
+          $Acl = Get-Acl "C:\Users\opensearch\Opensearch"
 
-          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "Allow")
+          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("user", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
 
           $Acl.SetAccessRule($Ar)
-          Set-Acl "C:\Users\opensearch" $Acl
+          Set-Acl "C:\Users\opensearch\Opensearch" $Acl
+          icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           mkdir C:\Users\opensearch\Opensearch\logs
-          New-Item C:\Users\opensearch\Opensearch\logs\output.log -type file
-          New-Item C:\Users\opensearch\paexec.log -type file
-          C:\Users\opensearch\Opensearch\bin\opensearch.bat
+          New-Item C:\Users\opensearch\Opensearch\opensearch.log -type file
+          cmdkey.exe /add:"C:\Users\opensearch\Opensearch\bin\opensearch.bat" /user:opensearch /pass:"P@ssw0rd"
+          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
 
       - name: Check the logs
         if: always()
         run: |
-          Get-Content C:\Users\opensearch\paexec.log
-          Get-Content C:\Users\opensearch\Opensearch\logs\output.log
+          Get-Content C:\Users\opensearch\Opensearch\logs\opensearch.log
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
           Start-Sleep -s 30
+          ls C:\Users\opensearch\Opensearch\logs
           Get-Content C:\Users\opensearch\Opensearch\logs\opensearch.log
 
       - name: Check OpenSearch Running
