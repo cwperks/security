@@ -133,7 +133,7 @@ jobs:
           Set-Acl "C:\Users\opensearch\Opensearch" $Acl
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           New-Item C:\Users\opensearch\output.log -type file
-          paexec -u opensearch -p "P@ssw0rd" -lo C:\Users\opensearch\output.log" -w "C:\Users\opensearch\" .\Opensearch\bin\opensearch.bat
+          paexec -u opensearch -p "P@ssw0rd" -lo "C:\Users\opensearch\output.log" -w "C:\Users\opensearch\" .\Opensearch\bin\opensearch.bat
 
       - name: Check the logs
         if: always()
