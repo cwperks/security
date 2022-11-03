@@ -129,7 +129,7 @@ jobs:
           New-Item C:\Users\opensearch\Opensearch\logs\opensearch.log -type file
           New-Item C:\Users\opensearch\Opensearch\logs\paexec.log -type file
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
-          paexec -l -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\Opensearch" -lo C:\Users\opensearch\Opensearch\logs\paexec.log -h C:\Users\opensearch\Opensearch\bin\opensearch.bat
+          paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\Opensearch" -lo C:\Users\opensearch\Opensearch\logs\paexec.log -h C:\Users\opensearch\Opensearch\bin\opensearch.bat
 
       - name: Check the logs
         if: always()
