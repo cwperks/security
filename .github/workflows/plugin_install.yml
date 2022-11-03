@@ -130,11 +130,12 @@ jobs:
           ls C:\Users\opensearch
           $Acl = Get-Acl "C:\Users\opensearch\Opensearch"
 
-          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "Allow")
+          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\opensearch", "FullControl", "Allow")
 
           $Acl.SetAccessRule($Ar)
           Set-Acl "C:\Users\opensearch\Opensearch" $Acl
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
+          mkdir C:\Users\opensearch\Opensearch\logs
           New-Item C:\Users\opensearch\Opensearch\logs\output.log -type file
           paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
 
