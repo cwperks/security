@@ -96,9 +96,6 @@ jobs:
           Rename-Item opensearch-* Opensearch
           mkdir C:\Users\opensearch
           net user "opensearch" "P@ssw0rd" /add /homedir:"C:\Users\opensearch"
-          icacls $env:USERPROFILE /grant opensearch:F
-          icacls .\Opensearch /grant opensearch:F
-          ls C:\Users
           move Opensearch C:\Users\opensearch\
 
       - name: Build Security Plugin with Gradle
@@ -109,15 +106,11 @@ jobs:
 
       - name: Move and rename security plugin
         run: |
-          echo $env:COMPUTERNAME
-          echo $env:USERNAME
-          echo $env:USERDNSDOMAIN
           move build\distributions\opensearch-security-*.zip C:\Users\opensearch\opensearch-security.zip
 
       - name: Install the plugin
         run: |
           cd C:\Users\opensearch
-          ls .
           'y' | .\Opensearch\bin\opensearch-plugin.bat remove opensearch-security
           del .\Opensearch\config\opensearch.yml
           New-Item .\Opensearch\config\opensearch.yml -type file
@@ -126,28 +119,26 @@ jobs:
 
       - name: Run OpenSearch with plugin
         run: |
-          ls $env:GITHUB_WORKSPACE
-          ls C:\Users\opensearch
-          $Acl = Get-Acl "C:\Users\opensearch\Opensearch"
+          $Acl = Get-Acl "C:\Users\opensearch"
 
-          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\opensearch", "FullControl", "Allow")
+          $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "Allow")
 
           $Acl.SetAccessRule($Ar)
-          Set-Acl "C:\Users\opensearch\Opensearch" $Acl
-          icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
+          Set-Acl "C:\Users\opensearch" $Acl
           mkdir C:\Users\opensearch\Opensearch\logs
           New-Item C:\Users\opensearch\Opensearch\logs\output.log -type file
-          paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
+          New-Item C:\Users\opensearch\paexec.log -type file
+          paexec -u opensearch -p "P@ssw0rd" -lo C:\Users\opensearch\paexec.log -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
 
       - name: Check the logs
         if: always()
         run: |
+          Get-Content C:\Users\opensearch\paexec.log
           Get-Content C:\Users\opensearch\Opensearch\logs\output.log
 
       - name: Sleep while OpenSearch finishes starting up
         run: |
           Start-Sleep -s 30
-          ls C:\Users\opensearch\Opensearch\logs
           Get-Content C:\Users\opensearch\Opensearch\logs\opensearch.log
 
       - name: Check OpenSearch Running
