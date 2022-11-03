@@ -135,7 +135,7 @@ jobs:
           $Acl.SetAccessRule($Ar)
           Set-Acl "$env:USERPROFILE" $Acl
           Set-Acl "$env:USERPROFILE\Opensearch\bin\opensearch.cmd" $Acl2
-          paexec -u opensearch -p "P@ssw0rd" -w "$env:USERPROFILE\Opensearch\bin" -lo $env:USERPROFILE\Opensearch\logs\paexec.log "opensearch.cmd"
+          paexec -u opensearch -p "P@ssw0rd" -w "$env:USERPROFILE\Opensearch\bin" -lo $env:USERPROFILE\Opensearch\logs\paexec.log "$env:USERPROFILE\Opensearch\bin\opensearch.cmd"
 
       - name: Check the logs
         if: always()
