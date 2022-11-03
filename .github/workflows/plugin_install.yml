@@ -82,9 +82,10 @@ jobs:
         with:
           java-version: 11
 
-      - name: Download PSExec
+      - name: Download PAExec
         run: |
-          choco install -y psexec
+          choco install wget --no-progress 
+          wget -q https://www.poweradmin.com/paexec/paexec.exe -P C:\Windows\System32
 
       - name: Download OpenSearch Core
         run: |
@@ -133,13 +134,15 @@ jobs:
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           mkdir C:\Users\opensearch\Opensearch\logs
           New-Item C:\Users\opensearch\Opensearch\logs\opensearch.log -type file
+          New-Item C:\Users\opensearch\Opensearch\logs\paexec.log -type file
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
-          psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
+          paexec -u opensearch -p "P@ssw0rd" -lo C:\Users\opensearch\Opensearch\logs\paexec.log cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
 
       - name: Check the logs
         if: always()
         run: |
           ls C:\Users\opensearch\Opensearch\logs
+          Get-Content C:\Users\opensearch\Opensearch\logs\paexec.log
           Get-Content C:\Users\opensearch\Opensearch\logs\opensearch.log
 
       - name: Sleep while OpenSearch finishes starting up
