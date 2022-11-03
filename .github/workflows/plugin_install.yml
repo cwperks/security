@@ -128,7 +128,7 @@ jobs:
           mkdir C:\Users\opensearch\Opensearch\logs
           New-Item C:\Users\opensearch\Opensearch\logs\output.log -type file
           New-Item C:\Users\opensearch\paexec.log -type file
-          paexec -u opensearch -p "P@ssw0rd" -lo C:\Users\opensearch\paexec.log -w "C:\Users\opensearch\" C:\Users\opensearch\Opensearch\bin\opensearch.bat
+          C:\Users\opensearch\Opensearch\bin\opensearch.bat
 
       - name: Check the logs
         if: always()
