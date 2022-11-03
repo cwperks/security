@@ -128,12 +128,14 @@ jobs:
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
           Rename-Item -Path "$env:USERPROFILE\Opensearch\bin\opensearch.bat" -NewName "opensearch.cmd"
           $Acl = Get-Acl "$env:USERPROFILE"
+          $Acl2 = Get-Acl "$env:USERPROFILE\Opensearch\bin\opensearch.cmd"
 
           $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("opensearch", "FullControl", "Allow")
 
           $Acl.SetAccessRule($Ar)
           Set-Acl "$env:USERPROFILE" $Acl
-          paexec "\\$env:COMPUTERNAME" "$env:USERPROFILE\Opensearch\bin\opensearch.cmd"
+          Set-Acl "$env:USERPROFILE" $Acl2
+          paexec -u opensearch -p "P@ssw0rd" -lo $env:USERPROFILE\Opensearch\logs\paexec.log "$env:USERPROFILE\Opensearch\bin\opensearch.cmd"
 
       - name: Check the logs
         if: always()
