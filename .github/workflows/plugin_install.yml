@@ -133,7 +133,7 @@ jobs:
           icacls C:\Users\opensearch\Opensearch\bin\opensearch.bat /grant opensearch:F
           mkdir C:\Users\opensearch\Opensearch\logs
           New-Item C:\Users\opensearch\Opensearch\opensearch.log -type file
-          cmdkey.exe /add:"C:\Users\opensearch\Opensearch\bin\opensearch.bat" /user:opensearch /pass:"P@ssw0rd"
+          cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
           psexec -accepteula -d -u opensearch -p "P@ssw0rd" cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.bat"
 
       - name: Check the logs
