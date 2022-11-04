@@ -126,12 +126,11 @@ jobs:
           $Acl.SetAccessRule($Ar)
           Set-Acl "C:\Users\opensearch" $Acl
           mkdir C:\Users\opensearch\Opensearch\logs
-          New-Item C:\Users\opensearch\Opensearch\logs\opensearch.log -type file
           New-Item C:\Users\opensearch\Opensearch\logs\paexec.log -type file
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
           Rename-Item -Path "C:\Users\opensearch\Opensearch\bin\opensearch.bat" -NewName "opensearch.cmd"
           ls C:\Users\opensearch\Opensearch\bin
-          paexec -l -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\Opensearch" -lo C:\Users\opensearch\Opensearch\logs\paexec.log C:\Users\opensearch\Opensearch\bin\opensearch.cmd
+          C:\Users\opensearch\Opensearch\bin\opensearch.cmd
 
       - name: Check the logs
         if: always()
