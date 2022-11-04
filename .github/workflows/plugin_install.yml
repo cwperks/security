@@ -130,7 +130,7 @@ jobs:
           cmdkey.exe /add:"$env:COMPUTERNAME" /user:opensearch /pass:"P@ssw0rd"
           Rename-Item -Path "C:\Users\opensearch\Opensearch\bin\opensearch.bat" -NewName "opensearch.cmd"
           ls C:\Users\opensearch\Opensearch\bin
-          paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\Opensearch" -lo C:\Users\opensearch\Opensearch\logs\paexec.log C:\Users\opensearch\Opensearch\bin\opensearch.cmd
+          paexec -u opensearch -p "P@ssw0rd" -w "C:\Users\opensearch\Opensearch" -lo C:\Users\opensearch\Opensearch\logs\paexec.log cmd /c "C:\Users\opensearch\Opensearch\bin\opensearch.cmd"
 
       - name: Check the logs
         if: always()
