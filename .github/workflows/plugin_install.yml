@@ -22,12 +22,30 @@ jobs:
       - name: Assemble target plugin
         run: ./gradlew assemble
 
+
+
+      - name: Create Setup Script for Linux
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          cat > setup.sh <<EOF
+          chmod +x plugins/opensearch-security/tools/install_demo_configuration.sh
+          yes | plugins/opensearch-security/tools/install_demo_configuration.sh
+          echo plugins.security.unsupported.restapi.allow_securityconfig_modification: true >> config/opensearch.yml
+          EOF
+
+      - name: Create Setup Script for Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          echo. >> setup.bat
+          echo 'y', 'y', 'N' | .\opensearch-3.0.0-SNAPSHOT\plugins\opensearch-security\tools\install_demo_configuration.bat >> setup.bat
+
       - name: Run Opensearch with A Single Plugin
         uses: ./.github/actions/start-opensearch-with-one-plugin
         with:
           opensearch-version: 3.0.0
           plugin-name: opensearch-security
-          plugin-start-script: install_demo_configuration
+          plugin-setup-script: setup
           docker-host-plugin-zip: security-plugin.zip
 
       - name: Run sanity tests
