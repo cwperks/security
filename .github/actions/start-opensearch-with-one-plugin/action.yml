@@ -68,6 +68,7 @@ runs:
         chown 1001:1001 -R /opensearch
         su -c "/opensearch/bin/opensearch" -s /bin/bash opensearch
         EOF
+        chmod +x setup.sh
         ./setup.sh
         docker build -t opensearch-test -f- . <<EOF
         FROM ubuntu:latest
