@@ -23,7 +23,6 @@ jobs:
         run: ./gradlew assemble
 
 
-
       - name: Create Setup Script for Linux
         if: ${{ runner.os == 'Linux' }}
         run: |
@@ -37,7 +36,7 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          echo. >> setup.bat
+          echo >> setup.bat
           echo 'y', 'y', 'N' | .\opensearch-3.0.0-SNAPSHOT\plugins\opensearch-security\tools\install_demo_configuration.bat >> setup.bat
 
       - name: Run Opensearch with A Single Plugin

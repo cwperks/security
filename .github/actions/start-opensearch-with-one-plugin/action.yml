@@ -65,11 +65,10 @@ runs:
       run: |
         cat > os-ep.sh <<EOF
         yes | opensearch-plugin install file:///docker-host/${{ inputs.docker-host-plugin-zip }}.zip
-        chmod +x plugins/${{ inputs.plugin-name }}/tools/${{ inputs.plugin-start-script }}.sh
-        yes | plugins/${{ inputs.plugin-name }}/tools/${{ inputs.plugin-start-script }}.sh
         chown 1001:1001 -R /opensearch
         su -c "/opensearch/bin/opensearch" -s /bin/bash opensearch
         EOF
+        ./setup.sh
         docker build -t opensearch-test -f- . <<EOF
         FROM ubuntu:latest
         COPY --chown=1001:1001 os-ep.sh /docker-host/
@@ -87,7 +86,7 @@ runs:
       if: ${{ runner.os == 'Windows'}}
       run: |
         'y' | .\opensearch-${{ inputs.opensearch-version }}-SNAPSHOT\bin\opensearch-plugin.bat install file:$pwd\${{ inputs.plugin-name }}.zip
-        'y', 'y', 'N' | .\opensearch-${{ inputs.opensearch-version }}-SNAPSHOT\plugins\${{ inputs.plugin-name }}\tools\${{ inputs.plugin-start-script }}.bat
+        .\setup.bat
       shell: pwsh
 
     # Run OpenSearch
