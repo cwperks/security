@@ -28,7 +28,7 @@ jobs:
         run: |
           cat > setup.sh <<EOF
           chmod +x ./opensearch/plugins/opensearch-security/tools/install_demo_configuration.sh
-          yes | ./opensearch/plugins/opensearch-security/tools/install_demo_configuration.sh
+          call yes ^| ./opensearch/plugins/opensearch-security/tools/install_demo_configuration.sh
           echo plugins.security.unsupported.restapi.allow_securityconfig_modification: true >> config/opensearch.yml
           EOF
 
@@ -41,7 +41,7 @@ jobs:
           echo path is 
           $pwd
           New-Item $pwd\setup.bat
-          Add-Content setup.bat "call {'yes', 'yes', 'No'} | D:\a\${{ github.event.repository.name }}\${{ github.event.repository.name }}\opensearch-3.0.0-SNAPSHOT\plugins\opensearch-security\tools\install_demo_configuration.bat"
+          Add-Content setup.bat "echo 'yes', 'yes', 'No' ^| D:\a\${{ github.event.repository.name }}\${{ github.event.repository.name }}\opensearch-3.0.0-SNAPSHOT\plugins\opensearch-security\tools\install_demo_configuration.bat"
 
       - name: Run Opensearch with A Single Plugin
         uses: ./.github/actions/start-opensearch-with-one-plugin
