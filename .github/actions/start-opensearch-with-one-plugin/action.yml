@@ -65,11 +65,11 @@ runs:
       run: |
         cat > os-ep.sh <<EOF
         yes | opensearch-plugin install file:///docker-host/${{ inputs.docker-host-plugin-zip }}.zip
+        chmod +x setup.sh
+        sh ./setup.sh
         su -c "/opensearch/bin/opensearch" -s /bin/bash opensearch
         chown 1001:1001 -R /opensearch
         EOF
-        chmod +x setup.sh
-        sh ./setup.sh
         docker build -t opensearch-test -f- . <<EOF
         FROM ubuntu:latest
         COPY --chown=1001:1001 os-ep.sh /docker-host/
