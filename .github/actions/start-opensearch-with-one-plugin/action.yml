@@ -80,6 +80,7 @@ runs:
         COPY --chown=1001:1001 setup* /opensearch/
         RUN chmod +x /docker-host/os-ep.sh
         RUN useradd -u 1001 -s /sbin/nologin opensearch
+        RUN apt-get update && apt-get install --yes --no-install-recommends curl
         ENV PATH="/opensearch/bin:${PATH}"
         WORKDIR /opensearch/
         ENTRYPOINT /docker-host/os-ep.sh
@@ -125,7 +126,7 @@ runs:
       if: ${{ runner.os != 'Windows'}}
       run: |
         docker logs ops
-        curl https://localhost:9200/_cat/plugins -u 'admin:admin' -k -v
+        docker exec ops curl https://localhost:9200/_cat/plugins -u 'admin:admin' -k -v
       shell: bash
 
     - name: Check OpenSearch Running on Windows
