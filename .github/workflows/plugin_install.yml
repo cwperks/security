@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [ubuntu-latest]
         jdk: [17]
     runs-on: ${{ matrix.os }}
     steps:
@@ -26,10 +26,11 @@ jobs:
       - name: Create Setup Script for Linux
         if: ${{ runner.os == 'Linux' }}
         run: |
-          cat > setup.sh <<EOF
-          chmod +x ./opensearch/plugins/opensearch-security/tools/install_demo_configuration.sh
-          call yes ^| ./opensearch/plugins/opensearch-security/tools/install_demo_configuration.sh
-          echo plugins.security.unsupported.restapi.allow_securityconfig_modification: true >> config/opensearch.yml
+          cat > setup.sh <<'EOF'
+          chmod +x $OPENSEARCH_HOME/plugins/opensearch-security/tools/install_demo_configuration.sh
+          $OPENSEARCH_HOME/plugins/opensearch-security/tools/install_demo_configuration.sh -y
+          # echo plugins.security.unsupported.restapi.allow_securityconfig_modification: true >> $OPENSEARCH_HOME/config/opensearch.yml
+          echo plugins.security.allow_default_init_securityindex: true >> $OPENSEARCH_HOME/config/opensearch.yml
           EOF
 
       - name: Create Setup Script for Windows
