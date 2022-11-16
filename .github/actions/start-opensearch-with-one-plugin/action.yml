@@ -95,12 +95,12 @@ runs:
 
     - name: Stop container
       if: ${{ runner.os == 'Linux'}}
-      run: docker stop ops
+      run: docker stop ops || true
       shell: bash
  
     - name: Remove existing image
       if: ${{ runner.os == 'Linux'}}
-      run: docker rm ops
+      run: docker rm ops || true
       shell: bash
 
     # Run OpenSearch
