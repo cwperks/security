@@ -65,6 +65,6 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo useradd -u 10001 -s /sbin/nologin opensearch
-          chown -R 10001 $GITHUB_WORKSPACE
-          chmod -R u+rX $GITHUB_WORKSPACE
+          sudo chown -R 10001 $GITHUB_WORKSPACE
+          sudo chmod -R u+rX $GITHUB_WORKSPACE
           su -m -c "GRADLE_USER_HOME=$GITHUB_WORKSPACE ./gradlew clean integTestRemote -Dtests.rest.cluster=localhost:9200 -Dtests.cluster=localhost:9200 -Dtests.clustername=opensearch -Dhttps=true -Duser=admin -Dpassword=admin" -s /bin/bash opensearch
