@@ -63,11 +63,12 @@ runs:
     - name: Install Plugin into OpenSearch for Linux
       if: ${{ runner.os == 'Linux'}}
       run: |
+        export OPENSEARCH_HOME=/opensearch
+        sudo chmod +x setup.sh
         cat > os-ep.sh <<EOF
         yes | opensearch-plugin install file:///docker-host/${{ inputs.docker-host-plugin-zip }}.zip
-        chmod +x setup.sh
-        sh ./setup.sh
-        su -c "/opensearch/bin/opensearch" -s /bin/bash opensearch
+        OPENSEARCH_HOME=$OPENSEARCH_HOME $OPENSEARCH_HOME/setup.sh
+        su -c "$OPENSEARCH_HOME/bin/opensearch" -s /bin/bash opensearch
         chown 1001:1001 -R /opensearch
         EOF
         docker build -t opensearch-test -f- . <<EOF
@@ -75,6 +76,7 @@ runs:
         COPY --chown=1001:1001 os-ep.sh /docker-host/
         COPY --chown=1001:1001 ${{ inputs.plugin-name }}.zip /docker-host/${{ inputs.docker-host-plugin-zip }}.zip
         COPY --chown=1001:1001 opensearch* /opensearch/
+        COPY --chown=1001:1001 setup* /opensearch/
         RUN chmod +x /docker-host/os-ep.sh
         RUN useradd -u 1001 -s /sbin/nologin opensearch
         ENV PATH="/opensearch/bin:${PATH}"
@@ -90,10 +92,20 @@ runs:
         .\setup.bat
       shell: pwsh
 
+    - name: Stop container
+      if: ${{ runner.os == 'Linux'}}
+      run: docker stop ops || true
+      shell: bash
+ 
+    - name: Remove existing image
+      if: ${{ runner.os == 'Linux'}}
+      run: docker rm ops || true
+      shell: bash
+
     # Run OpenSearch
     - name: Run OpenSearch with plugin on Linux
       if: ${{ runner.os == 'Linux'}}
-      run: docker run --name ops -d -p 9200:9200 -p 9600:9600 -i opensearch-test:latest
+      run: docker run --name ops -d -e cluster.name=opensearch -p 9200:9200 -p 9600:9600 -i opensearch-test:latest
       shell: bash
 
     - name: Run OpenSearch with plugin on Windows
@@ -105,7 +117,7 @@ runs:
     - name: Sleep while OpenSearch starts
       uses: peternied/action-sleep@v1
       with:
-        seconds: 30
+        seconds: 40
 
     # Verify that the server is operational
     - name: Check OpenSearch Running on Linux
