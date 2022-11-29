@@ -96,6 +96,30 @@ configurations.all {
     }
 }
 
+apply plugin: 'opensearch.opensearchplugin'
+apply plugin: 'opensearch.pluginzip'
+apply plugin: 'opensearch.rest-test'
+apply plugin: 'opensearch.testclusters'
+
+licenseHeaders.enabled = true
+
+// The following check that have never be enabled in security
+dependencyLicenses.enabled = false
+thirdPartyAudit.enabled = false
+loggerUsageCheck.enabled = false
+forbiddenApisMain.enabled = false
+forbiddenApisTest.enabled = false
+filepermissions.enabled = false
+forbiddenPatterns.enabled = false
+testingConventions.enabled = false
+// Conflicts between runtime kafka-clients:x.y.z & testRuntime kafka-clients:x.y.z:test
+jarHell.enabled = false
+tasks.whenTaskAdded {task ->
+    if(task.name.contains("forbiddenApisIntegrationTest")) {
+        task.enabled = false
+    }
+}
+
 dependencies {
     implementation 'jakarta.annotation:jakarta.annotation-api:1.3.5'
     implementation "org.opensearch.plugin:transport-netty4-client:${opensearch_version}"
