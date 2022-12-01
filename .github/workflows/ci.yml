@@ -13,6 +13,8 @@ jobs:
       fail-fast: false
       matrix:
         jdk: [8, 11, 14]
+        platform: ["ubuntu-latest", "windows-latest"]
+      runs-on: ${{ matrix.platform }}
 
     steps:
 
@@ -42,15 +44,18 @@ jobs:
 
     - name: Checkstyle
       run: ./gradlew clean checkstyleMain checkstyleTest
+      shell: bash
 
     - name: Package
       run: ./gradlew clean build -Dbuild.snapshot=false -x test
+      shell: bash
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
 
     - name: Test
       run: OPENDISTRO_SECURITY_TEST_OPENSSL_OPT=true ./gradlew test -i
+      shell: bash
 
     - name: Coverage
       uses: codecov/codecov-action@v1
@@ -77,20 +82,26 @@ jobs:
         echo "SECURITY_PLUGIN_VERSION_NO_SNAPSHOT=$security_plugin_version_no_snapshot" >> $GITHUB_ENV
         echo "SECURITY_PLUGIN_VERSION_ONLY_NUMBER=$security_plugin_version_only_number" >> $GITHUB_ENV
         echo "TEST_QUALIFIER=$test_qualifier" >> $GITHUB_ENV
+      shell: bash
 
     - run: |
         echo ${{ env.SECURITY_PLUGIN_VERSION }}
         echo ${{ env.SECURITY_PLUGIN_VERSION_NO_SNAPSHOT }}
         echo ${{ env.SECURITY_PLUGIN_VERSION_ONLY_NUMBER }}
         echo ${{ env.TEST_QUALIFIER }}
+      shell: bash
 
     - run: ./gradlew clean assemble && test -s ./build/opensearch-security-${{ env.SECURITY_PLUGIN_VERSION }}.jar
+      shell: bash
 
     - run: ./gradlew clean assemble -Dbuild.snapshot=false && test -s ./build/opensearch-security-${{ env.SECURITY_PLUGIN_VERSION_NO_SNAPSHOT }}.jar
+      shell: bash
 
     - run: ./gradlew clean assemble -Dbuild.snapshot=false -Dbuild.version_qualifier=${{ env.TEST_QUALIFIER }} && test -s ./build/opensearch-security-${{ env.SECURITY_PLUGIN_VERSION_ONLY_NUMBER }}-${{ env.TEST_QUALIFIER }}.jar
+      shell: bash
 
     - run: ./gradlew clean assemble -Dbuild.version_qualifier=${{ env.TEST_QUALIFIER }} && test -s ./build/opensearch-security-${{ env.SECURITY_PLUGIN_VERSION_ONLY_NUMBER }}-${{ env.TEST_QUALIFIER }}-SNAPSHOT.jar
+      shell: bash
 
     - run:  |
         ## EXISTING_OS_VERSION outputs the major version, example as 2
@@ -99,7 +110,9 @@ jobs:
         INCREMENT_OS_VERSION=$((++EXISTING_OS_VERSION)) 
         ./gradlew clean updateVersion -DnewVersion=$INCREMENT_OS_VERSION.0.0-SNAPSHOT
         test `./gradlew properties | grep opensearch.version | cut -d':' -f2- | awk '{$1=$1};1'` = $INCREMENT_OS_VERSION.0.0-SNAPSHOT
+      shell: bash
 
     - name: List files in the build directory if there was an error
       run: ls -al ./build/
       if: failure()
+      shell: bash
