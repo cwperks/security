@@ -912,7 +912,7 @@ public class SecurityAdmin {
         }
         
         System.out.println("Will retrieve '"+"/" +id+"' into "+filepath+" "+(legacy?"(legacy mode)":""));
-        try (Writer writer = new FileWriter(filepath, StandardCharsets.UTF_8)) {
+        try (Writer writer = new FileWriter(filepath)) {
 
             final GetResponse response = tc.get(new GetRequest(index).type(type).id(id).refresh(true).realtime(false)).actionGet();
 
