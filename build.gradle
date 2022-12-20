@@ -77,6 +77,12 @@ ext {
     }
 }
 
+buildscript {
+    dependencies {
+        classpath "org.opensearch.gradle:build-tools:${opensearch_version}"
+    }
+}
+
 
 apply plugin: 'opensearch.rest-test'
 apply plugin: 'opensearch.testclusters'
