@@ -200,6 +200,7 @@ opensearchplugin {
     name 'opensearch-security'
     description 'Provide access control related features for OpenSearch'
     classname 'org.opensearch.security.OpenSearchSecurityPlugin'
+    extendedPlugins = ['abstract-identity']
 }
 
 // This requires an additional Jar not published as part of build-tools
@@ -335,6 +336,7 @@ check.dependsOn integrationTest
 
 dependencies {
     implementation 'jakarta.annotation:jakarta.annotation-api:1.3.5'
+    compileOnly "org.opensearch.sandbox:opensearch-authn:${opensearch_version}"
     implementation "org.opensearch.plugin:transport-netty4-client:${opensearch_version}"
     implementation "org.opensearch.client:opensearch-rest-high-level-client:${opensearch_version}"
     implementation "org.apache.httpcomponents.client5:httpclient5-cache:${versions.httpclient5}"
