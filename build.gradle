@@ -200,7 +200,7 @@ opensearchplugin {
     name 'opensearch-security'
     description 'Provide access control related features for OpenSearch'
     classname 'org.opensearch.security.OpenSearchSecurityPlugin'
-    extendedPlugins = ['abstract-identity']
+    extendedPlugins = ['extensible-identity']
 }
 
 // This requires an additional Jar not published as part of build-tools

@@ -15,9 +15,6 @@ public class SecurityPluginAuthenticationManager implements AuthenticationManage
     public Subject getSubject() {
         final User user = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         SecurityPluginSubject sub = new SecurityPluginSubject(user.getName());
-        System.out.println("In Security Plugin");
-        System.out.println("SecurityPluginAuthenticationManager.getSubject");
-        System.out.println(sub.getPrincipal().getName());
         return sub;
     }
 
