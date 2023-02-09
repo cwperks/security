@@ -138,7 +138,7 @@ public class SecurityFilter implements ActionFilter {
 
     @Override
     public int order() {
-        return Integer.MIN_VALUE;
+        return Integer.MIN_VALUE + 1;
     }
 
     @Override
@@ -170,6 +170,7 @@ public class SecurityFilter implements ActionFilter {
             boolean enforcePrivilegesEvaluation = false;
             User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
             if(user == null && (user = userInjector.getInjectedUser()) != null) {
+                System.out.println("User is injected: " + user);
                 threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
                 // since there is no support for TransportClient auth/auth in 2.0 anymore, usually we
                 // can skip any checks on transport in case of trusted requests.
@@ -177,6 +178,7 @@ public class SecurityFilter implements ActionFilter {
                 // to perform privileges checks.
                 enforcePrivilegesEvaluation = true;
             }
+            System.out.println("Performing privilege evaluation on: " + user);
             final boolean userIsAdmin = isUserAdmin(user, adminDns);
             final boolean interClusterRequest = HeaderHelper.isInterClusterRequest(threadContext);
             final boolean trustedClusterRequest = HeaderHelper.isTrustedClusterRequest(threadContext);
@@ -260,7 +262,6 @@ public class SecurityFilter implements ActionFilter {
                     && (injectedRoles == null)
                     && !enforcePrivilegesEvaluation
                     ) {
-
                 chain.proceed(task, action, request, listener);
                 return;
             }

@@ -112,11 +112,6 @@ public class AllowlistingSettings {
                                           NodeClient client) throws IOException {
         // if allowlisting is enabled but the request is not allowlisted, then return false, otherwise true.
         if (this.enabled && !requestIsAllowlisted(request)){
-            channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, channel.newErrorBuilder().startObject()
-                    .field("error", request.method() + " " + request.path() + " API not allowlisted")
-                    .field("status", RestStatus.FORBIDDEN)
-                    .endObject()
-            ));
             return false;
         }
         return true;

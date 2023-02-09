@@ -120,13 +120,22 @@ public class SecurityRestFilter {
             
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
+                System.out.println("SecurityPlugin - SecurityRestFilter");
                 org.apache.logging.log4j.ThreadContext.clearAll();
                 if (!checkAndAuthenticateRequest(request, channel, client)) {
                     User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    if (userIsSuperAdmin(user, adminDNs) || (whitelistingSettings.checkRequestIsAllowed(request, channel, client) && allowlistingSettings.checkRequestIsAllowed(request, channel, client))) {
-                        original.handleRequest(request, channel, client);
+                    if (!userIsSuperAdmin(user, adminDNs)) {
+                        boolean isRequestAllowed = whitelistingSettings.checkRequestIsAllowed(request, channel, client) && allowlistingSettings.checkRequestIsAllowed(request, channel, client);
+                        if (!isRequestAllowed) {
+                            channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, channel.newErrorBuilder().startObject()
+                                    .field("error", request.method() + " " + request.path() + " API not allowlisted")
+                                    .field("status", RestStatus.FORBIDDEN)
+                                    .endObject()
+                            ));
+                        }
                     }
                 }
+                original.handleRequest(request, channel, client);
             }
         };
     }

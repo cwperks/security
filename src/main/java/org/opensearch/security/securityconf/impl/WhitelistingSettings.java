@@ -113,11 +113,6 @@ public class WhitelistingSettings extends AllowlistingSettings {
                                           NodeClient client) throws IOException {
         // if whitelisting is enabled but the request is not whitelisted, then return false, otherwise true.
         if (this.enabled && !requestIsWhitelisted(request)){
-            channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, channel.newErrorBuilder().startObject()
-                    .field("error", request.method() + " " + request.path() + " API not whitelisted")
-                    .field("status", RestStatus.FORBIDDEN)
-                    .endObject()
-            ));
             return false;
         }
         return true;
