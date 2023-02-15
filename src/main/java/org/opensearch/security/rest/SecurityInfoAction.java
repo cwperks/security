@@ -49,6 +49,8 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.auth.RolesInjector;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.support.Base64Helper;
 import org.opensearch.security.support.ConfigConstants;
@@ -68,11 +70,14 @@ public class SecurityInfoAction extends BaseRestHandler {
     private final Logger log = LogManager.getLogger(this.getClass());
     private final PrivilegesEvaluator evaluator;
     private final ThreadContext threadContext;
+    private final RolesInjector rolesInjector;
 
-    public SecurityInfoAction(final Settings settings, final RestController controller, final PrivilegesEvaluator evaluator, final ThreadPool threadPool) {
+
+    public SecurityInfoAction(final Settings settings, final RestController controller, final PrivilegesEvaluator evaluator, final ThreadPool threadPool, AuditLog auditLog) {
         super();
         this.threadContext = threadPool.getThreadContext();
         this.evaluator = evaluator;
+        this.rolesInjector = new RolesInjector(auditLog);
     }
 
     @Override
@@ -93,9 +98,15 @@ public class SecurityInfoAction extends BaseRestHandler {
 
                     
                     final boolean verbose = request.paramAsBoolean("verbose", false);
+
+                    final Set<String> injectedRoles = rolesInjector.injectUserAndRoles(threadContext);
                     
                     final X509Certificate[] certs = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_SSL_PEER_CERTIFICATES);
                     final User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+                    if (injectedRoles != null && injectedRoles.size() > 0) {
+                        user.addRoles(injectedRoles);
+                    }
+
                     final TransportAddress remoteAddress = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
 
                     final Set<String> securityRoles = evaluator.mapRoles(user, remoteAddress);

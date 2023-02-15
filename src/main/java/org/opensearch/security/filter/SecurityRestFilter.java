@@ -120,6 +120,7 @@ public class SecurityRestFilter {
             
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
+                System.out.println("Received REST request: " + request.path());
                 System.out.println("SecurityPlugin - SecurityRestFilter");
                 org.apache.logging.log4j.ThreadContext.clearAll();
                 if (!checkAndAuthenticateRequest(request, channel, client)) {

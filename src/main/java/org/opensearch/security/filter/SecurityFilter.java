@@ -166,7 +166,7 @@ public class SecurityFilter implements ActionFilter {
             if (complianceConfig != null && complianceConfig.isEnabled()) {
                 attachSourceFieldContext(request);
             }
-            final Set<String> injectedRoles = rolesInjector.injectUserAndRoles(request, action, task, threadContext);
+            final Set<String> injectedRoles = rolesInjector.injectUserAndRoles(threadContext);
             boolean enforcePrivilegesEvaluation = false;
             User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
             if(user == null && (user = userInjector.getInjectedUser()) != null) {

@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -51,6 +52,7 @@ import org.opensearch.security.action.configupdate.ConfigUpdateNodeResponse;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
 import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.auth.RolesInjector;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.dlic.rest.validation.AbstractConfigurationValidator;
@@ -78,6 +80,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 	protected final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator;
 	protected final AuditLog auditLog;
 	protected final Settings settings;
+	protected final RolesInjector rolesInjector;
 
 	protected AbstractApiAction(final Settings settings, final Path configPath, final RestController controller,
                                 final Client client, final AdminDNs adminDNs, final ConfigurationRepository cl,
@@ -96,6 +99,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		this.restApiAdminPrivilegesEvaluator =
 				new RestApiAdminPrivilegesEvaluator(threadPool.getThreadContext(), evaluator, adminDNs);
 		this.auditLog = auditLog;
+		this.rolesInjector = new RolesInjector(auditLog);
 	}
 
     protected abstract AbstractConfigurationValidator getValidator(RestRequest request, BytesReference ref, Object... params);
@@ -386,6 +390,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		// check if request is authorized
 		String authError = restApiPrivilegesEvaluator.checkAccessPermissions(request, getEndpoint());
 
+		System.out.println("AbstractApiAction Thread Context Headers: " + threadPool.getThreadContext().getHeaders());
+		System.out.println(threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES).toString());
+		final Set<String> injectedRoles = rolesInjector.injectUserAndRoles(threadPool.getThreadContext());
 		final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
 		final String userName = user == null ? null : user.getName();
 		if (authError != null) {
@@ -398,7 +405,10 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 			auditLog.logGrantedPrivileges(userName, request);
 		}
 
-		final Object originalUser = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+		// final Object originalUser = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+		if (injectedRoles != null && injectedRoles.size() > 0 && user != null) {
+			user.addRoles(injectedRoles);
+		}
 		final Object originalRemoteAddress = threadPool.getThreadContext()
 				.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
 		final Object originalOrigin = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN);
@@ -406,7 +416,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 		return channel -> threadPool.generic().submit(() -> {
 			try (StoredContext ignore = threadPool.getThreadContext().stashContext()) {
 				threadPool.getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
-				threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, originalUser);
+				threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
 				threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS, originalRemoteAddress);
 				threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, originalOrigin);
 

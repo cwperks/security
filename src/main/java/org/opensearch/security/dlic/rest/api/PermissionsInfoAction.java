@@ -35,6 +35,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.rest.RestStatus;
 import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.auth.RolesInjector;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
@@ -58,6 +59,8 @@ public class PermissionsInfoAction extends BaseRestHandler {
 	private final PrivilegesEvaluator privilegesEvaluator;
 	private final ConfigurationRepository configurationRepository;
 
+	private final RolesInjector rolesInjector;
+
 	protected PermissionsInfoAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
                                     final AdminDNs adminDNs, final ConfigurationRepository configurationRepository, final ClusterService cs,
                                     final PrincipalExtractor principalExtractor, final PrivilegesEvaluator privilegesEvaluator, ThreadPool threadPool, AuditLog auditLog) {
@@ -66,6 +69,7 @@ public class PermissionsInfoAction extends BaseRestHandler {
 		this.privilegesEvaluator = privilegesEvaluator;
 		this.restApiPrivilegesEvaluator = new RestApiPrivilegesEvaluator(settings, adminDNs, privilegesEvaluator, principalExtractor, configPath, threadPool);
 		this.configurationRepository = configurationRepository;
+		this.rolesInjector = new RolesInjector(auditLog);
 	}
 
 	@Override
@@ -99,7 +103,11 @@ public class PermissionsInfoAction extends BaseRestHandler {
 
                 try {
 
+					final Set<String> injectedRoles = rolesInjector.injectUserAndRoles(threadPool.getThreadContext());
             		final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+					if (injectedRoles != null && injectedRoles.size() > 0 && user != null) {
+						user.addRoles(injectedRoles);
+					}
             		final TransportAddress remoteAddress = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
             		Set<String> userRoles = privilegesEvaluator.mapRoles(user, remoteAddress);
             		Boolean hasApiAccess = restApiPrivilegesEvaluator.currentUserHasRestApiAccess(userRoles);

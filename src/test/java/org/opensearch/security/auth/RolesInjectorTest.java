@@ -36,15 +36,10 @@ import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURIT
 
 
 public class RolesInjectorTest {
-
-    private TransportRequest transportRequest;
-    private Task task;
     private AuditLog auditLog;
 
     @Before
     public void setup() {
-        transportRequest = mock(TransportRequest.class);
-        task = mock(Task.class);
         auditLog = mock(AuditLog.class);
     }
 
@@ -52,7 +47,7 @@ public class RolesInjectorTest {
     public void testNotInjected() {
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         RolesInjector rolesInjector = new RolesInjector(auditLog);
-        Set<String> roles = rolesInjector.injectUserAndRoles(transportRequest, "action0", task, threadContext);
+        Set<String> roles = rolesInjector.injectUserAndRoles(threadContext);
         assertEquals(null, roles);
         User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         assertEquals(null, user);
@@ -64,7 +59,7 @@ public class RolesInjectorTest {
         threadContext.putTransient(OPENDISTRO_SECURITY_INJECTED_ROLES, "user1|role_1,role_2");
 
         RolesInjector rolesInjector = new RolesInjector(auditLog);
-        Set<String> roles = rolesInjector.injectUserAndRoles(transportRequest, "action0", task, threadContext);
+        Set<String> roles = rolesInjector.injectUserAndRoles(threadContext);
 
         User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         assertEquals("user1", user.getName());
@@ -89,7 +84,7 @@ public class RolesInjectorTest {
             threadContext.putTransient(OPENDISTRO_SECURITY_INJECTED_ROLES, name);
 
             RolesInjector rolesInjector = new RolesInjector(auditLog);
-            Set<String> roles = rolesInjector.injectUserAndRoles(transportRequest, "action0", task, threadContext);
+            Set<String> roles = rolesInjector.injectUserAndRoles(threadContext);
 
             assertEquals(null, roles);
             User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);

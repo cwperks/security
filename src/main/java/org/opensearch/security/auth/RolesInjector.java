@@ -45,7 +45,7 @@ final public class RolesInjector {
         this.auditLog = auditLog;
     }
 
-    public Set<String> injectUserAndRoles(TransportRequest transportRequest, String action, Task task, final ThreadContext ctx) {
+    public Set<String> injectUserAndRoles(final ThreadContext ctx) {
         final String injectedUserAndRoles = ctx.getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES);
         if (injectedUserAndRoles == null) {
             return null;
@@ -72,13 +72,12 @@ final public class RolesInjector {
         Set<String> roles = ImmutableSet.copyOf(strs[1].split(","));
 
         if(user != null && roles != null) {
-            addUser(user, transportRequest, action, task, ctx);
+            addUser(user, ctx);
         }
         return roles;
     }
 
-    private void addUser(final User user, final TransportRequest transportRequest,
-                         final String action, final Task task, final ThreadContext threadContext) {
+    private void addUser(final User user, final ThreadContext threadContext) {
         if(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER) != null)
             return;
 
