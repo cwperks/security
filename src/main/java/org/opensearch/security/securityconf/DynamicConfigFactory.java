@@ -186,47 +186,60 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
         final AuditConfig audit = (AuditConfig)cr.getConfiguration(CType.AUDIT).getCEntry("config");
 
         if(config.getImplementingClass() == ConfigV7.class) {
-                //statics
-                
-                if(roles.containsAny(staticRoles)) {
-                    throw new StaticResourceException("Cannot override static roles");
-                }
-                if(!roles.add(staticRoles) && !staticRoles.getCEntries().isEmpty()) {
-                    throw new StaticResourceException("Unable to load static roles");
-                }
+            //statics
 
-                log.debug("Static roles loaded ({})", staticRoles.getCEntries().size());
+            if(roles.containsAny(staticRoles)) {
+                throw new StaticResourceException("Cannot override static roles");
+            }
+            if(!roles.add(staticRoles) && !staticRoles.getCEntries().isEmpty()) {
+                throw new StaticResourceException("Unable to load static roles");
+            }
 
-                if(actionGroups.containsAny(staticActionGroups)) {
-                    System.out.println("static: " + actionGroups.getCEntries());
-                    System.out.println("Static Action Groups:" + staticActionGroups.getCEntries());
-                    throw new StaticResourceException("Cannot override static action groups");
+            log.debug("Static roles loaded ({})", staticRoles.getCEntries().size());
+
+            if(actionGroups.containsAny(staticActionGroups)) {
+                System.out.println("static: " + actionGroups.getCEntries());
+                System.out.println("Static Action Groups:" + staticActionGroups.getCEntries());
+                throw new StaticResourceException("Cannot override static action groups");
+            }
+            if(!actionGroups.add(staticActionGroups) && !staticActionGroups.getCEntries().isEmpty()) {
+                throw new StaticResourceException("Unable to load static action groups");
+            }
+
+
+            log.debug("Static action groups loaded ({})", staticActionGroups.getCEntries().size());
+
+            if(tenants.containsAny(staticTenants)) {
+                throw new StaticResourceException("Cannot override static tenants");
+            }
+            if(!tenants.add(staticTenants) && !staticTenants.getCEntries().isEmpty()) {
+                throw new StaticResourceException("Unable to load static tenants");
+            }
+
+
+            log.debug("Static tenants loaded ({})", staticTenants.getCEntries().size());
+
+            log.debug("Static configuration loaded (total roles: {}/total action groups: {}/total tenants: {})",
+                roles.getCEntries().size(), actionGroups.getCEntries().size(), tenants.getCEntries().size());
+
+
+            SecurityDynamicConfiguration<InternalUserV7> internalUsersV7 = (SecurityDynamicConfiguration<InternalUserV7>) internalusers;
+            Map<String, InternalUserV7> internalUsersMap = internalUsersV7.getCEntries();
+            for (InternalUserV7 user : internalUsersMap.values()) {
+                if (user.isService()) {
+                    if (user.getBackend_roles() != null && user.getBackend_roles().size() > 0) {
+                        throw new StaticResourceException("Service account cannot be assigned backend roles");
+                    }
+
+                    if (user.getOpendistro_security_roles() != null && user.getOpendistro_security_roles().size() > 1) {
+                        throw new StaticResourceException("Service account cannot be assigned more than 1 role");
+                    }
                 }
-                if(!actionGroups.add(staticActionGroups) && !staticActionGroups.getCEntries().isEmpty()) {
-                    throw new StaticResourceException("Unable to load static action groups");
-                }
-                
-
-                log.debug("Static action groups loaded ({})", staticActionGroups.getCEntries().size());
-                
-                if(tenants.containsAny(staticTenants)) {
-                    throw new StaticResourceException("Cannot override static tenants");
-                }
-                if(!tenants.add(staticTenants) && !staticTenants.getCEntries().isEmpty()) {
-                    throw new StaticResourceException("Unable to load static tenants");
-                }
-                
-
-                log.debug("Static tenants loaded ({})", staticTenants.getCEntries().size());
-
-                log.debug("Static configuration loaded (total roles: {}/total action groups: {}/total tenants: {})",
-                    roles.getCEntries().size(), actionGroups.getCEntries().size(), tenants.getCEntries().size());
-
-            
+            }
 
             //rebuild v7 Models
             dcm = new DynamicConfigModelV7(getConfigV7(config), opensearchSettings, configPath, iab);
-            ium = new InternalUsersModelV7((SecurityDynamicConfiguration<InternalUserV7>) internalusers,
+            ium = new InternalUsersModelV7(internalUsersV7,
                 (SecurityDynamicConfiguration<RoleV7>) roles,
                 (SecurityDynamicConfiguration<RoleMappingsV7>) rolesmapping);
             cm = new ConfigModelV7((SecurityDynamicConfiguration<RoleV7>) roles,(SecurityDynamicConfiguration<RoleMappingsV7>)rolesmapping, (SecurityDynamicConfiguration<ActionGroupsV7>)actionGroups, (SecurityDynamicConfiguration<TenantV7>) tenants,dcm, opensearchSettings);

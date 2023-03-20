@@ -44,6 +44,7 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
         private String hash;
         private boolean reserved;
         private boolean hidden;
+        private boolean service;
         @JsonProperty(value = "static")
         private boolean _static;
         private List<String> backend_roles = Collections.emptyList();
@@ -51,10 +52,11 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
         private String description;
         private List<String> opendistro_security_roles = Collections.emptyList();
 
-        private InternalUserV7(String hash, boolean reserved, boolean hidden, List<String> backend_roles, Map<String, String> attributes) {
+        private InternalUserV7(String hash, boolean reserved, boolean hidden, boolean service, List<String> backend_roles, Map<String, String> attributes) {
             super();
             this.hash = hash;
             this.reserved = reserved;
+            this.service = service;
             this.hidden = hidden;
             this.backend_roles = backend_roles;
             this.attributes = attributes;
@@ -89,6 +91,13 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
         public void setHidden(boolean hidden) {
             this.hidden = hidden;
         }
+
+        public boolean isService() {
+            return service;
+        }
+        public void setService(boolean service) {
+        this.service = service;
+    }
        
 
         public List<String> getBackend_roles() {
