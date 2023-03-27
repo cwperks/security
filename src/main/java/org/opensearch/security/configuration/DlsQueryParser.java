@@ -67,11 +67,15 @@ public final class DlsQueryParser {
     }
 
     public BooleanQuery.Builder parse(Set<String> unparsedDlsQueries, QueryShardContext queryShardContext) {
-        return parse(unparsedDlsQueries, queryShardContext, null);
+        return parse(unparsedDlsQueries, queryShardContext, null, null);
+    }
+
+    public BooleanQuery.Builder parse(Set<String> unparsedDlsQueries, QueryShardContext queryShardContext, Occur occur) {
+        return parse(unparsedDlsQueries, queryShardContext, null, occur);
     }
 
     public BooleanQuery.Builder parse(Set<String> unparsedDlsQueries, QueryShardContext queryShardContext,
-            Function<Query, Query> queryMapFunction) {
+            Function<Query, Query> queryMapFunction, Occur occur) {
 
         if (unparsedDlsQueries == null || unparsedDlsQueries.isEmpty()) {
             return null;
@@ -90,7 +94,11 @@ public final class DlsQueryParser {
                 dlsQuery = queryMapFunction.apply(dlsQuery);
             }
 
-            dlsQueryBuilder.add(dlsQuery, Occur.SHOULD);
+            if (occur == null) {
+                dlsQueryBuilder.add(dlsQuery, Occur.SHOULD);
+            } else {
+                dlsQueryBuilder.add(dlsQuery, Occur.MUST);
+            }
 
             if (hasNestedMapping) {
                 handleNested(queryShardContext, dlsQueryBuilder, dlsQuery);

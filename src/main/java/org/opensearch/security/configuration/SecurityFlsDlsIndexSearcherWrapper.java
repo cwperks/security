@@ -19,6 +19,8 @@ import java.util.function.LongSupplier;
 
 import com.google.common.collect.Sets;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.ConstantScoreQuery;
 import org.apache.lucene.search.Query;
 
@@ -100,11 +102,19 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SecurityIndexSearcherWra
             if (dlsEval != null) {
                 Set<String> unparsedDlsQueries = queries.get(dlsEval);
 
+                System.out.println("unparsedDlsQueries: " + unparsedDlsQueries);
+
                 if (unparsedDlsQueries != null && !unparsedDlsQueries.isEmpty()) {
                     QueryShardContext queryShardContext = this.indexService.newQueryShardContext(shardId.getId(), null, nowInMillis, null);
                     // no need for scoring here, so its possible to wrap this in a
                     // ConstantScoreQuery
-                    dlsQuery = new ConstantScoreQuery(dlsQueryParser.parse(unparsedDlsQueries, queryShardContext).build());
+                    BooleanQuery boolQuery = dlsQueryParser.parse(unparsedDlsQueries, queryShardContext).build();
+                    System.out.println("boolQueryShould: " + boolQuery.toString());
+                    BooleanQuery boolQueryMust = dlsQueryParser.parse(unparsedDlsQueries, queryShardContext, BooleanClause.Occur.MUST).build();
+                    System.out.println("boolQueryMust: " + boolQueryMust.toString());
+                    dlsQuery = boolQueryMust;
+//                    dlsQuery = new ConstantScoreQuery(boolQueryMust);
+                    System.out.println("dlsQuery: " + dlsQuery.toString());
                 }
             }
 
