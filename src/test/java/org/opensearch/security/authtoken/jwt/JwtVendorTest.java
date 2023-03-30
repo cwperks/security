@@ -11,8 +11,14 @@
 
 package org.opensearch.security.authtoken.jwt;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
 import java.util.function.LongSupplier;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.cxf.rs.security.jose.jwk.JsonWebKey;
 import org.apache.cxf.rs.security.jose.jws.JwsJwtCompactConsumer;
 import org.apache.cxf.rs.security.jose.jwt.JwtToken;
@@ -20,6 +26,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
+
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 public class JwtVendorTest {
 
@@ -63,6 +72,35 @@ public class JwtVendorTest {
         Assert.assertNotNull(jwt.getClaim("iat"));
         Assert.assertNotNull(jwt.getClaim("exp"));
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
+    }
+
+    @Test
+    public void testCreateJwtWithRoles() throws Exception {
+        String issuer = "cluster_0";
+        String subject = "admin";
+        String audience = "extension_0";
+        List<String> roles = List.of("IT", "HR");
+        Integer expirySeconds = 300;
+        LongSupplier currentTime = () -> (int)100;
+        String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
+        Settings settings =  Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
+        Long expectedExp = currentTime.getAsLong() + (expirySeconds * 1000);
+
+        JwtVendor jwtVendor = new JwtVendor(settings, currentTime);
+        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, roles, expirySeconds);
+
+        JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
+        JwtToken jwt = jwtConsumer.getJwtToken();
+
+        Assert.assertEquals("cluster_0", jwt.getClaim("iss"));
+        Assert.assertEquals("admin", jwt.getClaim("sub"));
+        Assert.assertEquals("extension_0", jwt.getClaim("aud"));
+        Assert.assertNotNull(jwt.getClaim("iat"));
+        Assert.assertNotNull(jwt.getClaim("exp"));
+        Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
+
+        System.out.println("rolesClaim: " + jwt.getClaim("roles"));
+        System.out.println("roles: " + EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("roles").toString()));
     }
 
     @Test (expected = Exception.class)
