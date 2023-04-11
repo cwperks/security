@@ -11,9 +11,12 @@
 
 package org.opensearch.security.privileges;
 
+import java.util.Set;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.greenrobot.eventbus.Subscribe;
+
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -29,8 +32,6 @@ import org.opensearch.security.securityconf.SecurityRoles;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
-
-import java.util.Set;
 
 public class RestLayerPrivilegesEvaluator {
     protected final Logger log = LogManager.getLogger(this.getClass());
