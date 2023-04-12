@@ -96,6 +96,7 @@ import org.opensearch.env.NodeEnvironment;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
 import org.opensearch.identity.Subject;
+import org.opensearch.identity.TokenManager;
 import org.opensearch.index.Index;
 import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
@@ -149,6 +150,7 @@ import org.opensearch.security.http.SecurityHttpServerTransport;
 import org.opensearch.security.http.SecurityNonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.identity.SecuritySubject;
+import org.opensearch.security.identity.SecurityTokenManager;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
@@ -213,8 +215,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     private volatile ConfigurationRepository cr;
     private volatile AdminDNs adminDns;
     private volatile ClusterService cs;
-
     private volatile Subject securitySubject;
+    private volatile TokenManager securityTokenManager;
     private volatile AuditLog auditLog;
     private volatile BackendRegistry backendRegistry;
     private volatile SslExceptionHandler sslExceptionHandler;
@@ -780,6 +782,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
 
         this.securitySubject = new SecuritySubject(threadPool);
 
+        this.securityTokenManager = new SecurityTokenManager(threadPool);
+
         final List<Object> components = new ArrayList<Object>();
 
         if (client || disabled) {
@@ -1190,6 +1194,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     @Override
     public Subject getSubject() {
         return securitySubject;
+    }
+
+    @Override
+    public TokenManager getTokenManager() {
+        return securityTokenManager;
     }
 
     public static class GuiceHolder implements LifecycleComponent {
