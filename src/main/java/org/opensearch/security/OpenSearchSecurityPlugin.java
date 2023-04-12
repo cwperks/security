@@ -782,7 +782,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
 
         this.securitySubject = new SecuritySubject(threadPool);
 
-        this.securityTokenManager = new SecurityTokenManager(threadPool);
+        this.securityTokenManager = new SecurityTokenManager(threadPool, clusterService);
 
         final List<Object> components = new ArrayList<Object>();
 

@@ -12,6 +12,7 @@
 package org.opensearch.security.authtoken.jwt;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.apache.cxf.rs.security.jose.jwt.JwtUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.transport.TransportAddress;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -138,9 +140,8 @@ public class JwtVendor {
         return this.configModel.mapSecurityRoles(user, caller);
     }
 
-    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, List<String> roles) throws Exception {
+    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, Collection<String> roles) throws Exception {
         long timeMillis = timeProvider.getAsLong();
-        Instant now = Instant.ofEpochMilli(timeProvider.getAsLong());
 
         jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
         JwtClaims jwtClaims = new JwtClaims();
@@ -178,6 +179,47 @@ public class JwtVendor {
         if (logger.isDebugEnabled()) {
             logger.debug(
                     "Created JWT: "
+                            + encodedJwt
+                            + "\n"
+                            + jsonMapReaderWriter.toJson(jwt.getJwsHeaders())
+                            + "\n"
+                            + JwtUtils.claimsToJson(jwt.getClaims())
+            );
+        }
+
+        return encodedJwt;
+    }
+
+    public String createRefreshToken(String issuer, String subject, String audience, Collection<String> roles) throws OpenSearchSecurityException {
+        long timeMillis = timeProvider.getAsLong();
+
+        jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
+        JwtClaims jwtClaims = new JwtClaims();
+        JwtToken jwt = new JwtToken(jwtClaims);
+
+        jwtClaims.setIssuer(issuer);
+
+        jwtClaims.setIssuedAt(timeMillis);
+
+        jwtClaims.setSubject(subject);
+
+        jwtClaims.setAudience(audience);
+
+        jwtClaims.setNotBefore(timeMillis);
+        jwtClaims.setProperty("type", "refresh_token");
+
+        if (roles != null) {
+            String listOfRoles = String.join(",", roles);
+            jwtClaims.setProperty("roles", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfRoles));
+        } else {
+            throw new OpenSearchSecurityException("Roles cannot be null");
+        }
+
+        String encodedJwt = jwtProducer.processJwt(jwt);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(
+                    "Created Refresh Token: "
                             + encodedJwt
                             + "\n"
                             + jsonMapReaderWriter.toJson(jwt.getJwsHeaders())
