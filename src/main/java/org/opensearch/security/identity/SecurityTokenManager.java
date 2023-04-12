@@ -47,14 +47,28 @@ public class SecurityTokenManager implements TokenManager {
         Settings settings = Settings.builder().put("signing_key", signingKey).put("encryption_key", encryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings);
 
-        String signedJwt = jwtVendor.createRefreshToken(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, mappedRoles);
+        String signedJwt = jwtVendor.createJwt(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, null, mappedRoles);
 
         return new BearerToken(signedJwt);
     }
 
     @Override
     public AuthToken issueRefreshTokenOnBehalfOfAuthenticatedUser(String extensionUniqueId) {
-        return null;
+        final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+        if (user == null) {
+            throw new OpenSearchSecurityException("No authenticated user. Cannot issue an auth token.");
+        }
+        final TransportAddress caller = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
+        Set<String> mappedRoles = mapRoles(user, caller);
+        // TODO Extract these from dynamic config settings
+        String signingKey = Base64.getEncoder().encodeToString("Secret signing key".getBytes(StandardCharsets.UTF_8));
+        String encryptionKey = RandomStringUtils.randomAlphanumeric(16);
+        Settings settings = Settings.builder().put("signing_key", signingKey).put("encryption_key", encryptionKey).build();
+        JwtVendor jwtVendor = new JwtVendor(settings);
+
+        String signedJwt = jwtVendor.createRefreshToken(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, mappedRoles);
+
+        return new BearerToken(signedJwt);
     }
 
     @Subscribe

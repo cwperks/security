@@ -140,7 +140,7 @@ public class JwtVendor {
         return this.configModel.mapSecurityRoles(user, caller);
     }
 
-    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, Collection<String> roles) throws Exception {
+    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, Collection<String> roles) throws OpenSearchSecurityException {
         long timeMillis = timeProvider.getAsLong();
 
         jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
@@ -164,14 +164,14 @@ public class JwtVendor {
             long expiryTime = timeProvider.getAsLong() + (expirySeconds * 1000);
             jwtClaims.setExpiryTime(expiryTime);
         } else {
-            throw new Exception("The expiration time should be a positive integer");
+            throw new OpenSearchSecurityException("The expiration time should be a positive integer");
         }
 
         if (roles != null) {
             String listOfRoles = String.join(",", roles);
             jwtClaims.setProperty("roles", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfRoles));
         } else {
-            throw new Exception("Roles cannot be null");
+            throw new OpenSearchSecurityException("Roles cannot be null");
         }
 
         String encodedJwt = jwtProducer.processJwt(jwt);
