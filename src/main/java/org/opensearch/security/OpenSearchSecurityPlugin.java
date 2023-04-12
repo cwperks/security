@@ -859,6 +859,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
         dcf.registerDCFListener(compatConfig);
         dcf.registerDCFListener(irr);
         dcf.registerDCFListener(xffResolver);
+        dcf.registerDCFListener(securityTokenManager);
         dcf.registerDCFListener(evaluator);
         dcf.registerDCFListener(restLayerEvaluator);
         dcf.registerDCFListener(securityRestHandler);
