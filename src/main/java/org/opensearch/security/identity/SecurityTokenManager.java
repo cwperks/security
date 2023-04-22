@@ -1,7 +1,12 @@
 package org.opensearch.security.identity;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Set;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.greenrobot.eventbus.Subscribe;
+
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -16,10 +21,6 @@ import org.opensearch.security.securityconf.ConfigModel;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Set;
 
 public class SecurityTokenManager implements TokenManager {
 
