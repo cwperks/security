@@ -27,6 +27,8 @@
 package org.opensearch.security.filter;
 
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,21 +39,26 @@ import org.apache.logging.log4j.Logger;
 import org.greenrobot.eventbus.Subscribe;
 
 import org.opensearch.OpenSearchException;
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.rest.BytesRestResponse;
+import org.opensearch.rest.PermissibleRoute;
 import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.RestRequest.Method;
 import org.opensearch.rest.RestStatus;
+import org.opensearch.rest.extensions.RestSendToExtensionAction;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auth.BackendRegistry;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.CompatConfig;
 import org.opensearch.security.dlic.rest.api.AllowlistApiAction;
+import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
+import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.securityconf.impl.AllowlistingSettings;
 import org.opensearch.security.securityconf.impl.WhitelistingSettings;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
@@ -70,6 +77,8 @@ public class SecurityRestFilter {
 
     protected final Logger log = LogManager.getLogger(this.getClass());
     private final BackendRegistry registry;
+
+    private final RestLayerPrivilegesEvaluator evaluator;
     private final AuditLog auditLog;
     private final ThreadContext threadContext;
     private final PrincipalExtractor principalExtractor;
@@ -87,11 +96,12 @@ public class SecurityRestFilter {
     private static final Pattern PATTERN_PATH_PREFIX = Pattern.compile(REGEX_PATH_PREFIX);
 
 
-    public SecurityRestFilter(final BackendRegistry registry, final AuditLog auditLog,
-                              final ThreadPool threadPool, final PrincipalExtractor principalExtractor,
+    public SecurityRestFilter(final BackendRegistry registry, final RestLayerPrivilegesEvaluator evaluator,
+                              final AuditLog auditLog, final ThreadPool threadPool, final PrincipalExtractor principalExtractor,
                               final Settings settings, final Path configPath, final CompatConfig compatConfig) {
         super();
         this.registry = registry;
+        this.evaluator = evaluator;
         this.auditLog = auditLog;
         this.threadContext = threadPool.getThreadContext();
         this.principalExtractor = principalExtractor;
@@ -117,14 +127,16 @@ public class SecurityRestFilter {
      */
     public RestHandler wrap(RestHandler original, AdminDNs adminDNs) {
         return new RestHandler() {
-            
+
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
                 org.apache.logging.log4j.ThreadContext.clearAll();
                 if (!checkAndAuthenticateRequest(request, channel, client)) {
                     User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
                     if (userIsSuperAdmin(user, adminDNs) || (whitelistingSettings.checkRequestIsAllowed(request, channel, client) && allowlistingSettings.checkRequestIsAllowed(request, channel, client))) {
-                        original.handleRequest(request, channel, client);
+                        if (!authorizeRequest(original, request, channel, user)) {
+                            original.handleRequest(request, channel, client);
+                        }
                     }
                 }
             }
@@ -138,11 +150,48 @@ public class SecurityRestFilter {
         return user != null && adminDNs.isAdmin(user);
     }
 
+    private boolean authorizeRequest(RestHandler original, RestRequest request, RestChannel channel, User user) throws Exception {
+        if (original instanceof RestSendToExtensionAction) {
+            List<RestHandler.Route> extensionRoutes = original.routes();
+            Optional<RestHandler.Route> handler = extensionRoutes.stream()
+                    .filter(rh -> rh.getMethod().equals(request.method()))
+                    .filter(rh -> restPathMatches(request.path(), rh.getPath()))
+                    .findFirst();
+            if (handler.isPresent() && handler.get() instanceof PermissibleRoute) {
+                String action = ((PermissibleRoute)handler.get()).name();
+                PrivilegesEvaluatorResponse pres = evaluator.evaluate(user, action);
+                if (log.isDebugEnabled()) {
+                    log.debug(pres.toString());
+                }
+
+                if (pres.isAllowed()) {
+                    // TODO make sure this is audit logged
+                    log.debug("Request has been granted");
+                    // auditLog.logGrantedPrivileges(action, request, task);
+                } else {
+                    // auditLog.logMissingPrivileges(action, request, task);
+                    String err;
+                    if(!pres.getMissingSecurityRoles().isEmpty()) {
+                        err = String.format("No mapping for %s on roles %s", user, pres.getMissingSecurityRoles());
+                    } else {
+                        err = String.format("no permissions for %s and %s", pres.getMissingPrivileges(), user);
+                    }
+                    log.debug(err);
+                    // TODO Figure out why extension hangs intermittently after single unauthorized request
+                    channel.sendResponse(new BytesRestResponse(RestStatus.UNAUTHORIZED, err));
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private boolean checkAndAuthenticateRequest(RestRequest request, RestChannel channel,
                                                 NodeClient client) throws Exception {
 
         threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, Origin.REST.toString());
-        
+
         if(HTTPHelper.containsBadHeader(request)) {
             final OpenSearchException exception = ExceptionUtils.createBadHeaderException();
             log.error(exception.toString());
@@ -150,7 +199,7 @@ public class SecurityRestFilter {
             channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, exception));
             return true;
         }
-        
+
         if(SSLRequestHelper.containsBadHeader(threadContext, ConfigConstants.OPENDISTRO_SECURITY_CONFIG_PREFIX)) {
             final OpenSearchException exception = ExceptionUtils.createBadHeaderException();
             log.error(exception.toString());
@@ -165,7 +214,7 @@ public class SecurityRestFilter {
                 if(sslInfo.getPrincipal() != null) {
                     threadContext.putTransient("_opendistro_security_ssl_principal", sslInfo.getPrincipal());
                 }
-                
+
                 if(sslInfo.getX509Certs() != null) {
                      threadContext.putTransient("_opendistro_security_ssl_peer_certificates", sslInfo.getX509Certs());
                 }
@@ -178,7 +227,7 @@ public class SecurityRestFilter {
             channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, e));
             return true;
         }
-        
+
         if(!compatConfig.restAuthEnabled()) {
             return false;
         }
@@ -197,7 +246,7 @@ public class SecurityRestFilter {
                 org.apache.logging.log4j.ThreadContext.put("user", ((User)threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER)).getName());
             }
         }
-        
+
         return false;
     }
 
@@ -209,5 +258,31 @@ public class SecurityRestFilter {
     @Subscribe
     public void onAllowlistingSettingChanged(AllowlistingSettings allowlistingSettings) {
         this.allowlistingSettings = allowlistingSettings;
+    }
+
+    /**
+     * Determines if the request's path is a match for the configured handler path.
+     *
+     * @param requestPath The path from the {@link PermissibleRoute}
+     * @param handlerPath The path from the {@link RestHandler.Route}
+     * @return true if the request path matches the route
+     */
+    private boolean restPathMatches(String requestPath, String handlerPath) {
+        // Check exact match
+        if (handlerPath.equals(requestPath)) {
+            return true;
+        }
+        // Split path to evaluate named params
+        String[] handlerSplit = handlerPath.split("/");
+        String[] requestSplit = requestPath.split("/");
+        if (handlerSplit.length != requestSplit.length) {
+            return false;
+        }
+        for (int i = 0; i < handlerSplit.length; i++) {
+            if (!(handlerSplit[i].equals(requestSplit[i]) || (handlerSplit[i].startsWith("{") && handlerSplit[i].endsWith("}")))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

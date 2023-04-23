@@ -40,6 +40,7 @@ import org.opensearch.action.bulk.BulkShardRequest;
 import org.opensearch.action.support.replication.TransportReplicationAction.ConcreteShardRequest;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.transport.TransportAddress;
+import org.opensearch.common.util.FeatureFlags;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.search.internal.ShardSearchRequest;
 import org.opensearch.security.auditlog.AuditLog;
@@ -195,6 +196,7 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
             //also allow when issued from a remote cluster for cross cluster search
             if ( !HeaderHelper.isInterClusterRequest(getThreadContext())
                     && !HeaderHelper.isTrustedClusterRequest(getThreadContext())
+                    && !HeaderHelper.isExtensionRequest(getThreadContext())
                     && !task.getAction().equals("internal:transport/handshake")
                     && (task.getAction().startsWith("internal:") || task.getAction().contains("["))) {
 
@@ -216,14 +218,14 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
                 transportChannel.sendResponse(ex);
                 return;
             } else {
-
                 if(getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN) == null) {
                     getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, Origin.TRANSPORT.toString());
                 }
 
                 //network intercluster request or cross search cluster request
                 if(HeaderHelper.isInterClusterRequest(getThreadContext())
-                        || HeaderHelper.isTrustedClusterRequest(getThreadContext())) {
+                        || HeaderHelper.isTrustedClusterRequest(getThreadContext())
+                        || HeaderHelper.isExtensionRequest(getThreadContext())) {
 
                     final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
                     final String injectedRolesHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_HEADER);
@@ -256,7 +258,6 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
                     }
 
                 } else {
-
                     //this is a netty request from a non-server node (maybe also be internal: or a shard request)
                     //and therefore issued by a transport client
 
@@ -324,6 +325,11 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
             if (isTraceEnabled) {
                 log.trace("Is not an inter cluster request");
             }
+        }
+
+        String extensionUniqueId = getThreadContext().getHeader("extension_unique_id");
+        if (FeatureFlags.isEnabled(FeatureFlags.EXTENSIONS) && extensionUniqueId != null) {
+            getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_SSL_TRANSPORT_EXTENSION_REQUEST, Boolean.TRUE);
         }
 
         super.addAdditionalContextValues(action, request, localCerts, peerCerts, principal);
