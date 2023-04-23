@@ -95,6 +95,8 @@ import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
+import org.opensearch.identity.Subject;
+import org.opensearch.identity.TokenManager;
 import org.opensearch.index.Index;
 import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
@@ -103,6 +105,7 @@ import org.opensearch.indices.IndicesService;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.indices.breaker.CircuitBreakerService;
 import org.opensearch.plugins.ClusterPlugin;
+import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
@@ -141,6 +144,8 @@ import org.opensearch.security.filter.SecurityRestFilter;
 import org.opensearch.security.http.SecurityHttpServerTransport;
 import org.opensearch.security.http.SecurityNonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
+import org.opensearch.security.identity.SecuritySubject;
+import org.opensearch.security.identity.SecurityTokenManager;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.resolver.IndexResolverReplacer;
@@ -185,7 +190,7 @@ import org.opensearch.transport.TransportResponseHandler;
 import org.opensearch.transport.TransportService;
 import org.opensearch.watcher.ResourceWatcherService;
 
-public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin implements ClusterPlugin, MapperPlugin {
+public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin implements ClusterPlugin, MapperPlugin, IdentityPlugin {
 
     private static final String KEYWORD = ".keyword";
     private static final Logger actionTrace = LogManager.getLogger("opendistro_security_action_trace");
@@ -202,6 +207,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     private volatile ConfigurationRepository cr;
     private volatile AdminDNs adminDns;
     private volatile ClusterService cs;
+    private volatile Subject securitySubject;
+    private volatile TokenManager securityTokenManager;
     private volatile AuditLog auditLog;
     private volatile BackendRegistry backendRegistry;
     private volatile SslExceptionHandler sslExceptionHandler;
@@ -760,6 +767,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
         this.cs = clusterService;
         this.localClient = localClient;
 
+        this.securitySubject = new SecuritySubject(threadPool);
+
+        this.securityTokenManager = new SecurityTokenManager(threadPool, clusterService);
+
         final List<Object> components = new ArrayList<Object>();
 
         if (client || disabled) {
@@ -832,6 +843,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
         dcf.registerDCFListener(compatConfig);
         dcf.registerDCFListener(irr);
         dcf.registerDCFListener(xffResolver);
+        dcf.registerDCFListener(securityTokenManager);
         dcf.registerDCFListener(evaluator);
         dcf.registerDCFListener(securityRestHandler);
         if (!(auditLog instanceof NullAuditLog)) {
@@ -1159,6 +1171,16 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
             return field.substring(0, field.length()-KEYWORD.length());
         }
         return field;
+    }
+
+    @Override
+    public Subject getSubject() {
+        return securitySubject;
+    }
+
+    @Override
+    public TokenManager getTokenManager() {
+        return securityTokenManager;
     }
 
     public static class GuiceHolder implements LifecycleComponent {

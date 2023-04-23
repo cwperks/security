@@ -12,6 +12,7 @@
 package org.opensearch.security.authtoken.jwt;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +32,7 @@ import org.apache.cxf.rs.security.jose.jwt.JwtUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.transport.TransportAddress;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -123,22 +125,11 @@ public class JwtVendor {
         }
     }
 
-    //TODO:Getting roles from User
-    public Map<String, String> prepareClaimsForUser(User user, ThreadPool threadPool) {
-        Map<String, String> claims = new HashMap<>();
-        this.threadContext = threadPool.getThreadContext();
-        final TransportAddress caller = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
-        Set<String> mappedRoles = mapRoles(user, caller);
-        claims.put("sub", user.getName());
-        claims.put("roles", String.join(",", mappedRoles));
-        return claims;
-    }
-
     public Set<String> mapRoles(final User user, final TransportAddress caller) {
         return this.configModel.mapSecurityRoles(user, caller);
     }
 
-    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, List<String> roles) throws Exception {
+    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, Collection<String> roles) throws OpenSearchSecurityException {
         long timeMillis = timeProvider.getAsLong();
         Instant now = Instant.ofEpochMilli(timeProvider.getAsLong());
 
@@ -163,14 +154,14 @@ public class JwtVendor {
             long expiryTime = timeProvider.getAsLong() + (expirySeconds * 1000);
             jwtClaims.setExpiryTime(expiryTime);
         } else {
-            throw new Exception("The expiration time should be a positive integer");
+            throw new OpenSearchSecurityException("The expiration time should be a positive integer");
         }
 
         if (roles != null) {
             String listOfRoles = String.join(",", roles);
             jwtClaims.setProperty("roles", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfRoles));
         } else {
-            throw new Exception("Roles cannot be null");
+            throw new OpenSearchSecurityException("Roles cannot be null");
         }
 
         String encodedJwt = jwtProducer.processJwt(jwt);
