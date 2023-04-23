@@ -230,4 +230,45 @@ public class JwtVendor {
 
         return encodedJwt;
     }
+
+    public String createServiceAccountToken(String issuer, String extensionUniqueId) throws OpenSearchSecurityException {
+        long timeMillis = timeProvider.getAsLong();
+
+        jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
+        JwtClaims jwtClaims = new JwtClaims();
+        JwtToken jwt = new JwtToken(jwtClaims);
+
+        jwtClaims.setIssuer(issuer);
+
+        jwtClaims.setIssuedAt(timeMillis);
+
+        jwtClaims.setSubject(extensionUniqueId);
+
+        jwtClaims.setAudience(extensionUniqueId);
+
+        jwtClaims.setNotBefore(timeMillis);
+        // First crack at an implementation
+        // An internal user does not need to exist
+        // A role needs to exist with the same name as the extension unique id
+        jwtClaims.setProperty("roles", extensionUniqueId);
+        jwtClaims.setProperty("type", "service_account_token");
+
+        long expiryTime = timeProvider.getAsLong() + (365 * 24 * 60 * 60 * 1000); // 1 year
+        jwtClaims.setExpiryTime(expiryTime);
+
+        String encodedJwt = jwtProducer.processJwt(jwt);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(
+                    "Created Service Account Token: "
+                            + encodedJwt
+                            + "\n"
+                            + jsonMapReaderWriter.toJson(jwt.getJwsHeaders())
+                            + "\n"
+                            + JwtUtils.claimsToJson(jwt.getClaims())
+            );
+        }
+
+        return encodedJwt;
+    }
 }

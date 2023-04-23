@@ -2,6 +2,7 @@ package org.opensearch.security.identity;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -68,6 +69,19 @@ public class SecurityTokenManager implements TokenManager {
         JwtVendor jwtVendor = new JwtVendor(settings);
 
         String signedJwt = jwtVendor.createRefreshToken(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, mappedRoles);
+
+        return new BearerToken(signedJwt);
+    }
+
+    @Override
+    public AuthToken generateServiceAccountToken(String extensionUniqueId) throws OpenSearchSecurityException {
+        // TODO Extract these from dynamic config settings
+        String signingKey = Base64.getEncoder().encodeToString("Secret signing key".getBytes(StandardCharsets.UTF_8));
+        String encryptionKey = RandomStringUtils.randomAlphanumeric(16);
+        Settings settings = Settings.builder().put("signing_key", signingKey).put("encryption_key", encryptionKey).build();
+        JwtVendor jwtVendor = new JwtVendor(settings);
+
+        String signedJwt = jwtVendor.createServiceAccountToken(clusterService.getClusterName().value(), extensionUniqueId);
 
         return new BearerToken(signedJwt);
     }
