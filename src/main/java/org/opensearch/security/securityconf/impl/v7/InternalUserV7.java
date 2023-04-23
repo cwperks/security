@@ -36,10 +36,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.opensearch.security.securityconf.Hashed;
 import org.opensearch.security.securityconf.Hideable;
+import org.opensearch.security.securityconf.Service;
 import org.opensearch.security.securityconf.StaticDefinable;
 import org.opensearch.security.securityconf.impl.v6.InternalUserV6;
 
-public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
+public class InternalUserV7 implements Hideable, Hashed, StaticDefinable, Service {
         
         private String hash;
         private boolean reserved;
@@ -91,7 +92,6 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
         public void setHidden(boolean hidden) {
             this.hidden = hidden;
         }
-
         public boolean isService() {
             return service;
         }
@@ -125,8 +125,9 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
 
         @Override
         public String toString() {
-            return "InternalUserV7 [hash=" + hash + ", reserved=" + reserved + ", hidden=" + hidden + ", _static=" + _static + ", backend_roles="
-                    + backend_roles + ", attributes=" + attributes + ", description=" + description + "]";
+            return "InternalUserV7 [hash=" + hash + ", reserved=" + reserved + ", hidden=" + hidden + ", service="
+                    + service + ", _static=" + _static + ", backend_roles=" + backend_roles + ", attributes="
+                    + attributes + ", description=" + description + "]";
         }
 
         @Override
@@ -159,6 +160,4 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
         public void setStatic(boolean _static) {
             this._static = _static;
         }
-        
-        
-    }
+}
