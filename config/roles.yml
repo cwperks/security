@@ -297,6 +297,8 @@ security_analytics_read_access:
   reserved: true
   cluster_permissions:
     - 'cluster:admin/opensearch/securityanalytics/alerts/get'
+    - 'cluster:admin/opensearch/securityanalytics/correlations/findings'
+    - 'cluster:admin/opensearch/securityanalytics/correlations/list'
     - 'cluster:admin/opensearch/securityanalytics/detector/get'
     - 'cluster:admin/opensearch/securityanalytics/detector/search'
     - 'cluster:admin/opensearch/securityanalytics/findings/get'
@@ -310,6 +312,7 @@ security_analytics_full_access:
   reserved: true
   cluster_permissions:
     - 'cluster:admin/opensearch/securityanalytics/alerts/*'
+    - 'cluster:admin/opensearch/securityanalytics/correlations/*'
     - 'cluster:admin/opensearch/securityanalytics/detector/*'
     - 'cluster:admin/opensearch/securityanalytics/findings/*'
     - 'cluster:admin/opensearch/securityanalytics/mapping/*'
@@ -330,13 +333,13 @@ security_analytics_ack_alerts:
 # Roles for Hello World extension, roles that extensions would like to add should be ultimately be defined elsewhere
 extension_hw_greet:
   reserved: true
-  extension_permissions:
-    - 'extension:hw/greet'
+  cluster_permissions:
+    - 'hw:greet'
 
 extension_hw_full:
   reserved: true
-  extension_permissions:
-    - 'extension:hw/greet'
-    - 'extension:hw/greet_with_adjective'
-    - 'extension:hw/great_with_name'
-    - 'extension:hw/goodbye'
+  cluster_permissions:
+    - 'hw:greet'
+    - 'hw:greet_with_adjective'
+    - 'hw:great_with_name'
+    - 'hw:goodbye'
