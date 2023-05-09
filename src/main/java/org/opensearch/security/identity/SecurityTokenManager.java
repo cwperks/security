@@ -11,18 +11,17 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.transport.TransportAddress;
-import org.opensearch.identity.Principals;
-import org.opensearch.identity.TokenManager;
-import org.opensearch.identity.noop.NoopToken;
+import org.opensearch.identity.AuthTokenManager;
+import org.opensearch.identity.noop.NoopAuthToken;
 import org.opensearch.identity.tokens.AuthToken;
-import org.opensearch.identity.tokens.BearerToken;
+import org.opensearch.identity.tokens.BearerAuthToken;
 import org.opensearch.security.authtoken.jwt.JwtVendor;
 import org.opensearch.security.securityconf.ConfigModel;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
-public class SecurityTokenManager implements TokenManager {
+public class SecurityTokenManager implements AuthTokenManager {
 
     private final ThreadPool threadPool;
 
@@ -50,7 +49,7 @@ public class SecurityTokenManager implements TokenManager {
 
         String signedJwt = jwtVendor.createJwt(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, null, mappedRoles);
 
-        return new BearerToken(signedJwt);
+        return new BearerAuthToken(signedJwt);
     }
 
     @Override
@@ -69,7 +68,13 @@ public class SecurityTokenManager implements TokenManager {
 
         String signedJwt = jwtVendor.createRefreshToken(clusterService.getClusterName().value(), user.getName(), extensionUniqueId, mappedRoles);
 
-        return new BearerToken(signedJwt);
+        return new BearerAuthToken(signedJwt);
+    }
+
+    @Override
+    public AuthToken generateServiceAccountToken(String s) throws OpenSearchSecurityException {
+        // TODO Implement this
+        return new NoopAuthToken("");
     }
 
     @Subscribe

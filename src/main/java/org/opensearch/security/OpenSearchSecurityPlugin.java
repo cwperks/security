@@ -98,7 +98,7 @@ import org.opensearch.extensions.ExtensionsManager;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
 import org.opensearch.identity.Subject;
-import org.opensearch.identity.TokenManager;
+import org.opensearch.identity.AuthTokenManager;
 import org.opensearch.index.Index;
 import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
@@ -220,7 +220,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     private volatile AdminDNs adminDns;
     private volatile ClusterService cs;
     private volatile Subject securitySubject;
-    private volatile TokenManager securityTokenManager;
+    private volatile AuthTokenManager securityTokenManager;
     private volatile AuditLog auditLog;
     private volatile BackendRegistry backendRegistry;
     private volatile SslExceptionHandler sslExceptionHandler;
@@ -1207,7 +1207,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     }
 
     @Override
-    public TokenManager getTokenManager() {
+    public AuthTokenManager getAuthTokenManager() {
         return securityTokenManager;
     }
 

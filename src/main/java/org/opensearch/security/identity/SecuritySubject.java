@@ -14,8 +14,8 @@ package org.opensearch.security.identity;
 import java.security.Principal;
 
 import org.opensearch.identity.NamedPrincipal;
-import org.opensearch.identity.Principals;
 import org.opensearch.identity.Subject;
+import org.opensearch.identity.tokens.AuthToken;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
@@ -31,9 +31,14 @@ public class SecuritySubject implements Subject {
     public Principal getPrincipal() {
         final User user = (User) threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         if (user == null) {
-            return Principals.UNAUTHENTICATED.getPrincipal();
+            return NamedPrincipal.UNAUTHENTICATED;
         }
         return new NamedPrincipal(user.getName());
+    }
+
+    @Override
+    public void authenticate(AuthToken authToken) {
+        // TODO implement this - replace with logic from SecurityRestFilter
     }
 
     @Override
