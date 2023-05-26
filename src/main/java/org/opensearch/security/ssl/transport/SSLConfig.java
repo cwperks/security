@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.ssl.transport;
 
 import org.apache.logging.log4j.LogManager;
@@ -33,16 +30,17 @@ public class SSLConfig {
     }
 
     public SSLConfig(final Settings settings) {
-        this(settings.getAsBoolean(ConfigConstants.SECURITY_SSL_ONLY, false),
-            SecuritySettings.SSL_DUAL_MODE_SETTING.get(settings));
+        this(settings.getAsBoolean(ConfigConstants.SECURITY_SSL_ONLY, false), SecuritySettings.SSL_DUAL_MODE_SETTING.get(settings));
     }
 
     public void registerClusterSettingsChangeListener(final ClusterSettings clusterSettings) {
-        clusterSettings.addSettingsUpdateConsumer(SecuritySettings.SSL_DUAL_MODE_SETTING,
-            dualModeEnabledClusterSetting -> {
-                logger.info("Detected change in settings, cluster setting for SSL dual mode is {}", dualModeEnabledClusterSetting ? "enabled" : "disabled");
-                setDualModeEnabled(dualModeEnabledClusterSetting);
-            });
+        clusterSettings.addSettingsUpdateConsumer(SecuritySettings.SSL_DUAL_MODE_SETTING, dualModeEnabledClusterSetting -> {
+            logger.info(
+                "Detected change in settings, cluster setting for SSL dual mode is {}",
+                dualModeEnabledClusterSetting ? "enabled" : "disabled"
+            );
+            setDualModeEnabled(dualModeEnabledClusterSetting);
+        });
     }
 
     private void setDualModeEnabled(boolean dualModeEnabled) {

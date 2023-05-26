@@ -1,12 +1,10 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
 package org.opensearch.security.ssl.transport;
 
@@ -76,10 +74,8 @@ public class DualModeSSLHandlerTests {
         handler.decode(ctx, buffer, null);
         // ensure ssl handler is added
         Mockito.verify(ctx, Mockito.times(1)).pipeline();
-        Mockito.verify(pipeline, Mockito.times(1))
-                .addAfter("port_unification_handler", "ssl_server", sslHandler);
-        Mockito.verify(pipeline,
-                Mockito.times(1)).remove(handler);
+        Mockito.verify(pipeline, Mockito.times(1)).addAfter("port_unification_handler", "ssl_server", sslHandler);
+        Mockito.verify(pipeline, Mockito.times(1)).remove(handler);
     }
 
     @Test
@@ -95,10 +91,8 @@ public class DualModeSSLHandlerTests {
         handler.decode(ctx, buffer, null);
         // ensure ssl handler is added
         Mockito.verify(ctx, Mockito.times(1)).pipeline();
-        Mockito.verify(pipeline, Mockito.times(0))
-                .addAfter("port_unification_handler", "ssl_server", sslHandler);
-        Mockito.verify(pipeline,
-                Mockito.times(1)).remove(handler);
+        Mockito.verify(pipeline, Mockito.times(0)).addAfter("port_unification_handler", "ssl_server", sslHandler);
+        Mockito.verify(pipeline, Mockito.times(1)).remove(handler);
     }
 
     @Test

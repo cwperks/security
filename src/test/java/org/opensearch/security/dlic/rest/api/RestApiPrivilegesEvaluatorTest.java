@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.dlic.rest.api;
 
 import java.io.IOException;
@@ -34,12 +31,14 @@ public class RestApiPrivilegesEvaluatorTest {
 
     @Before
     public void setUp() {
-        this.privilegesEvaluator = new RestApiPrivilegesEvaluator(Settings.EMPTY,
-                mock(AdminDNs.class),
-                mock(PrivilegesEvaluator.class),
-                mock(PrincipalExtractor.class),
-                mock(Path.class),
-                mock(ThreadPool.class));
+        this.privilegesEvaluator = new RestApiPrivilegesEvaluator(
+            Settings.EMPTY,
+            mock(AdminDNs.class),
+            mock(PrivilegesEvaluator.class),
+            mock(PrincipalExtractor.class),
+            mock(Path.class),
+            mock(ThreadPool.class)
+        );
     }
 
     @Test

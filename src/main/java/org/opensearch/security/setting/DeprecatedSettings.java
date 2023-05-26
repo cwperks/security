@@ -1,8 +1,11 @@
 /*
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
-
 package org.opensearch.security.setting;
 
 import org.opensearch.common.logging.DeprecationLogger;
@@ -20,7 +23,12 @@ public class DeprecatedSettings {
      */
     public static void checkForDeprecatedSetting(final Settings settings, final String legacySettingKey, final String validSettingKey) {
         if (settings.hasValue(legacySettingKey)) {
-            DEPRECATION_LOGGER.deprecate(legacySettingKey, "Found deprecated setting '{}', please replace with '{}'", legacySettingKey, validSettingKey);
+            DEPRECATION_LOGGER.deprecate(
+                legacySettingKey,
+                "Found deprecated setting '{}', please replace with '{}'",
+                legacySettingKey,
+                validSettingKey
+            );
         }
     }
 }

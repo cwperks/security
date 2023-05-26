@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package com.amazon.dlic.auth.http.saml;
 
 import java.io.IOException;
@@ -68,7 +65,6 @@ import org.opensearch.security.user.AuthCredentials;
 import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
-
 public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
     protected final static Logger log = LogManager.getLogger(HTTPSamlAuthenticator.class);
 
@@ -78,9 +74,8 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
 
     private static final String API_AUTHTOKEN_SUFFIX = "api/authtoken";
     private static final String AUTHINFO_SUFFIX = "authinfo";
-    private static final String REGEX_PATH_PREFIX = "/(" + LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/" +"(.*)";
-    private static final  Pattern PATTERN_PATH_PREFIX = Pattern.compile(REGEX_PATH_PREFIX);
-
+    private static final String REGEX_PATH_PREFIX = "/(" + LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/" + "(.*)";
+    private static final Pattern PATTERN_PATH_PREFIX = Pattern.compile(REGEX_PATH_PREFIX);
 
     private static boolean openSamlInitialized = false;
 
@@ -132,13 +127,15 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
             try {
                 this.saml2SettingsProvider.getCached();
             } catch (Exception e) {
-                log.debug("Exception while initializing Saml2SettingsProvider. Possibly, the IdP is unreachable right now. This is recoverable by a meta data refresh.", e);
+                log.debug(
+                    "Exception while initializing Saml2SettingsProvider. Possibly, the IdP is unreachable right now. This is recoverable by a meta data refresh.",
+                    e
+                );
             }
 
             this.jwtSettings = this.createJwtAuthenticatorSettings(settings);
 
-            this.authTokenProcessorHandler = new AuthTokenProcessorHandler(settings, jwtSettings,
-                    this.saml2SettingsProvider);
+            this.authTokenProcessorHandler = new AuthTokenProcessorHandler(settings, jwtSettings, this.saml2SettingsProvider);
 
             this.httpJwtAuthenticator = new HTTPJwtAuthenticator(this.jwtSettings, configPath);
 
@@ -149,8 +146,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
     }
 
     @Override
-    public AuthCredentials extractCredentials(RestRequest restRequest, ThreadContext threadContext)
-            throws OpenSearchSecurityException {
+    public AuthCredentials extractCredentials(RestRequest restRequest, ThreadContext threadContext) throws OpenSearchSecurityException {
         Matcher matcher = PATTERN_PATH_PREFIX.matcher(restRequest.path());
         final String suffix = matcher.matches() ? matcher.group(2) : null;
         if (API_AUTHTOKEN_SUFFIX.equals(suffix)) {
@@ -177,8 +173,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
             RestRequest restRequest = restChannel.request();
             Matcher matcher = PATTERN_PATH_PREFIX.matcher(restRequest.path());
             final String suffix = matcher.matches() ? matcher.group(2) : null;
-            if (API_AUTHTOKEN_SUFFIX.equals(suffix)
-                    && this.authTokenProcessorHandler.handle(restRequest, restChannel)){
+            if (API_AUTHTOKEN_SUFFIX.equals(suffix) && this.authTokenProcessorHandler.handle(restRequest, restChannel)) {
                 return true;
             }
 
@@ -200,9 +195,12 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
         AuthnRequest authnRequest = this.buildAuthnRequest(saml2Settings);
 
         return "X-Security-IdP realm=\"OpenSearch Security\" location=\""
-                + StringEscapeUtils.escapeJava(getSamlRequestRedirectBindingLocation(IdpEndpointType.SSO, saml2Settings,
-                        authnRequest.getEncodedAuthnRequest(true)))
-                + "\" requestId=\"" + StringEscapeUtils.escapeJava(authnRequest.getId()) + "\"";
+            + StringEscapeUtils.escapeJava(
+                getSamlRequestRedirectBindingLocation(IdpEndpointType.SSO, saml2Settings, authnRequest.getEncodedAuthnRequest(true))
+            )
+            + "\" requestId=\""
+            + StringEscapeUtils.escapeJava(authnRequest.getId())
+            + "\"";
     }
 
     private AuthnRequest buildAuthnRequest(Saml2Settings saml2Settings) {
@@ -221,12 +219,16 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
 
     private PrivateKey getSpSignaturePrivateKey(Settings settings, Path configPath) throws Exception {
         try {
-            PrivateKey result = PemKeyReader.loadKeyFromStream(settings.get("sp.signature_private_key_password"),
-                    PemKeyReader.resolveStream("sp.signature_private_key", settings));
+            PrivateKey result = PemKeyReader.loadKeyFromStream(
+                settings.get("sp.signature_private_key_password"),
+                PemKeyReader.resolveStream("sp.signature_private_key", settings)
+            );
 
             if (result == null) {
-                result = PemKeyReader.loadKeyFromFile(settings.get("sp.signature_private_key_password"),
-                        PemKeyReader.resolve("sp.signature_private_key_filepath", settings, configPath, false));
+                result = PemKeyReader.loadKeyFromFile(
+                    settings.get("sp.signature_private_key_password"),
+                    PemKeyReader.resolve("sp.signature_private_key_filepath", settings, configPath, false)
+                );
             }
 
             return result;
@@ -297,8 +299,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
     }
 
     @SuppressWarnings("removal")
-    private MetadataResolver createMetadataResolver(final Settings settings, final Path configPath)
-            throws Exception {
+    private MetadataResolver createMetadataResolver(final Settings settings, final Path configPath) throws Exception {
         final AbstractMetadataResolver metadataResolver;
 
         final String idpMetadataUrl = settings.get(IDP_METADATA_URL);
@@ -311,7 +312,9 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
         } else if (idpMetadataBody != null) {
             metadataResolver = new DOMMetadataResolver(getMetadataDOM(idpMetadataBody));
         } else {
-            throw new Exception(String.format("One of %s, %s or %s must be configured", IDP_METADATA_URL, IDP_METADATA_FILE, IDP_METADATA_CONTENT));
+            throw new Exception(
+                String.format("One of %s, %s or %s must be configured", IDP_METADATA_URL, IDP_METADATA_FILE, IDP_METADATA_CONTENT)
+            );
         }
 
         metadataResolver.setId(HTTPSamlAuthenticator.class.getName() + "_" + (++resolverIdCounter));
@@ -378,14 +381,12 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
 
             String nameIdClaim = this.subjectKey == null ? "sub" : "saml_ni";
             String nameId = authCredentials.getAttributes().get("attr.jwt." + nameIdClaim);
-            String nameIdFormat = SamlNameIdFormat
-                    .getByShortName(authCredentials.getAttributes().get("attr.jwt.saml_nif")).getUri();
+            String nameIdFormat = SamlNameIdFormat.getByShortName(authCredentials.getAttributes().get("attr.jwt.saml_nif")).getUri();
             String sessionIndex = authCredentials.getAttributes().get("attr.jwt.saml_si");
 
             LogoutRequest logoutRequest = new LogoutRequest(saml2Settings, null, nameId, sessionIndex, nameIdFormat);
 
-            return getSamlRequestRedirectBindingLocation(IdpEndpointType.SLO, saml2Settings,
-                    logoutRequest.getEncodedLogoutRequest(true));
+            return getSamlRequestRedirectBindingLocation(IdpEndpointType.SLO, saml2Settings, logoutRequest.getEncodedLogoutRequest(true));
 
         } catch (Exception e) {
             log.error("Error while creating logout URL. Logout will be not available", e);
@@ -398,8 +399,8 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
         threadContext.putTransient(ConfigConstants.SSO_LOGOUT_URL, buildLogoutUrl(authCredentials));
     }
 
-    private String getSamlRequestRedirectBindingLocation(IdpEndpointType idpEndpointType, Saml2Settings saml2Settings,
-            String samlRequest) throws Exception {
+    private String getSamlRequestRedirectBindingLocation(IdpEndpointType idpEndpointType, Saml2Settings saml2Settings, String samlRequest)
+        throws Exception {
 
         URL idpUrl = getIdpUrl(idpEndpointType, saml2Settings);
 
@@ -417,8 +418,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
             return "SAMLRequest=" + Util.urlEncoder(samlRequest);
         }
 
-        String queryString = "SAMLRequest=" + Util.urlEncoder(samlRequest) + "&SigAlg="
-                + Util.urlEncoder(this.spSignatureAlgorithm);
+        String queryString = "SAMLRequest=" + Util.urlEncoder(samlRequest) + "&SigAlg=" + Util.urlEncoder(this.spSignatureAlgorithm);
 
         String signature = getSamlRequestQueryStringSignature(queryString);
 
@@ -429,8 +429,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
 
     private String getSamlRequestQueryStringSignature(String samlRequestQueryString) throws Exception {
         try {
-            return Util.base64encoder(
-                    Util.sign(samlRequestQueryString, this.spSignaturePrivateKey, this.spSignatureAlgorithm));
+            return Util.base64encoder(Util.sign(samlRequestQueryString, this.spSignaturePrivateKey, this.spSignatureAlgorithm));
         } catch (Exception e) {
             throw new Exception("Error while signing SAML request", e);
         }
@@ -462,8 +461,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
             return new KeyProvider() {
 
                 @Override
-                public JsonWebKey getKeyAfterRefresh(String kid)
-                        throws AuthenticatorUnavailableException, BadCredentialsException {
+                public JsonWebKey getKeyAfterRefresh(String kid) throws AuthenticatorUnavailableException, BadCredentialsException {
                     return authTokenProcessorHandler.getSigningKey();
                 }
 
@@ -477,6 +475,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
     }
 
     private enum IdpEndpointType {
-        SSO, SLO
+        SSO,
+        SLO
     }
 }

@@ -1,18 +1,11 @@
 /*
- *   Copyright OpenSearch Contributors
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
-
 package org.opensearch.security;
 
 import java.nio.file.Path;
@@ -63,14 +56,21 @@ public class RolesInjectorIntegTest extends SingleClusterTest {
         }
 
         @Override
-        public Collection<Object> createComponents(Client client, ClusterService clusterService, ThreadPool threadPool,
-                                                   ResourceWatcherService resourceWatcherService, ScriptService scriptService,
-                                                   NamedXContentRegistry xContentRegistry, Environment environment,
-                                                   NodeEnvironment nodeEnvironment, NamedWriteableRegistry namedWriteableRegistry,
-                                                   IndexNameExpressionResolver indexNameExpressionResolver,
-                                                   Supplier<RepositoriesService> repositoriesServiceSupplier) {
-            if(injectedRoles != null)
-                threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES, injectedRoles);
+        public Collection<Object> createComponents(
+            Client client,
+            ClusterService clusterService,
+            ThreadPool threadPool,
+            ResourceWatcherService resourceWatcherService,
+            ScriptService scriptService,
+            NamedXContentRegistry xContentRegistry,
+            Environment environment,
+            NodeEnvironment nodeEnvironment,
+            NamedWriteableRegistry namedWriteableRegistry,
+            IndexNameExpressionResolver indexNameExpressionResolver,
+            Supplier<RepositoriesService> repositoriesServiceSupplier
+        ) {
+            if (injectedRoles != null) threadPool.getThreadContext()
+                .putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES, injectedRoles);
             return new ArrayList<>();
         }
     }
@@ -79,26 +79,42 @@ public class RolesInjectorIntegTest extends SingleClusterTest {
     public void testRolesInject() throws Exception {
         setup(Settings.EMPTY, new DynamicSecurityConfig().setSecurityRoles("roles.yml"), Settings.EMPTY);
 
-        Assert.assertEquals(clusterInfo.numNodes, clusterHelper.nodeClient().admin().cluster().health(
-                new ClusterHealthRequest().waitForGreenStatus()).actionGet().getNumberOfNodes());
-        Assert.assertEquals(ClusterHealthStatus.GREEN, clusterHelper.nodeClient().admin().cluster().
-                health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getStatus());
+        Assert.assertEquals(
+            clusterInfo.numNodes,
+            clusterHelper.nodeClient()
+                .admin()
+                .cluster()
+                .health(new ClusterHealthRequest().waitForGreenStatus())
+                .actionGet()
+                .getNumberOfNodes()
+        );
+        Assert.assertEquals(
+            ClusterHealthStatus.GREEN,
+            clusterHelper.nodeClient().admin().cluster().health(new ClusterHealthRequest().waitForGreenStatus()).actionGet().getStatus()
+        );
 
-        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false) 
-                .put(minimumSecuritySettings(Settings.EMPTY).get(0))
-                .put("cluster.name", clusterInfo.clustername)
-                .put("path.data", "./target/data/" + clusterInfo.clustername + "/cert/data")
-                .put("path.logs", "./target/data/" + clusterInfo.clustername + "/cert/logs")
-                .put("path.home", "./target")
-                .put("node.name", "testclient")
-                .put("discovery.initial_state_timeout", "8s")
-                .put("plugins.security.allow_default_init_securityindex", "true")
-                .putList("discovery.zen.ping.unicast.hosts", clusterInfo.nodeHost + ":" + clusterInfo.nodePort)
-                .build();
+        final Settings tcSettings = AbstractSecurityUnitTest.nodeRolesSettings(Settings.builder(), false, false)
+            .put(minimumSecuritySettings(Settings.EMPTY).get(0))
+            .put("cluster.name", clusterInfo.clustername)
+            .put("path.data", "./target/data/" + clusterInfo.clustername + "/cert/data")
+            .put("path.logs", "./target/data/" + clusterInfo.clustername + "/cert/logs")
+            .put("path.home", "./target")
+            .put("node.name", "testclient")
+            .put("discovery.initial_state_timeout", "8s")
+            .put("plugins.security.allow_default_init_securityindex", "true")
+            .putList("discovery.zen.ping.unicast.hosts", clusterInfo.nodeHost + ":" + clusterInfo.nodePort)
+            .build();
 
-        //1. Without roles injection.
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class,
-                OpenSearchSecurityPlugin.class, RolesInjectorPlugin.class).start()) {
+        // 1. Without roles injection.
+        try (
+            Node node = new PluginAwareNode(
+                false,
+                tcSettings,
+                Netty4ModulePlugin.class,
+                OpenSearchSecurityPlugin.class,
+                RolesInjectorPlugin.class
+            ).start()
+        ) {
             waitForInit(node.client());
 
             CreateIndexResponse cir = node.client().admin().indices().create(new CreateIndexRequest("captain-logs-1")).actionGet();
@@ -107,10 +123,18 @@ public class RolesInjectorIntegTest extends SingleClusterTest {
             Assert.assertTrue(ier.isExists());
         }
 
-        //2. With invalid roles, must throw security exception.
+        // 2. With invalid roles, must throw security exception.
         RolesInjectorPlugin.injectedRoles = "invalid_user|invalid_role";
         Exception exception = null;
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class, RolesInjectorPlugin.class).start()) {
+        try (
+            Node node = new PluginAwareNode(
+                false,
+                tcSettings,
+                Netty4ModulePlugin.class,
+                OpenSearchSecurityPlugin.class,
+                RolesInjectorPlugin.class
+            ).start()
+        ) {
             waitForInit(node.client());
 
             CreateIndexResponse cir = node.client().admin().indices().create(new CreateIndexRequest("captain-logs-2")).actionGet();
@@ -122,9 +146,17 @@ public class RolesInjectorIntegTest extends SingleClusterTest {
         Assert.assertNotNull(exception);
         Assert.assertTrue(exception.getMessage().contains("indices:admin/create"));
 
-        //3. With valid roles - which has permission to create index.
+        // 3. With valid roles - which has permission to create index.
         RolesInjectorPlugin.injectedRoles = "valid_user|opendistro_security_all_access";
-        try (Node node = new PluginAwareNode(false, tcSettings, Netty4ModulePlugin.class, OpenSearchSecurityPlugin.class, RolesInjectorPlugin.class).start()) {
+        try (
+            Node node = new PluginAwareNode(
+                false,
+                tcSettings,
+                Netty4ModulePlugin.class,
+                OpenSearchSecurityPlugin.class,
+                RolesInjectorPlugin.class
+            ).start()
+        ) {
             waitForInit(node.client());
 
             CreateIndexResponse cir = node.client().admin().indices().create(new CreateIndexRequest("captain-logs-3")).actionGet();

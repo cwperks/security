@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.dlic.rest.api;
 
 import org.apache.hc.core5.http.Header;
@@ -24,12 +21,13 @@ import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
 public class IndexMissingTest extends AbstractRestApiUnitTest {
-    private final String ENDPOINT; 
+    private final String ENDPOINT;
+
     protected String getEndpointPrefix() {
         return PLUGINS_PREFIX;
     }
 
-    public IndexMissingTest(){
+    public IndexMissingTest() {
         ENDPOINT = getEndpointPrefix() + "/api";
     }
 
@@ -81,7 +79,11 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
         Assert.assertEquals("{\"status\":\"INTERNAL_SERVER_ERROR\",\"message\":\"Security index not initialized\"}", errorString);
 
         // PUT request
-        response = rh.executePutRequest(ENDPOINT + "/actiongroups/READ", FileHelper.loadFile("restapi/actiongroup_read.json"), new Header[0]);
+        response = rh.executePutRequest(
+            ENDPOINT + "/actiongroups/READ",
+            FileHelper.loadFile("restapi/actiongroup_read.json"),
+            new Header[0]
+        );
         Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatusCode());
 
         // DELETE request
@@ -95,7 +97,10 @@ public class IndexMissingTest extends AbstractRestApiUnitTest {
         response = rh.executeGetRequest(ENDPOINT + "/roles");
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         SecurityJsonNode securityJsonNode = new SecurityJsonNode(DefaultObjectMapper.readTree(response.getBody()));
-        Assert.assertEquals("OPENDISTRO_SECURITY_CLUSTER_ALL", securityJsonNode.get("opendistro_security_admin").get("cluster_permissions").get(0).asString());
+        Assert.assertEquals(
+            "OPENDISTRO_SECURITY_CLUSTER_ALL",
+            securityJsonNode.get("opendistro_security_admin").get("cluster_permissions").get(0).asString()
+        );
 
     }
 }

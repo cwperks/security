@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.transport;
 
 import java.security.cert.CertificateParsingException;
@@ -58,8 +40,8 @@ public final class DefaultInterClusterRequestEvaluator implements InterClusterRe
     public DefaultInterClusterRequestEvaluator(final Settings settings) {
         this.certOid = settings.get(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.5");
         this.staticNodesDnFromEsYml = WildcardMatcher.from(
-                settings.getAsList(ConfigConstants.SECURITY_NODES_DN, Collections.emptyList()),
-                false
+            settings.getAsList(ConfigConstants.SECURITY_NODES_DN, Collections.emptyList()),
+            false
         );
         this.dynamicNodesDnConfigEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED, false);
         this.dynamicNodesDn = Collections.emptyMap();
@@ -79,32 +61,42 @@ public final class DefaultInterClusterRequestEvaluator implements InterClusterRe
     }
 
     @Override
-    public boolean isInterClusterRequest(TransportRequest request, X509Certificate[] localCerts, X509Certificate[] peerCerts,
-            final String principal) {
-        
+    public boolean isInterClusterRequest(
+        TransportRequest request,
+        X509Certificate[] localCerts,
+        X509Certificate[] peerCerts,
+        final String principal
+    ) {
+
         String[] principals = new String[2];
-        
+
         if (principal != null && principal.length() > 0) {
             principals[0] = principal;
-            principals[1] = principal.replace(" ","");
+            principals[1] = principal.replace(" ", "");
         }
 
         WildcardMatcher nodesDn = this.getNodesDnToEvaluate();
 
         final boolean isTraceEnabled = log.isTraceEnabled();
         if (principals[0] != null && nodesDn.matchAny(principals)) {
-            
+
             if (isTraceEnabled) {
-                log.trace("Treat certificate with principal {} as other node because of it matches one of {}", Arrays.toString(principals),
-                        nodesDn);
+                log.trace(
+                    "Treat certificate with principal {} as other node because of it matches one of {}",
+                    Arrays.toString(principals),
+                    nodesDn
+                );
             }
-            
+
             return true;
-            
+
         } else {
             if (isTraceEnabled) {
-                log.trace("Treat certificate with principal {} NOT as other node because we it does not matches one of {}", Arrays.toString(principals),
-                        nodesDn);
+                log.trace(
+                    "Treat certificate with principal {} NOT as other node because we it does not matches one of {}",
+                    Arrays.toString(principals),
+                    nodesDn
+                );
             }
         }
 
@@ -133,8 +125,11 @@ public final class DefaultInterClusterRequestEvaluator implements InterClusterRe
                             if (value instanceof String) {
                                 sb.append(id + "::" + value);
                             } else if (value instanceof byte[]) {
-                                log.error("Unable to handle OID san {} with value {} of type byte[] (ASN.1 DER not supported here)", id,
-                                        Arrays.toString((byte[]) value));
+                                log.error(
+                                    "Unable to handle OID san {} with value {} of type byte[] (ASN.1 DER not supported here)",
+                                    id,
+                                    Arrays.toString((byte[]) value)
+                                );
                             } else {
                                 log.error("Unable to handle OID san {} with value {} of type {}", id, value, value.getClass());
                             }

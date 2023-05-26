@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.auditlog;
 
 import java.io.Closeable;
@@ -43,30 +25,38 @@ import org.opensearch.transport.TransportRequest;
 
 public interface AuditLog extends Closeable {
 
-    //login
+    // login
     void logFailedLogin(String effectiveUser, boolean securityadmin, String initiatingUser, RestRequest request);
+
     void logSucceededLogin(String effectiveUser, boolean securityadmin, String initiatingUser, RestRequest request);
 
-    //privs
+    // privs
     void logMissingPrivileges(String privilege, String effectiveUser, RestRequest request);
+
     void logGrantedPrivileges(String effectiveUser, RestRequest request);
+
     void logMissingPrivileges(String privilege, TransportRequest request, Task task);
+
     void logGrantedPrivileges(String privilege, TransportRequest request, Task task);
 
     // index event requests
     void logIndexEvent(String privilege, TransportRequest request, Task task);
 
-    //spoof
+    // spoof
     void logBadHeaders(TransportRequest request, String action, Task task);
+
     void logBadHeaders(RestRequest request);
 
     void logSecurityIndexAttempt(TransportRequest request, String action, Task task);
 
     void logSSLException(TransportRequest request, Throwable t, String action, Task task);
+
     void logSSLException(RestRequest request, Throwable t);
 
     void logDocumentRead(String index, String id, ShardId shardId, Map<String, String> fieldNameValues);
+
     void logDocumentWritten(ShardId shardId, GetResult originalIndex, Index currentIndex, IndexResult result);
+
     void logDocumentDeleted(ShardId shardId, Delete delete, DeleteResult result);
 
     // compliance config
@@ -74,12 +64,16 @@ public interface AuditLog extends Closeable {
 
     // set config
     void setConfig(AuditConfig auditConfig);
-    
+
     public enum Origin {
-        REST, TRANSPORT, LOCAL
+        REST,
+        TRANSPORT,
+        LOCAL
     }
 
     public enum Operation {
-        CREATE, UPDATE, DELETE
+        CREATE,
+        UPDATE,
+        DELETE
     }
 }

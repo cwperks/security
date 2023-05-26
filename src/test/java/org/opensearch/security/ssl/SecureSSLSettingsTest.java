@@ -1,6 +1,10 @@
 /*
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
 package org.opensearch.security.ssl;
 
@@ -31,9 +35,7 @@ public class SecureSSLSettingsTest {
 
     @Test
     public void testGetInsecureSetting() {
-        final var settings = Settings.builder()
-                .put(SECURITY_SSL_HTTP_PEMKEY_PASSWORD.insecurePropertyName, "test-password")
-                .build();
+        final var settings = Settings.builder().put(SECURITY_SSL_HTTP_PEMKEY_PASSWORD.insecurePropertyName, "test-password").build();
         final var password = SECURITY_SSL_HTTP_PEMKEY_PASSWORD.getSetting(settings);
         Assert.assertEquals("test-password", password);
     }
@@ -43,9 +45,9 @@ public class SecureSSLSettingsTest {
         final var mockSecureSettings = new MockSecureSettings();
         mockSecureSettings.setString(SECURITY_SSL_HTTP_PEMKEY_PASSWORD.propertyName, "secure-password");
         final var settings = Settings.builder()
-                .setSecureSettings(mockSecureSettings)
-                .put(SECURITY_SSL_HTTP_PEMKEY_PASSWORD.insecurePropertyName, "insecure-password")
-                .build();
+            .setSecureSettings(mockSecureSettings)
+            .put(SECURITY_SSL_HTTP_PEMKEY_PASSWORD.insecurePropertyName, "insecure-password")
+            .build();
         final var password = SECURITY_SSL_HTTP_PEMKEY_PASSWORD.getSetting(settings);
         Assert.assertEquals("secure-password", password);
     }

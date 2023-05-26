@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.configuration;
 
 import org.apache.logging.log4j.LogManager;
@@ -40,18 +22,18 @@ public class ClusterInfoHolder implements ClusterStateListener {
     private volatile DiscoveryNodes nodes = null;
     private volatile Boolean isLocalNodeElectedClusterManager = null;
     private volatile boolean initialized;
-    
+
     @Override
     public void clusterChanged(ClusterChangedEvent event) {
-        if(nodes == null || event.nodesChanged()) {
+        if (nodes == null || event.nodesChanged()) {
             nodes = event.state().nodes();
             if (log.isDebugEnabled()) {
                 log.debug("Cluster Info Holder now initialized for 'nodes'");
             }
             initialized = true;
         }
-        
-        isLocalNodeElectedClusterManager = event.localNodeClusterManager()?Boolean.TRUE:Boolean.FALSE;
+
+        isLocalNodeElectedClusterManager = event.localNodeClusterManager() ? Boolean.TRUE : Boolean.FALSE;
     }
 
     public Boolean isLocalNodeElectedClusterManager() {
@@ -63,13 +45,13 @@ public class ClusterInfoHolder implements ClusterStateListener {
     }
 
     public Boolean hasNode(DiscoveryNode node) {
-        if(nodes == null) {
-            if(log.isDebugEnabled()) {
+        if (nodes == null) {
+            if (log.isDebugEnabled()) {
                 log.debug("Cluster Info Holder not initialized yet for 'nodes'");
             }
             return null;
         }
-        
-        return nodes.nodeExists(node)?Boolean.TRUE:Boolean.FALSE;
+
+        return nodes.nodeExists(node) ? Boolean.TRUE : Boolean.FALSE;
     }
 }

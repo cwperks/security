@@ -1,12 +1,11 @@
 /*
-* Copyright OpenSearch Contributors
-* SPDX-License-Identifier: Apache-2.0
-*
-* The OpenSearch Contributors require contributions made to
-* this file be licensed under the Apache-2.0 license or a
-* compatible open source license.
-*
-*/
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
 package org.opensearch.common.logging;
 
 /**
@@ -21,13 +20,9 @@ import org.apache.logging.log4j.core.LogEvent;
 
 class NodeAndClusterIdConverter {
 
+    public NodeAndClusterIdConverter() {}
 
-	public NodeAndClusterIdConverter() {
-	}
+    public static void setNodeIdAndClusterId(String nodeId, String clusterUUID) {}
 
-	public static void setNodeIdAndClusterId(String nodeId, String clusterUUID) {
-	}
-
-	public void format(LogEvent event, StringBuilder toAppendTo) {
-	}
+    public void format(LogEvent event, StringBuilder toAppendTo) {}
 }

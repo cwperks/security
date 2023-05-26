@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.ssl.util;
 
 import java.io.IOException;
@@ -41,7 +38,8 @@ public class CertFromTruststore {
         return new CertFromTruststore();
     }
 
-    public CertFromTruststore(KeystoreProps keystoreProps, String truststoreAlias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+    public CertFromTruststore(KeystoreProps keystoreProps, String truststoreAlias) throws CertificateException, NoSuchAlgorithmException,
+        KeyStoreException, IOException {
         this.keystoreProps = keystoreProps;
         final KeyStore ts = keystoreProps.loadKeystore();
 
@@ -54,7 +52,8 @@ public class CertFromTruststore {
         validate();
     }
 
-    public CertFromTruststore(KeystoreProps keystoreProps, String serverTruststoreAlias, String clientTruststoreAlias) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+    public CertFromTruststore(KeystoreProps keystoreProps, String serverTruststoreAlias, String clientTruststoreAlias)
+        throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
         this.keystoreProps = keystoreProps;
         final KeyStore ts = this.keystoreProps.loadKeystore();
 

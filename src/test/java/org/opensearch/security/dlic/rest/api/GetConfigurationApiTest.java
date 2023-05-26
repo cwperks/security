@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.dlic.rest.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -24,12 +21,13 @@ import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
 public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
-    private final String ENDPOINT; 
+    private final String ENDPOINT;
+
     protected String getEndpointPrefix() {
         return PLUGINS_PREFIX;
     }
 
-    public GetConfigurationApiTest(){
+    public GetConfigurationApiTest() {
         ENDPOINT = getEndpointPrefix() + "/api";
     }
 
@@ -48,9 +46,7 @@ public class GetConfigurationApiTest extends AbstractRestApiUnitTest {
         response = rh.executeGetRequest(ENDPOINT + "/securityconfig");
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         Settings settings = Settings.builder().loadFromSource(response.getBody(), XContentType.JSON).build();
-        Assert.assertEquals(
-                settings.getAsBoolean("config.dynamic.authc.authentication_domain_basic_internal.http_enabled", false),
-                true);
+        Assert.assertEquals(settings.getAsBoolean("config.dynamic.authc.authentication_domain_basic_internal.http_enabled", false), true);
         Assert.assertNull(settings.get("_opendistro_security_meta.type"));
 
         // internalusers

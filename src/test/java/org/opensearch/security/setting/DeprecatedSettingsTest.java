@@ -1,8 +1,11 @@
 /*
  * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
-
 package org.opensearch.security.setting;
 
 import org.junit.After;
@@ -29,7 +32,7 @@ public class DeprecatedSettingsTest {
     @Mock
     private DeprecationLogger logger;
 
-    private DeprecationLogger original; 
+    private DeprecationLogger original;
 
     @Before
     public void before() {

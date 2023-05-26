@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.securityconf.impl;
 
 import java.io.IOException;
@@ -48,7 +45,7 @@ public class WhitelistingSettings extends AllowlistingSettings {
     }
 
     public Map<String, List<HttpRequestMethods>> getRequests() {
-        return this.requests == null ? Collections.emptyMap(): this.requests;
+        return this.requests == null ? Collections.emptyMap() : this.requests;
     }
 
     public void setRequests(Map<String, List<HttpRequestMethods>> requests) {
@@ -59,7 +56,6 @@ public class WhitelistingSettings extends AllowlistingSettings {
     public String toString() {
         return "WhitelistingSetting [enabled=" + enabled + ", requests=" + requests + ']';
     }
-
 
     /**
      * Helper function to check if a rest request is whitelisted, by checking if the path is whitelisted,
@@ -76,26 +72,26 @@ public class WhitelistingSettings extends AllowlistingSettings {
      *      GET /_cluster/settings  - OK
      *      GET /_cluster/settings/ - OK
      */
-    private boolean requestIsWhitelisted(RestRequest request){
+    private boolean requestIsWhitelisted(RestRequest request) {
 
-        //ALSO ALLOWS REQUEST TO HAVE TRAILING '/'
-        //pathWithoutTrailingSlash stores the endpoint path without extra '/'. eg: /_cat/nodes
-        //pathWithTrailingSlash stores the endpoint path with extra '/'. eg: /_cat/nodes/
+        // ALSO ALLOWS REQUEST TO HAVE TRAILING '/'
+        // pathWithoutTrailingSlash stores the endpoint path without extra '/'. eg: /_cat/nodes
+        // pathWithTrailingSlash stores the endpoint path with extra '/'. eg: /_cat/nodes/
         String path = request.path();
         String pathWithoutTrailingSlash;
         String pathWithTrailingSlash;
 
-        //first obtain pathWithoutTrailingSlash, then add a '/' to it to get pathWithTrailingSlash
+        // first obtain pathWithoutTrailingSlash, then add a '/' to it to get pathWithTrailingSlash
         pathWithoutTrailingSlash = path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
         pathWithTrailingSlash = pathWithoutTrailingSlash + '/';
 
-        //check if pathWithoutTrailingSlash is whitelisted
-        if(requests.containsKey(pathWithoutTrailingSlash) && requests.get(pathWithoutTrailingSlash).contains(HttpRequestMethods.valueOf(request.method().toString())))
-            return true;
+        // check if pathWithoutTrailingSlash is whitelisted
+        if (requests.containsKey(pathWithoutTrailingSlash)
+            && requests.get(pathWithoutTrailingSlash).contains(HttpRequestMethods.valueOf(request.method().toString()))) return true;
 
-        //check if pathWithTrailingSlash is whitelisted
-        if(requests.containsKey(pathWithTrailingSlash) && requests.get(pathWithTrailingSlash).contains(HttpRequestMethods.valueOf(request.method().toString())))
-            return true;
+        // check if pathWithTrailingSlash is whitelisted
+        if (requests.containsKey(pathWithTrailingSlash)
+            && requests.get(pathWithTrailingSlash).contains(HttpRequestMethods.valueOf(request.method().toString()))) return true;
         return false;
     }
 
@@ -109,15 +105,19 @@ public class WhitelistingSettings extends AllowlistingSettings {
      * Currently, each resource_name has to be whitelisted separately
      */
     @Override
-    public boolean checkRequestIsAllowed(RestRequest request, RestChannel channel,
-                                          NodeClient client) throws IOException {
+    public boolean checkRequestIsAllowed(RestRequest request, RestChannel channel, NodeClient client) throws IOException {
         // if whitelisting is enabled but the request is not whitelisted, then return false, otherwise true.
-        if (this.enabled && !requestIsWhitelisted(request)){
-            channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, channel.newErrorBuilder().startObject()
-                    .field("error", request.method() + " " + request.path() + " API not whitelisted")
-                    .field("status", RestStatus.FORBIDDEN)
-                    .endObject()
-            ));
+        if (this.enabled && !requestIsWhitelisted(request)) {
+            channel.sendResponse(
+                new BytesRestResponse(
+                    RestStatus.FORBIDDEN,
+                    channel.newErrorBuilder()
+                        .startObject()
+                        .field("error", request.method() + " " + request.path() + " API not whitelisted")
+                        .field("status", RestStatus.FORBIDDEN)
+                        .endObject()
+                )
+            );
             return false;
         }
         return true;

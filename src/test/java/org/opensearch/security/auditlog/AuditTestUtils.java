@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.auditlog;
 
 import java.nio.file.Path;
@@ -62,7 +59,8 @@ public class AuditTestUtils {
         final Client clientProvider,
         final ThreadPool threadPool,
         final IndexNameExpressionResolver resolver,
-        final ClusterService clusterService) {
+        final ClusterService clusterService
+    ) {
         AuditLogImpl auditLog = new AuditLogImpl(settings, configPath, clientProvider, threadPool, resolver, clusterService);
         AuditConfig auditConfig = AuditConfig.from(settings);
         auditLog.setConfig(auditConfig);

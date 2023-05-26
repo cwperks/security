@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.cache;
 
 import java.nio.file.Path;
@@ -19,13 +16,11 @@ import org.opensearch.security.auth.AuthorizationBackend;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.user.User;
 
-
 public class DummyAuthorizer implements AuthorizationBackend {
 
     private static volatile long count;
 
-    public DummyAuthorizer(final Settings settings, final Path configPath) {
-    }
+    public DummyAuthorizer(final Settings settings, final Path configPath) {}
 
     @Override
     public String getType() {
@@ -44,7 +39,7 @@ public class DummyAuthorizer implements AuthorizationBackend {
     }
 
     public static void reset() {
-        count=0;
+        count = 0;
     }
 
 }

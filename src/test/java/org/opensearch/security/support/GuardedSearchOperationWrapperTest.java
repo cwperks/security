@@ -1,12 +1,10 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
 package org.opensearch.security.support;
 
@@ -25,7 +23,6 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-
 
 public class GuardedSearchOperationWrapperTest {
 
@@ -115,26 +112,21 @@ public class GuardedSearchOperationWrapperTest {
     private static class DefaultingGuardedSearchOperationWrapper implements GuardedSearchOperationWrapper {
 
         @Override
-        public void onNewReaderContext(ReaderContext readerContext) {
-        }
+        public void onNewReaderContext(ReaderContext readerContext) {}
 
         @Override
-        public void onNewScrollContext(ReaderContext readerContext) {
-        }
+        public void onNewScrollContext(ReaderContext readerContext) {}
 
         @Override
-        public void onPreQueryPhase(SearchContext context) {
-        }
+        public void onPreQueryPhase(SearchContext context) {}
 
         @Override
-        public void onQueryPhase(SearchContext searchContext, long tookInNanos) {
-        }
+        public void onQueryPhase(SearchContext searchContext, long tookInNanos) {}
 
         @Override
-        public void validateReaderContext(ReaderContext readerContext, TransportRequest transportRequest) {
-        }
+        public void validateReaderContext(ReaderContext readerContext, TransportRequest transportRequest) {}
 
-        void exerciseAllMethods(){
+        void exerciseAllMethods() {
             final SearchOperationListener sol = this.toListener();
             sol.onNewReaderContext(mock(ReaderContext.class));
             sol.onNewScrollContext(mock(ReaderContext.class));

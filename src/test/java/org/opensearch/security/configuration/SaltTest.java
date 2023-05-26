@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.configuration;
 
 import java.nio.charset.StandardCharsets;
@@ -44,9 +41,7 @@ public class SaltTest {
     public void testConfig() {
         // arrange
         final String testSalt = "abcdefghijklmnop";
-        final Settings settings = Settings.builder()
-                .put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt)
-                .build();
+        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt).build();
 
         // act
         final Salt salt = Salt.from(settings);
@@ -60,9 +55,7 @@ public class SaltTest {
     public void testSaltUsesOnlyFirst16Bytes() {
         // arrange
         final String testSalt = "abcdefghijklmnopqrstuvwxyz";
-        final Settings settings = Settings.builder()
-                .put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt)
-                .build();
+        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt).build();
         // act
         final Salt salt = Salt.from(settings);
 
@@ -79,9 +72,7 @@ public class SaltTest {
 
         // arrange
         final String testSalt = "abcd";
-        final Settings settings = Settings.builder()
-                .put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt)
-                .build();
+        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_COMPLIANCE_SALT, testSalt).build();
         // act
         final Salt salt = Salt.from(settings);
     }
@@ -93,7 +84,7 @@ public class SaltTest {
         thrown.expectMessage("Provided compliance salt must contain 16 bytes");
 
         // act
-        new Salt(new byte[]{1, 2, 3, 4, 5});
+        new Salt(new byte[] { 1, 2, 3, 4, 5 });
     }
 
     @Test
@@ -103,12 +94,12 @@ public class SaltTest {
         thrown.expectMessage("Provided compliance salt must contain 16 bytes");
 
         // act
-        new Salt(new byte[]{1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5});
+        new Salt(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });
     }
 
     @Test
     public void testSaltThrowsNoExceptionWhenCorrectBytesArrayProvided() {
         // act
-        new Salt(new byte[]{1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1});
+        new Salt(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1 });
     }
 }

@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.test.helper.network;
 
 /*
@@ -79,9 +61,7 @@ public class SocketUtils {
      */
     public static final int PORT_RANGE_MAX = 65535;
 
-
     private static final Random random = new Random(System.currentTimeMillis());
-
 
     /**
      * Although {@code SocketUtils} consists solely of static utility methods,
@@ -102,7 +82,6 @@ public class SocketUtils {
     public SocketUtils() {
         /* no-op */
     }
-
 
     /**
      * Find an available TCP port randomly selected from the range
@@ -218,19 +197,17 @@ public class SocketUtils {
         return SocketType.UDP.findAvailablePorts(numRequested, minPort, maxPort);
     }
 
-
     private enum SocketType {
 
         TCP {
             @Override
             protected boolean isPortAvailable(int port) {
                 try {
-                    ServerSocket serverSocket = ServerSocketFactory.getDefault().createServerSocket(
-                            port, 1, InetAddress.getByName("localhost"));
+                    ServerSocket serverSocket = ServerSocketFactory.getDefault()
+                        .createServerSocket(port, 1, InetAddress.getByName("localhost"));
                     serverSocket.close();
                     return true;
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                     return false;
                 }
             }
@@ -243,8 +220,7 @@ public class SocketUtils {
                     DatagramSocket socket = new DatagramSocket(port, InetAddress.getByName("localhost"));
                     socket.close();
                     return true;
-                }
-                catch (Exception ex) {
+                } catch (Exception ex) {
                     return false;
                 }
             }
@@ -277,23 +253,28 @@ public class SocketUtils {
          * @throws IllegalStateException if no available port could be found
          */
         int findAvailablePort(int minPort, int maxPort) {
-            //Assert.assertTrue(minPort > 0, "'minPort' must be greater than 0");
-            //Assert.isTrue(maxPort >= minPort, "'maxPort' must be greater than or equal to 'minPort'");
-            //Assert.isTrue(maxPort <= PORT_RANGE_MAX, "'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
+            // Assert.assertTrue(minPort > 0, "'minPort' must be greater than 0");
+            // Assert.isTrue(maxPort >= minPort, "'maxPort' must be greater than or equal to 'minPort'");
+            // Assert.isTrue(maxPort <= PORT_RANGE_MAX, "'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
 
             int portRange = maxPort - minPort;
             int candidatePort;
             int searchCounter = 0;
             do {
                 if (searchCounter > portRange) {
-                    throw new IllegalStateException(String.format(
+                    throw new IllegalStateException(
+                        String.format(
                             "Could not find an available %s port in the range [%d, %d] after %d attempts",
-                            name(), minPort, maxPort, searchCounter));
+                            name(),
+                            minPort,
+                            maxPort,
+                            searchCounter
+                        )
+                    );
                 }
                 candidatePort = findRandomPort(minPort, maxPort);
                 searchCounter++;
-            }
-            while (!isPortAvailable(candidatePort));
+            } while (!isPortAvailable(candidatePort));
 
             return candidatePort;
         }
@@ -308,12 +289,12 @@ public class SocketUtils {
          * @throws IllegalStateException if the requested number of available ports could not be found
          */
         SortedSet<Integer> findAvailablePorts(int numRequested, int minPort, int maxPort) {
-            //Assert.isTrue(minPort > 0, "'minPort' must be greater than 0");
-            //Assert.isTrue(maxPort > minPort, "'maxPort' must be greater than 'minPort'");
-            //Assert.isTrue(maxPort <= PORT_RANGE_MAX, "'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
-            //Assert.isTrue(numRequested > 0, "'numRequested' must be greater than 0");
-            //Assert.isTrue((maxPort - minPort) >= numRequested,
-            //        "'numRequested' must not be greater than 'maxPort' - 'minPort'");
+            // Assert.isTrue(minPort > 0, "'minPort' must be greater than 0");
+            // Assert.isTrue(maxPort > minPort, "'maxPort' must be greater than 'minPort'");
+            // Assert.isTrue(maxPort <= PORT_RANGE_MAX, "'maxPort' must be less than or equal to " + PORT_RANGE_MAX);
+            // Assert.isTrue(numRequested > 0, "'numRequested' must be greater than 0");
+            // Assert.isTrue((maxPort - minPort) >= numRequested,
+            // "'numRequested' must not be greater than 'maxPort' - 'minPort'");
 
             SortedSet<Integer> availablePorts = new TreeSet<>();
             int attemptCount = 0;
@@ -322,9 +303,9 @@ public class SocketUtils {
             }
 
             if (availablePorts.size() != numRequested) {
-                throw new IllegalStateException(String.format(
-                        "Could not find %d available %s ports in the range [%d, %d]",
-                        numRequested, name(), minPort, maxPort));
+                throw new IllegalStateException(
+                    String.format("Could not find %d available %s ports in the range [%d, %d]", numRequested, name(), minPort, maxPort)
+                );
             }
 
             return availablePorts;

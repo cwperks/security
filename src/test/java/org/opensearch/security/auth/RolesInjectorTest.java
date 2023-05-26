@@ -1,18 +1,11 @@
 /*
- *   Copyright OpenSearch Contributors
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
-
 package org.opensearch.security.auth;
 
 import java.util.Arrays;
@@ -33,7 +26,6 @@ import org.opensearch.transport.TransportRequest;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES;
-
 
 public class RolesInjectorTest {
 
@@ -76,13 +68,7 @@ public class RolesInjectorTest {
 
     @Test
     public void testCorruptedInjection() {
-        List<String> corruptedStrs = Arrays.asList(
-                "invalid",
-                "role_1,role_2",
-                " | ",
-                "  ",
-                "|"
-        );
+        List<String> corruptedStrs = Arrays.asList("invalid", "role_1,role_2", " | ", "  ", "|");
 
         corruptedStrs.forEach(name -> {
             ThreadContext threadContext = new ThreadContext(Settings.EMPTY);

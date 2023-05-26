@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.filter;
 
 import java.nio.file.Path;
@@ -83,13 +65,18 @@ public class SecurityRestFilter {
     private static final String HEALTH_SUFFIX = "health";
     private static final String WHO_AM_I_SUFFIX = "whoami";
 
-    private static final String REGEX_PATH_PREFIX = "/("+ LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/" +"(.*)";
+    private static final String REGEX_PATH_PREFIX = "/(" + LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/" + "(.*)";
     private static final Pattern PATTERN_PATH_PREFIX = Pattern.compile(REGEX_PATH_PREFIX);
 
-
-    public SecurityRestFilter(final BackendRegistry registry, final AuditLog auditLog,
-                              final ThreadPool threadPool, final PrincipalExtractor principalExtractor,
-                              final Settings settings, final Path configPath, final CompatConfig compatConfig) {
+    public SecurityRestFilter(
+        final BackendRegistry registry,
+        final AuditLog auditLog,
+        final ThreadPool threadPool,
+        final PrincipalExtractor principalExtractor,
+        final Settings settings,
+        final Path configPath,
+        final CompatConfig compatConfig
+    ) {
         super();
         this.registry = registry;
         this.auditLog = auditLog;
@@ -117,13 +104,15 @@ public class SecurityRestFilter {
      */
     public RestHandler wrap(RestHandler original, AdminDNs adminDNs) {
         return new RestHandler() {
-            
+
             @Override
             public void handleRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
                 org.apache.logging.log4j.ThreadContext.clearAll();
                 if (!checkAndAuthenticateRequest(request, channel, client)) {
                     User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    if (userIsSuperAdmin(user, adminDNs) || (whitelistingSettings.checkRequestIsAllowed(request, channel, client) && allowlistingSettings.checkRequestIsAllowed(request, channel, client))) {
+                    if (userIsSuperAdmin(user, adminDNs)
+                        || (whitelistingSettings.checkRequestIsAllowed(request, channel, client)
+                            && allowlistingSettings.checkRequestIsAllowed(request, channel, client))) {
                         original.handleRequest(request, channel, client);
                     }
                 }
@@ -138,20 +127,19 @@ public class SecurityRestFilter {
         return user != null && adminDNs.isAdmin(user);
     }
 
-    private boolean checkAndAuthenticateRequest(RestRequest request, RestChannel channel,
-                                                NodeClient client) throws Exception {
+    private boolean checkAndAuthenticateRequest(RestRequest request, RestChannel channel, NodeClient client) throws Exception {
 
         threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, Origin.REST.toString());
-        
-        if(HTTPHelper.containsBadHeader(request)) {
+
+        if (HTTPHelper.containsBadHeader(request)) {
             final OpenSearchException exception = ExceptionUtils.createBadHeaderException();
             log.error(exception.toString());
             auditLog.logBadHeaders(request);
             channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, exception));
             return true;
         }
-        
-        if(SSLRequestHelper.containsBadHeader(threadContext, ConfigConstants.OPENDISTRO_SECURITY_CONFIG_PREFIX)) {
+
+        if (SSLRequestHelper.containsBadHeader(threadContext, ConfigConstants.OPENDISTRO_SECURITY_CONFIG_PREFIX)) {
             final OpenSearchException exception = ExceptionUtils.createBadHeaderException();
             log.error(exception.toString());
             auditLog.logBadHeaders(request);
@@ -161,13 +149,13 @@ public class SecurityRestFilter {
 
         final SSLInfo sslInfo;
         try {
-            if((sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor)) != null) {
-                if(sslInfo.getPrincipal() != null) {
+            if ((sslInfo = SSLRequestHelper.getSSLInfo(settings, configPath, request, principalExtractor)) != null) {
+                if (sslInfo.getPrincipal() != null) {
                     threadContext.putTransient("_opendistro_security_ssl_principal", sslInfo.getPrincipal());
                 }
-                
-                if(sslInfo.getX509Certs() != null) {
-                     threadContext.putTransient("_opendistro_security_ssl_peer_certificates", sslInfo.getX509Certs());
+
+                if (sslInfo.getX509Certs() != null) {
+                    threadContext.putTransient("_opendistro_security_ssl_peer_certificates", sslInfo.getX509Certs());
                 }
                 threadContext.putTransient("_opendistro_security_ssl_protocol", sslInfo.getProtocol());
                 threadContext.putTransient("_opendistro_security_ssl_cipher", sslInfo.getCipher());
@@ -178,26 +166,27 @@ public class SecurityRestFilter {
             channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, e));
             return true;
         }
-        
-        if(!compatConfig.restAuthEnabled()) {
+
+        if (!compatConfig.restAuthEnabled()) {
             return false;
         }
 
         Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
         final String suffix = matcher.matches() ? matcher.group(2) : null;
-        if(request.method() != Method.OPTIONS
-                && !(HEALTH_SUFFIX.equals(suffix))
-                && !(WHO_AM_I_SUFFIX.equals(suffix))) {
+        if (request.method() != Method.OPTIONS && !(HEALTH_SUFFIX.equals(suffix)) && !(WHO_AM_I_SUFFIX.equals(suffix))) {
             if (!registry.authenticate(request, channel, threadContext)) {
                 // another roundtrip
                 org.apache.logging.log4j.ThreadContext.remove("user");
                 return true;
             } else {
                 // make it possible to filter logs by username
-                org.apache.logging.log4j.ThreadContext.put("user", ((User)threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER)).getName());
+                org.apache.logging.log4j.ThreadContext.put(
+                    "user",
+                    ((User) threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER)).getName()
+                );
             }
         }
-        
+
         return false;
     }
 

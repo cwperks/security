@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.http;
 
 import java.net.InetSocketAddress;
@@ -47,7 +29,7 @@ public class XFFResolver {
     private volatile boolean enabled;
     private volatile RemoteIpDetector detector;
     private final ThreadContext threadContext;
-        
+
     public XFFResolver(final ThreadPool threadPool) {
         super();
         this.threadContext = threadPool.getThreadContext();
@@ -58,40 +40,49 @@ public class XFFResolver {
         if (isTraceEnabled) {
             log.trace("resolve {}", request.getHttpChannel().getRemoteAddress());
         }
-        
-        if(enabled && request.getHttpChannel().getRemoteAddress() instanceof InetSocketAddress && request.getHttpChannel() instanceof Netty4HttpChannel) {
 
-            final InetSocketAddress isa = new InetSocketAddress(detector.detect(request, threadContext), ((InetSocketAddress)request.getHttpChannel().getRemoteAddress()).getPort());
-        
-            if(isa.isUnresolved()) {           
-                throw new OpenSearchSecurityException("Cannot resolve address "+isa.getHostString());
+        if (enabled
+            && request.getHttpChannel().getRemoteAddress() instanceof InetSocketAddress
+            && request.getHttpChannel() instanceof Netty4HttpChannel) {
+
+            final InetSocketAddress isa = new InetSocketAddress(
+                detector.detect(request, threadContext),
+                ((InetSocketAddress) request.getHttpChannel().getRemoteAddress()).getPort()
+            );
+
+            if (isa.isUnresolved()) {
+                throw new OpenSearchSecurityException("Cannot resolve address " + isa.getHostString());
             }
-                
-             
+
             if (isTraceEnabled) {
-                if(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_XFF_DONE) == Boolean.TRUE) {
+                if (threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_XFF_DONE) == Boolean.TRUE) {
                     log.trace("xff resolved {} to {}", request.getHttpChannel().getRemoteAddress(), isa);
                 } else {
-                    log.trace("no xff done for {}",request.getClass());
+                    log.trace("no xff done for {}", request.getClass());
                 }
             }
             return new TransportAddress(isa);
-        } else if(request.getHttpChannel().getRemoteAddress() instanceof InetSocketAddress){
-            
+        } else if (request.getHttpChannel().getRemoteAddress() instanceof InetSocketAddress) {
+
             if (isTraceEnabled) {
-                log.trace("no xff done (enabled or no netty request) {},{},{},{}",enabled, request.getClass());
+                log.trace("no xff done (enabled or no netty request) {},{},{},{}", enabled, request.getClass());
 
             }
-            return new TransportAddress((InetSocketAddress)request.getHttpChannel().getRemoteAddress());
+            return new TransportAddress((InetSocketAddress) request.getHttpChannel().getRemoteAddress());
         } else {
-            throw new OpenSearchSecurityException("Cannot handle this request. Remote address is "+request.getHttpChannel().getRemoteAddress()+" with request class "+request.getClass());
+            throw new OpenSearchSecurityException(
+                "Cannot handle this request. Remote address is "
+                    + request.getHttpChannel().getRemoteAddress()
+                    + " with request class "
+                    + request.getClass()
+            );
         }
     }
 
     @Subscribe
     public void onDynamicConfigModelChanged(DynamicConfigModel dcm) {
         enabled = dcm.isXffEnabled();
-        if(enabled) {
+        if (enabled) {
             detector = new RemoteIpDetector();
             detector.setInternalProxies(dcm.getInternalProxies());
             detector.setRemoteIpHeader(dcm.getRemoteIpHeader());

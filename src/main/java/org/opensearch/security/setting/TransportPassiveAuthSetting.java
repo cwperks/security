@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.setting;
 
 import org.opensearch.common.settings.Setting;
@@ -24,10 +21,7 @@ public class TransportPassiveAuthSetting extends OpensearchDynamicSetting<Boolea
     }
 
     private static Setting<Boolean> getSetting() {
-        return Setting.boolSetting(
-                SETTING,
-                false,
-                Setting.Property.NodeScope, Setting.Property.Dynamic);
+        return Setting.boolSetting(SETTING, false, Setting.Property.NodeScope, Setting.Property.Dynamic);
     }
 
     private static Boolean getSettingInitialValue(final Settings settings) {
@@ -36,6 +30,9 @@ public class TransportPassiveAuthSetting extends OpensearchDynamicSetting<Boolea
 
     @Override
     protected String getClusterChangeMessage(final Boolean dynamicSettingNewValue) {
-        return String.format("Detected change in settings, cluster setting for transportPassiveAuth is %s", dynamicSettingNewValue ? "enabled" : "disabled");
+        return String.format(
+            "Detected change in settings, cluster setting for transportPassiveAuth is %s",
+            dynamicSettingNewValue ? "enabled" : "disabled"
+        );
     }
 }

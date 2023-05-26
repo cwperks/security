@@ -1,12 +1,10 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
 package org.opensearch.security.support;
 
@@ -60,14 +58,14 @@ public class SecurityUtilsTest {
             final String prefixWithKeyName = "${" + predicateName + "." + envKeyName;
 
             final String baseKeyName = prefixWithKeyName + "}";
-            assertThat("Testing " + envKeyName + ", " + baseKeyName,
-                predicate.test(baseKeyName),
-                equalTo(true));
+            assertThat("Testing " + envKeyName + ", " + baseKeyName, predicate.test(baseKeyName), equalTo(true));
 
             final String baseKeyNameWithDefault = prefixWithKeyName + ":-tTt}";
-            assertThat("Testing " + envKeyName + " with defaultValue, " + baseKeyNameWithDefault,
+            assertThat(
+                "Testing " + envKeyName + " with defaultValue, " + baseKeyNameWithDefault,
                 predicate.test(baseKeyNameWithDefault),
-                equalTo(true));
+                equalTo(true)
+            );
         });
     }
 }

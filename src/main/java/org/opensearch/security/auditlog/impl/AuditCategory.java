@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.auditlog.impl;
 
 import java.util.Collection;
@@ -33,13 +30,8 @@ public enum AuditCategory {
     COMPLIANCE_INTERNAL_CONFIG_WRITE;
 
     public static Set<AuditCategory> parse(final Collection<String> categories) {
-        if (categories.isEmpty())
-            return Collections.emptySet();
+        if (categories.isEmpty()) return Collections.emptySet();
 
-        return categories
-                .stream()
-                .map(String::toUpperCase)
-                .map(AuditCategory::valueOf)
-                .collect(ImmutableSet.toImmutableSet());
+        return categories.stream().map(String::toUpperCase).map(AuditCategory::valueOf).collect(ImmutableSet.toImmutableSet());
     }
 }

@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.support;
 
 import java.lang.reflect.Method;
@@ -19,7 +16,6 @@ import java.util.function.Function;
 
 import org.opensearch.SpecialPermission;
 
-
 public class ReflectiveAttributeAccessors {
     public static <O> Function<O, Object> objectAttr(String name) {
         return new ReflectiveAttributeGetter<O, Object>(name, Object.class);
@@ -28,7 +24,7 @@ public class ReflectiveAttributeAccessors {
     public static <O, R> Function<O, R> objectAttr(String name, Class<R> type) {
         return new ReflectiveAttributeGetter<O, R>(name, type);
     }
-    
+
     public static <O, R> Function<O, R> protectedObjectAttr(String name, Class<R> type) {
         return new ProtectedReflectiveAttributeGetter<O, R>(name, type);
     }
@@ -114,7 +110,6 @@ public class ReflectiveAttributeAccessors {
         }
     }
 
-    
     static class ReflectiveAttributeSetter<O, R> implements BiFunction<O, R, Void> {
         private final String attribute;
         private final String methodName;

@@ -1,12 +1,11 @@
 /*
-* Copyright OpenSearch Contributors
-* SPDX-License-Identifier: Apache-2.0
-*
-* The OpenSearch Contributors require contributions made to
-* this file be licensed under the Apache-2.0 license or a
-* compatible open source license.
-*
-*/
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
 package org.opensearch.test.framework.matcher;
 
 import java.util.Set;
@@ -22,27 +21,27 @@ import static java.util.Objects.isNull;
 
 class DeletePitContainsExactlyIdsResponseMatcher extends TypeSafeDiagnosingMatcher<DeletePitResponse> {
 
-	private final Set<String> expectedPitIds;
+    private final Set<String> expectedPitIds;
 
-	DeletePitContainsExactlyIdsResponseMatcher(String[] expectedPitIds) {
-		if (isNull(expectedPitIds) || 0 == expectedPitIds.length) {
-			throw new IllegalArgumentException("expectedPitIds cannot be null or empty");
-		}
-		this.expectedPitIds = Set.of(expectedPitIds);
-	}
+    DeletePitContainsExactlyIdsResponseMatcher(String[] expectedPitIds) {
+        if (isNull(expectedPitIds) || 0 == expectedPitIds.length) {
+            throw new IllegalArgumentException("expectedPitIds cannot be null or empty");
+        }
+        this.expectedPitIds = Set.of(expectedPitIds);
+    }
 
-	@Override
-	protected boolean matchesSafely(DeletePitResponse response, Description mismatchDescription) {
-		Set<String> actualPitIds = response.getDeletePitResults().stream().map(DeletePitInfo::getPitId).collect(Collectors.toSet());
-		if (!actualPitIds.equals(expectedPitIds)) {
-			mismatchDescription.appendText("Actual pit ids: ").appendValue(actualPitIds);
-			return false;
-		}
-		return true;
-	}
+    @Override
+    protected boolean matchesSafely(DeletePitResponse response, Description mismatchDescription) {
+        Set<String> actualPitIds = response.getDeletePitResults().stream().map(DeletePitInfo::getPitId).collect(Collectors.toSet());
+        if (!actualPitIds.equals(expectedPitIds)) {
+            mismatchDescription.appendText("Actual pit ids: ").appendValue(actualPitIds);
+            return false;
+        }
+        return true;
+    }
 
-	@Override
-	public void describeTo(Description description) {
-		description.appendText("Should contain exactly pit with ids: ").appendValue(expectedPitIds);
-	}
+    @Override
+    public void describeTo(Description description) {
+        description.appendText("Should contain exactly pit with ids: ").appendValue(expectedPitIds);
+    }
 }

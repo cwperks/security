@@ -1,16 +1,10 @@
 /*
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
 package org.opensearch.security.ssl;
 
@@ -75,8 +69,7 @@ public final class SecureSSLSettings {
         public final String defaultValue;
 
         public Setting<SecureString> asSetting() {
-            return SecureSetting.secureString(this.propertyName,
-                    new InsecureFallbackStringSetting(this.insecurePropertyName));
+            return SecureSetting.secureString(this.propertyName, new InsecureFallbackStringSetting(this.insecurePropertyName));
         }
 
         public Setting<SecureString> asInsecureSetting() {
@@ -89,9 +82,9 @@ public final class SecureSSLSettings {
 
         public String getSetting(Settings settings, String defaultValue) {
             return Optional.of(this.asSetting().get(settings))
-                    .filter(ss -> ss.length() > 0)
-                    .map(SecureString::toString)
-                    .orElse(defaultValue);
+                .filter(ss -> ss.length() > 0)
+                .map(SecureString::toString)
+                .orElse(defaultValue);
         }
     }
 
@@ -99,8 +92,8 @@ public final class SecureSSLSettings {
 
     public static List<Setting<?>> getSecureSettings() {
         return Arrays.stream(SSLSetting.values())
-                .flatMap(setting -> Stream.of(setting.asSetting(), setting.asInsecureSetting()))
-                .collect(Collectors.toList());
+            .flatMap(setting -> Stream.of(setting.asSetting(), setting.asInsecureSetting()))
+            .collect(Collectors.toList());
     }
 
     /**
@@ -117,8 +110,12 @@ public final class SecureSSLSettings {
 
         public SecureString get(Settings settings) {
             if (this.exists(settings)) {
-                LOG.warn("Setting [{}] has a secure counterpart [{}{}] which should be used instead - allowing for legacy SSL setups",
-                        this.name, this.name, SECURE_SUFFIX);
+                LOG.warn(
+                    "Setting [{}] has a secure counterpart [{}{}] which should be used instead - allowing for legacy SSL setups",
+                    this.name,
+                    this.name,
+                    SECURE_SUFFIX
+                );
             }
 
             return super.get(settings);

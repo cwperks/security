@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package com.amazon.dlic.auth.ldap;
 
 import java.util.Collections;
@@ -30,8 +27,14 @@ public class LdapUser extends User {
     private final transient LdapEntry userEntry;
     private final String originalUsername;
 
-    public LdapUser(final String name, String originalUsername, final LdapEntry userEntry,
-            final AuthCredentials credentials, int customAttrMaxValueLen, WildcardMatcher allowlistedCustomLdapAttrMatcher) {
+    public LdapUser(
+        final String name,
+        String originalUsername,
+        final LdapEntry userEntry,
+        final AuthCredentials credentials,
+        int customAttrMaxValueLen,
+        WildcardMatcher allowlistedCustomLdapAttrMatcher
+    ) {
         super(name, null, credentials);
         this.originalUsername = originalUsername;
         this.userEntry = userEntry;
@@ -41,7 +44,7 @@ public class LdapUser extends User {
 
     /**
      * May return null because ldapEntry is transient
-     * 
+     *
      * @return ldapEntry or null if object was deserialized
      */
     public LdapEntry getUserEntry() {
@@ -55,9 +58,13 @@ public class LdapUser extends User {
     public String getOriginalUsername() {
         return originalUsername;
     }
-    
-    public static Map<String, String> extractLdapAttributes(String originalUsername, final LdapEntry userEntry,
-            int customAttrMaxValueLen, WildcardMatcher allowlistedCustomLdapAttrMatcher) {
+
+    public static Map<String, String> extractLdapAttributes(
+        String originalUsername,
+        final LdapEntry userEntry,
+        int customAttrMaxValueLen,
+        WildcardMatcher allowlistedCustomLdapAttrMatcher
+    ) {
         Map<String, String> attributes = new HashMap<>();
         attributes.put("ldap.original.username", originalUsername);
         attributes.put("ldap.dn", userEntry.getDn());

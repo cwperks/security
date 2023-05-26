@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security;
 
 import java.io.IOException;
@@ -54,10 +36,10 @@ public class DefaultObjectMapper {
     public static final ObjectMapper objectMapper = new ObjectMapper();
     public final static ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private static final ObjectMapper defaulOmittingObjectMapper = new ObjectMapper();
-    
+
     static {
         objectMapper.setSerializationInclusion(Include.NON_NULL);
-        //objectMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+        // objectMapper.enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
         objectMapper.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
         defaulOmittingObjectMapper.setSerializationInclusion(Include.NON_DEFAULT);
         defaulOmittingObjectMapper.enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
@@ -75,24 +57,31 @@ public class DefaultObjectMapper {
         if (value == null) {
             return defaultValue;
         } else if (value instanceof Boolean) {
-            return (boolean)value;
+            return (boolean) value;
         } else if (value instanceof String) {
-            String text = ((String)value).trim();
+            String text = ((String) value).trim();
             if ("true".equals(text) || "True".equals(text)) {
                 return true;
             }
             if ("false".equals(text) || "False".equals(text)) {
                 return false;
             }
-            throw InvalidFormatException.from(null,
-                    "Cannot deserialize value of type 'boolean' from String \"" + text + "\": only \"true\" or \"false\" recognized)",
-                    null, Boolean.class);
+            throw InvalidFormatException.from(
+                null,
+                "Cannot deserialize value of type 'boolean' from String \"" + text + "\": only \"true\" or \"false\" recognized)",
+                null,
+                Boolean.class
+            );
         }
-        throw MismatchedInputException.from(null, Boolean.class, "Cannot deserialize instance of 'boolean' out of '" + value + "' (Property: " + key + ")");
+        throw MismatchedInputException.from(
+            null,
+            Boolean.class,
+            "Cannot deserialize instance of 'boolean' out of '" + value + "' (Property: " + key + ")"
+        );
     }
 
     public static <T> T getOrDefault(Map<String, Object> properties, String key, T defaultValue) {
-        T value = (T)properties.get(key);
+        T value = (T) properties.get(key);
         return value != null ? value : defaultValue;
     }
 
@@ -116,7 +105,7 @@ public class DefaultObjectMapper {
             throw (IOException) e.getCause();
         }
     }
-    
+
     @SuppressWarnings("removal")
     public static <T> T readValue(String string, Class<T> clazz) throws IOException {
 
@@ -137,7 +126,7 @@ public class DefaultObjectMapper {
             throw (IOException) e.getCause();
         }
     }
-    
+
     @SuppressWarnings("removal")
     public static JsonNode readTree(String string) throws IOException {
 
@@ -172,7 +161,7 @@ public class DefaultObjectMapper {
             return AccessController.doPrivileged(new PrivilegedExceptionAction<String>() {
                 @Override
                 public String run() throws Exception {
-                    return (omitDefaults?defaulOmittingObjectMapper:objectMapper).writeValueAsString(value);
+                    return (omitDefaults ? defaulOmittingObjectMapper : objectMapper).writeValueAsString(value);
                 }
             });
         } catch (final PrivilegedActionException e) {
@@ -229,12 +218,11 @@ public class DefaultObjectMapper {
     }
 
     public static Set<String> getFields(Class cls) {
-        return objectMapper
-                .getSerializationConfig()
-                .introspect(getTypeFactory().constructType(cls))
-                .findProperties()
-                .stream()
-                .map(BeanPropertyDefinition::getName)
-                .collect(ImmutableSet.toImmutableSet());
+        return objectMapper.getSerializationConfig()
+            .introspect(getTypeFactory().constructType(cls))
+            .findProperties()
+            .stream()
+            .map(BeanPropertyDefinition::getName)
+            .collect(ImmutableSet.toImmutableSet());
     }
 }

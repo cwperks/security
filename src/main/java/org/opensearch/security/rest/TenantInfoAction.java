@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.rest;
 
 import java.io.IOException;
@@ -65,11 +47,10 @@ import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
 
 public class TenantInfoAction extends BaseRestHandler {
     private static final List<Route> routes = addRoutesPrefix(
-            ImmutableList.of(
-                new Route(GET, "/tenantinfo"),
-                new Route(POST, "/tenantinfo")
-            ),
-            "/_opendistro/_security", "/_plugins/_security");
+        ImmutableList.of(new Route(GET, "/tenantinfo"), new Route(POST, "/tenantinfo")),
+        "/_opendistro/_security",
+        "/_plugins/_security"
+    );
 
     private final Logger log = LogManager.getLogger(this.getClass());
     private final PrivilegesEvaluator evaluator;
@@ -78,9 +59,15 @@ public class TenantInfoAction extends BaseRestHandler {
     private final AdminDNs adminDns;
     private final ConfigurationRepository configurationRepository;
 
-    public TenantInfoAction(final Settings settings, final RestController controller, 
-    		final PrivilegesEvaluator evaluator, final ThreadPool threadPool, final ClusterService clusterService, final AdminDNs adminDns,
-                            final ConfigurationRepository configurationRepository) {
+    public TenantInfoAction(
+        final Settings settings,
+        final RestController controller,
+        final PrivilegesEvaluator evaluator,
+        final ThreadPool threadPool,
+        final ClusterService clusterService,
+        final AdminDNs adminDns,
+        final ConfigurationRepository configurationRepository
+    ) {
         super();
         this.threadContext = threadPool.getThreadContext();
         this.evaluator = evaluator;
@@ -100,41 +87,41 @@ public class TenantInfoAction extends BaseRestHandler {
 
             @Override
             public void accept(RestChannel channel) throws Exception {
-                XContentBuilder builder = channel.newBuilder(); //NOSONAR
+                XContentBuilder builder = channel.newBuilder(); // NOSONAR
                 BytesRestResponse response = null;
-                
+
                 try {
 
-                    final User user = (User)threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    
-                    //only allowed for admins or the kibanaserveruser
-                    if(!isAuthorized()) {
-                        response = new BytesRestResponse(RestStatus.FORBIDDEN,"");
+                    final User user = (User) threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+
+                    // only allowed for admins or the kibanaserveruser
+                    if (!isAuthorized()) {
+                        response = new BytesRestResponse(RestStatus.FORBIDDEN, "");
                     } else {
 
-                    	builder.startObject();
-	
-                    	final SortedMap<String, IndexAbstraction> lookup = clusterService.state().metadata().getIndicesLookup();
-                    	for(final String indexOrAlias: lookup.keySet()) {
-                    		final String tenant = tenantNameForIndex(indexOrAlias);
-                    		if(tenant != null) {
-                    			builder.field(indexOrAlias, tenant);
-                    		}
-                    	}
+                        builder.startObject();
 
-	                    builder.endObject();
-	
-	                    response = new BytesRestResponse(RestStatus.OK, builder);
+                        final SortedMap<String, IndexAbstraction> lookup = clusterService.state().metadata().getIndicesLookup();
+                        for (final String indexOrAlias : lookup.keySet()) {
+                            final String tenant = tenantNameForIndex(indexOrAlias);
+                            if (tenant != null) {
+                                builder.field(indexOrAlias, tenant);
+                            }
+                        }
+
+                        builder.endObject();
+
+                        response = new BytesRestResponse(RestStatus.OK, builder);
                     }
                 } catch (final Exception e1) {
                     log.error(e1.toString());
-                    builder = channel.newBuilder(); //NOSONAR
+                    builder = channel.newBuilder(); // NOSONAR
                     builder.startObject();
                     builder.field("error", e1.toString());
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, builder);
                 } finally {
-                    if(builder != null) {
+                    if (builder != null) {
                         builder.close();
                     }
                 }
@@ -145,7 +132,7 @@ public class TenantInfoAction extends BaseRestHandler {
     }
 
     private boolean isAuthorized() {
-        final User user = (User)threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+        final User user = (User) threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
 
         if (user == null) {
             return false;
@@ -173,44 +160,43 @@ public class TenantInfoAction extends BaseRestHandler {
     }
 
     private final SecurityDynamicConfiguration<?> load(final CType config, boolean logComplianceEvent) {
-        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationsFromIndex(Collections.singleton(config), logComplianceEvent).get(config).deepClone();
+        SecurityDynamicConfiguration<?> loaded = configurationRepository.getConfigurationsFromIndex(
+            Collections.singleton(config),
+            logComplianceEvent
+        ).get(config).deepClone();
         return DynamicConfigFactory.addStatics(loaded);
     }
 
     private String tenantNameForIndex(String index) {
-    	String[] indexParts;
-    	if(index == null 
-    			|| (indexParts = index.split("_")).length != 3
-    			) {
-    		return null;
-    	}
-    	
-    	
-    	if(!indexParts[0].equals(evaluator.dashboardsIndex())) {
-    		return null;
-    	}
-    	
-    	try {
-			final int expectedHash = Integer.parseInt(indexParts[1]);
-			final String sanitizedName = indexParts[2];
-			
-			for(String tenant: evaluator.getAllConfiguredTenantNames()) {
-				if(tenant.hashCode() == expectedHash && sanitizedName.equals(tenant.toLowerCase().replaceAll("[^a-z0-9]+",""))) {
-					return tenant;
-				}
-			}
+        String[] indexParts;
+        if (index == null || (indexParts = index.split("_")).length != 3) {
+            return null;
+        }
 
-			return "__private__";
-		} catch (NumberFormatException e) {
-			log.warn("Index {} looks like a Security tenant index but we cannot parse the hashcode so we ignore it.", index);
-			return null;
-		}
+        if (!indexParts[0].equals(evaluator.dashboardsIndex())) {
+            return null;
+        }
+
+        try {
+            final int expectedHash = Integer.parseInt(indexParts[1]);
+            final String sanitizedName = indexParts[2];
+
+            for (String tenant : evaluator.getAllConfiguredTenantNames()) {
+                if (tenant.hashCode() == expectedHash && sanitizedName.equals(tenant.toLowerCase().replaceAll("[^a-z0-9]+", ""))) {
+                    return tenant;
+                }
+            }
+
+            return "__private__";
+        } catch (NumberFormatException e) {
+            log.warn("Index {} looks like a Security tenant index but we cannot parse the hashcode so we ignore it.", index);
+            return null;
+        }
     }
 
     @Override
     public String getName() {
         return "Tenant Info Action";
     }
-    
-    
+
 }

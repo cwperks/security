@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.dlic.rest.api;
 
 import org.apache.hc.core5.http.Header;
@@ -29,13 +26,14 @@ import static org.junit.Assert.assertTrue;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
 
 public class AccountApiTest extends AbstractRestApiUnitTest {
-    private final String BASE_ENDPOINT; 
-    private final String ENDPOINT; 
+    private final String BASE_ENDPOINT;
+    private final String ENDPOINT;
+
     protected String getEndpointPrefix() {
         return PLUGINS_PREFIX;
     }
 
-    public AccountApiTest(){
+    public AccountApiTest() {
         BASE_ENDPOINT = getEndpointPrefix() + "/api/";
         ENDPOINT = getEndpointPrefix() + "/api/account";
     }
@@ -189,14 +187,16 @@ public class AccountApiTest extends AbstractRestApiUnitTest {
         final String testUsername = "test";
         final String testPassword = "test-password";
         final String newPassword = "new-password";
-        final String createInternalUserPayload = "{\n" +
-                "  \"password\": \"" + testPassword + "\",\n" +
-                "  \"backend_roles\": [\"test-backend-role-1\"],\n" +
-                "  \"opendistro_security_roles\": [\"opendistro_security_all_access\"],\n" +
-                "  \"attributes\": {\n" +
-                "    \"attribute1\": \"value1\"\n" +
-                "  }\n" +
-                "}";
+        final String createInternalUserPayload = "{\n"
+            + "  \"password\": \""
+            + testPassword
+            + "\",\n"
+            + "  \"backend_roles\": [\"test-backend-role-1\"],\n"
+            + "  \"opendistro_security_roles\": [\"opendistro_security_all_access\"],\n"
+            + "  \"attributes\": {\n"
+            + "    \"attribute1\": \"value1\"\n"
+            + "  }\n"
+            + "}";
         final String changePasswordPayload = "{\"password\":\"" + newPassword + "\", \"current_password\":\"" + testPassword + "\"}";
         final String internalUserEndpoint = BASE_ENDPOINT + "internalusers/" + testUsername;
 
@@ -215,9 +215,9 @@ public class AccountApiTest extends AbstractRestApiUnitTest {
         response = rh.executeGetRequest(internalUserEndpoint);
         assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         Settings responseBody = Settings.builder()
-                .loadFromSource(response.getBody(), XContentType.JSON)
-                .build()
-                .getAsSettings(testUsername);
+            .loadFromSource(response.getBody(), XContentType.JSON)
+            .build()
+            .getAsSettings(testUsername);
         assertTrue(responseBody.getAsList("backend_roles").contains("test-backend-role-1"));
         assertTrue(responseBody.getAsList("opendistro_security_roles").contains("opendistro_security_all_access"));
         assertEquals(responseBody.getAsSettings("attributes").get("attribute1"), "value1");

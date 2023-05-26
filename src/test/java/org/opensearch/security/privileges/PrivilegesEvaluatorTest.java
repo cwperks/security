@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.privileges;
 
 import org.apache.hc.core5.http.Header;
@@ -26,15 +23,15 @@ public class PrivilegesEvaluatorTest extends SingleClusterTest {
     private static final Header NegatedRegexUserHeader = encodeBasicHeader("negated_regex_user", "negated_regex_user");
 
     public void setupSettingsIndexPattern() throws Exception {
-        Settings settings = Settings.builder()
-                .build();
-        setup(Settings.EMPTY,
-                new DynamicSecurityConfig()
-                        .setSecurityRoles("roles_index_patterns.yml")
-                        .setSecurityInternalUsers("internal_users_index_patterns.yml")
-                        .setSecurityRolesMapping("roles_mapping_index_patterns.yml"),
-                settings,
-                true);
+        Settings settings = Settings.builder().build();
+        setup(
+            Settings.EMPTY,
+            new DynamicSecurityConfig().setSecurityRoles("roles_index_patterns.yml")
+                .setSecurityInternalUsers("internal_users_index_patterns.yml")
+                .setSecurityRolesMapping("roles_mapping_index_patterns.yml"),
+            settings,
+            true
+        );
     }
 
     @Test
@@ -42,9 +39,9 @@ public class PrivilegesEvaluatorTest extends SingleClusterTest {
         setupSettingsIndexPattern();
 
         RestHelper rh = nonSslRestHelper();
-        RestHelper.HttpResponse response = rh.executeGetRequest( "*/_search", NegativeLookaheadUserHeader);
+        RestHelper.HttpResponse response = rh.executeGetRequest("*/_search", NegativeLookaheadUserHeader);
         Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
-        response = rh.executeGetRequest( "r*/_search", NegativeLookaheadUserHeader);
+        response = rh.executeGetRequest("r*/_search", NegativeLookaheadUserHeader);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
     }
 
@@ -53,9 +50,9 @@ public class PrivilegesEvaluatorTest extends SingleClusterTest {
         setupSettingsIndexPattern();
 
         RestHelper rh = nonSslRestHelper();
-        RestHelper.HttpResponse response = rh.executeGetRequest( "*/_search", NegatedRegexUserHeader);
+        RestHelper.HttpResponse response = rh.executeGetRequest("*/_search", NegatedRegexUserHeader);
         Assert.assertEquals(HttpStatus.SC_FORBIDDEN, response.getStatusCode());
-        response = rh.executeGetRequest( "r*/_search", NegatedRegexUserHeader);
+        response = rh.executeGetRequest("r*/_search", NegatedRegexUserHeader);
         Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
     }
 }

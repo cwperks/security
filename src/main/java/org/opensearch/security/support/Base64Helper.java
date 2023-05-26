@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.support;
 
 import java.io.ByteArrayInputStream;
@@ -88,15 +70,13 @@ public class Base64Helper {
         Enum.class
     );
 
-    private static final Set<String> SAFE_CLASS_NAMES = Collections.singleton(
-        "org.ldaptive.LdapAttribute$LdapAttributeValues"
-    );
+    private static final Set<String> SAFE_CLASS_NAMES = Collections.singleton("org.ldaptive.LdapAttribute$LdapAttributeValues");
 
     private static boolean isSafeClass(Class<?> cls) {
-        return cls.isArray() ||
-            SAFE_CLASSES.contains(cls) ||
-            SAFE_CLASS_NAMES.contains(cls.getName()) ||
-            SAFE_ASSIGNABLE_FROM_CLASSES.stream().anyMatch(c -> c.isAssignableFrom(cls));
+        return cls.isArray()
+            || SAFE_CLASSES.contains(cls)
+            || SAFE_CLASS_NAMES.contains(cls.getName())
+            || SAFE_ASSIGNABLE_FROM_CLASSES.stream().anyMatch(c -> c.isAssignableFrom(cls));
     }
 
     private final static class SafeObjectOutputStream extends ObjectOutputStream {
@@ -110,7 +90,7 @@ public class Base64Helper {
                 try {
                     sm.checkPermission(new SpecialPermission());
 
-                    AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                         AccessController.checkPermission(SUBSTITUTION_PERMISSION);
                         return null;
                     });
@@ -141,9 +121,7 @@ public class Base64Helper {
                 sm.checkPermission(new SpecialPermission());
             }
 
-            AccessController.doPrivileged(
-                (PrivilegedAction<Boolean>) () -> enableReplaceObject(true)
-            );
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> enableReplaceObject(true));
         }
 
         @Override

@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.dlic.rest.api;
 
 import java.nio.file.Path;
@@ -74,16 +71,40 @@ import static org.opensearch.security.dlic.rest.support.Utils.addDeprecatedRoute
  * <p>
  */
 public class WhitelistApiAction extends AllowlistApiAction {
-    private static final List<DeprecatedRoute> routes = addDeprecatedRoutesPrefix(ImmutableList.of(
-            new DeprecatedRoute(RestRequest.Method.GET, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."),
-            new DeprecatedRoute(RestRequest.Method.PUT, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."),
-            new DeprecatedRoute(RestRequest.Method.PATCH, "/whitelist", "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead.")
-    ));
+    private static final List<DeprecatedRoute> routes = addDeprecatedRoutesPrefix(
+        ImmutableList.of(
+            new DeprecatedRoute(
+                RestRequest.Method.GET,
+                "/whitelist",
+                "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."
+            ),
+            new DeprecatedRoute(
+                RestRequest.Method.PUT,
+                "/whitelist",
+                "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."
+            ),
+            new DeprecatedRoute(
+                RestRequest.Method.PATCH,
+                "/whitelist",
+                "[/whitelist] is a deprecated endpoint. Please use [/allowlist] instead."
+            )
+        )
+    );
 
     @Inject
-    public WhitelistApiAction(final Settings settings, final Path configPath, final RestController controller, final Client client,
-                              final AdminDNs adminDNs, final ConfigurationRepository cl, final ClusterService cs,
-                              final PrincipalExtractor principalExtractor, final PrivilegesEvaluator evaluator, ThreadPool threadPool, AuditLog auditLog) {
+    public WhitelistApiAction(
+        final Settings settings,
+        final Path configPath,
+        final RestController controller,
+        final Client client,
+        final AdminDNs adminDNs,
+        final ConfigurationRepository cl,
+        final ClusterService cs,
+        final PrincipalExtractor principalExtractor,
+        final PrivilegesEvaluator evaluator,
+        ThreadPool threadPool,
+        AuditLog auditLog
+    ) {
         super(settings, configPath, controller, client, adminDNs, cl, cs, principalExtractor, evaluator, threadPool, auditLog);
     }
 

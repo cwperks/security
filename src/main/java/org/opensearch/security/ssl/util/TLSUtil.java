@@ -1,19 +1,16 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
 package org.opensearch.security.ssl.util;
 
 import java.nio.ByteOrder;
 
 import io.netty.buffer.ByteBuf;
-
 
 public class TLSUtil {
 
@@ -41,7 +38,7 @@ public class TLSUtil {
             case SSL_CONTENT_TYPE_ALERT:
             case SSL_CONTENT_TYPE_HANDSHAKE:
             case SSL_CONTENT_TYPE_APPLICATION_DATA:
-            // CS-SUPPRESS-SINGLE: RegexpSingleline Extensions heartbeat needs special handling by security extension
+                // CS-SUPPRESS-SINGLE: RegexpSingleline Extensions heartbeat needs special handling by security extension
             case SSL_CONTENT_TYPE_EXTENSION_HEARTBEAT:
                 tls = true;
                 break;
@@ -71,7 +68,6 @@ public class TLSUtil {
     }
 
     private static int unsignedShortBE(ByteBuf buffer, int offset) {
-        return buffer.order() == ByteOrder.BIG_ENDIAN ?
-                buffer.getUnsignedShort(offset) : buffer.getUnsignedShortLE(offset);
+        return buffer.order() == ByteOrder.BIG_ENDIAN ? buffer.getUnsignedShort(offset) : buffer.getUnsignedShortLE(offset);
     }
 }

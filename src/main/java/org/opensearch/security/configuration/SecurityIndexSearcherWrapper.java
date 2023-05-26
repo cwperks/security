@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.configuration;
 
 import java.io.IOException;
@@ -47,7 +29,7 @@ import org.opensearch.security.support.HeaderHelper;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 
-public class SecurityIndexSearcherWrapper implements CheckedFunction<DirectoryReader, DirectoryReader, IOException>  {
+public class SecurityIndexSearcherWrapper implements CheckedFunction<DirectoryReader, DirectoryReader, IOException> {
 
     protected final Logger log = LogManager.getLogger(this.getClass());
     protected final ThreadContext threadContext;
@@ -63,18 +45,32 @@ public class SecurityIndexSearcherWrapper implements CheckedFunction<DirectoryRe
     private final Boolean systemIndexEnabled;
     private final WildcardMatcher systemIndexMatcher;
 
-    //constructor is called per index, so avoid costly operations here
-    public SecurityIndexSearcherWrapper(final IndexService indexService, final Settings settings, final AdminDNs adminDNs, final PrivilegesEvaluator evaluator) {
+    // constructor is called per index, so avoid costly operations here
+    public SecurityIndexSearcherWrapper(
+        final IndexService indexService,
+        final Settings settings,
+        final AdminDNs adminDNs,
+        final PrivilegesEvaluator evaluator
+    ) {
         index = indexService.index();
         threadContext = indexService.getThreadPool().getThreadContext();
-        this.securityIndex = settings.get(ConfigConstants.SECURITY_CONFIG_INDEX_NAME, ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX);
+        this.securityIndex = settings.get(
+            ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
+            ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
+        );
         this.evaluator = evaluator;
         this.adminDns = adminDNs;
         this.protectedIndexMatcher = WildcardMatcher.from(settings.getAsList(ConfigConstants.SECURITY_PROTECTED_INDICES_KEY));
         this.allowedRolesMatcher = WildcardMatcher.from(settings.getAsList(ConfigConstants.SECURITY_PROTECTED_INDICES_ROLES_KEY));
-        this.protectedIndexEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_KEY, ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_DEFAULT);
+        this.protectedIndexEnabled = settings.getAsBoolean(
+            ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_KEY,
+            ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_DEFAULT
+        );
 
-        this.systemIndexEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_DEFAULT);
+        this.systemIndexEnabled = settings.getAsBoolean(
+            ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY,
+            ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_DEFAULT
+        );
         this.systemIndexMatcher = WildcardMatcher.from(settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY));
     }
 
@@ -134,7 +130,7 @@ public class SecurityIndexSearcherWrapper implements CheckedFunction<DirectoryRe
 
     protected final boolean isAdminDnOrPluginRequest() {
         final User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-        if(user == null) {
+        if (user == null) {
             // allow request without user from plugin.
             return true;
         } else if (adminDns.isAdmin(user)) {

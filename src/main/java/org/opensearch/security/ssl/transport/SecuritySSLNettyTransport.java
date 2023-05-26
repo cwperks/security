@@ -1,31 +1,11 @@
 /*
- * Copyright 2015-2017 floragunn GmbH
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * 
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * 
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.ssl.transport;
 
 import java.net.InetSocketAddress;
@@ -71,11 +51,29 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
     private final SslExceptionHandler errorHandler;
     private final SSLConfig SSLConfig;
 
-    public SecuritySSLNettyTransport(final Settings settings, final Version version, final ThreadPool threadPool, final NetworkService networkService,
-                                     final PageCacheRecycler pageCacheRecycler, final NamedWriteableRegistry namedWriteableRegistry,
-                                     final CircuitBreakerService circuitBreakerService, final SecurityKeyStore ossks, final SslExceptionHandler errorHandler, SharedGroupFactory sharedGroupFactory,
-                                     final SSLConfig SSLConfig) {
-        super(settings, version, threadPool, networkService, pageCacheRecycler, namedWriteableRegistry, circuitBreakerService, sharedGroupFactory);
+    public SecuritySSLNettyTransport(
+        final Settings settings,
+        final Version version,
+        final ThreadPool threadPool,
+        final NetworkService networkService,
+        final PageCacheRecycler pageCacheRecycler,
+        final NamedWriteableRegistry namedWriteableRegistry,
+        final CircuitBreakerService circuitBreakerService,
+        final SecurityKeyStore ossks,
+        final SslExceptionHandler errorHandler,
+        SharedGroupFactory sharedGroupFactory,
+        final SSLConfig SSLConfig
+    ) {
+        super(
+            settings,
+            version,
+            threadPool,
+            networkService,
+            pageCacheRecycler,
+            namedWriteableRegistry,
+            circuitBreakerService,
+            sharedGroupFactory
+        );
 
         this.ossks = ossks;
         this.errorHandler = errorHandler;
@@ -101,7 +99,7 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
     protected ChannelHandler getServerChannelInitializer(String name) {
         return new SSLServerChannelInitializer(name);
     }
-    
+
     @Override
     protected ChannelHandler getClientChannelInitializer(DiscoveryNode node) {
         return new SSLClientChannelInitializer(node);
@@ -127,7 +125,7 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
                 ch.pipeline().addFirst("ssl_server", sslHandler);
             }
         }
-        
+
         @Override
         public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (cause instanceof DecoderException && cause != null) {
@@ -147,23 +145,25 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
         private final boolean hostnameVerificationEnabled;
         private final boolean hostnameVerificationResovleHostName;
         private final SslExceptionHandler errorHandler;
-        
 
-        private ClientSSLHandler(final SecurityKeyStore sks, final boolean hostnameVerificationEnabled,
-                                 final boolean hostnameVerificationResovleHostName, final SslExceptionHandler errorHandler) {
+        private ClientSSLHandler(
+            final SecurityKeyStore sks,
+            final boolean hostnameVerificationEnabled,
+            final boolean hostnameVerificationResovleHostName,
+            final SslExceptionHandler errorHandler
+        ) {
             this.sks = sks;
             this.hostnameVerificationEnabled = hostnameVerificationEnabled;
             this.hostnameVerificationResovleHostName = hostnameVerificationResovleHostName;
             this.errorHandler = errorHandler;
         }
-        
 
         @Override
         public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (cause instanceof DecoderException && cause != null) {
                 cause = cause.getCause();
             }
-            
+
             errorHandler.logError(cause, false);
             logger.error("Exception during establishing a SSL connection: " + cause, cause);
 
@@ -171,7 +171,8 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
         }
 
         @Override
-        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) throws Exception {
+        public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise)
+            throws Exception {
             SSLEngine engine = null;
             try {
                 if (hostnameVerificationEnabled) {
@@ -183,10 +184,16 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
                         hostname = inetSocketAddress.getHostString();
                     }
 
-                    if(log.isDebugEnabled()) {
-                        log.debug("Hostname of peer is {} ({}/{}) with hostnameVerificationResovleHostName: {}", hostname, inetSocketAddress.getHostName(), inetSocketAddress.getHostString(), hostnameVerificationResovleHostName);
+                    if (log.isDebugEnabled()) {
+                        log.debug(
+                            "Hostname of peer is {} ({}/{}) with hostnameVerificationResovleHostName: {}",
+                            hostname,
+                            inetSocketAddress.getHostName(),
+                            inetSocketAddress.getHostString(),
+                            hostnameVerificationResovleHostName
+                        );
                     }
-                    
+
                     engine = sks.createClientTransportSSLEngine(hostname, inetSocketAddress.getPort());
                 } else {
                     engine = sks.createClientTransportSSLEngine(null, -1);
@@ -210,14 +217,23 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
         public SSLClientChannelInitializer(DiscoveryNode node) {
             this.node = node;
             hostnameVerificationEnabled = settings.getAsBoolean(
-                    SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENFORCE_HOSTNAME_VERIFICATION, true);
+                SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENFORCE_HOSTNAME_VERIFICATION,
+                true
+            );
             hostnameVerificationResovleHostName = settings.getAsBoolean(
-                    SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENFORCE_HOSTNAME_VERIFICATION_RESOLVE_HOST_NAME, true);
+                SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENFORCE_HOSTNAME_VERIFICATION_RESOLVE_HOST_NAME,
+                true
+            );
 
             connectionTestResult = SSLConnectionTestResult.SSL_AVAILABLE;
             if (SSLConfig.isDualModeEnabled()) {
-                SSLConnectionTestUtil sslConnectionTestUtil = new SSLConnectionTestUtil(node.getAddress().getAddress(), node.getAddress().getPort());
-                connectionTestResult = AccessController.doPrivileged((PrivilegedAction<SSLConnectionTestResult>) sslConnectionTestUtil::testConnection);
+                SSLConnectionTestUtil sslConnectionTestUtil = new SSLConnectionTestUtil(
+                    node.getAddress().getAddress(),
+                    node.getAddress().getPort()
+                );
+                connectionTestResult = AccessController.doPrivileged(
+                    (PrivilegedAction<SSLConnectionTestResult>) sslConnectionTestUtil::testConnection
+                );
             }
         }
 
@@ -225,31 +241,35 @@ public class SecuritySSLNettyTransport extends Netty4Transport {
         protected void initChannel(Channel ch) throws Exception {
             super.initChannel(ch);
 
-            if(connectionTestResult == SSLConnectionTestResult.OPENSEARCH_PING_FAILED) {
-                logger.error("SSL dual mode is enabled but dual mode handshake and OpenSearch ping has failed during client connection setup, closing channel");
+            if (connectionTestResult == SSLConnectionTestResult.OPENSEARCH_PING_FAILED) {
+                logger.error(
+                    "SSL dual mode is enabled but dual mode handshake and OpenSearch ping has failed during client connection setup, closing channel"
+                );
                 ch.close();
                 return;
             }
 
             if (connectionTestResult == SSLConnectionTestResult.SSL_AVAILABLE) {
                 logger.debug("Connection to {} needs to be ssl, adding ssl handler to the client channel ", node.getHostName());
-                ch.pipeline().addFirst("client_ssl_handler", new ClientSSLHandler(ossks, hostnameVerificationEnabled,
-                        hostnameVerificationResovleHostName, errorHandler));
+                ch.pipeline()
+                    .addFirst(
+                        "client_ssl_handler",
+                        new ClientSSLHandler(ossks, hostnameVerificationEnabled, hostnameVerificationResovleHostName, errorHandler)
+                    );
             } else {
                 logger.debug("Connection to {} needs to be non ssl", node.getHostName());
             }
         }
-        
+
         @Override
         public final void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             if (cause instanceof DecoderException && cause != null) {
                 cause = cause.getCause();
             }
 
-
             errorHandler.logError(cause, false);
             logger.error("Exception during establishing a SSL connection: " + cause, cause);
-            
+
             super.exceptionCaught(ctx, cause);
         }
     }

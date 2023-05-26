@@ -1,14 +1,11 @@
 /*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.auth;
 
 import java.nio.ByteBuffer;
@@ -51,7 +48,7 @@ public class InternalAuthBackendTests {
         CharBuffer buf = StandardCharsets.UTF_8.decode(wrap);
         char[] array = new char[buf.limit()];
         buf.get(array);
-        Arrays.fill(password, (byte)0);
+        Arrays.fill(password, (byte) 0);
         return array;
     }
 
@@ -68,12 +65,11 @@ public class InternalAuthBackendTests {
 
         char[] array = createArrayFromPasswordBytes(validPasswordBytes);
 
-
         when(internalUsersModel.getHash(validUsernameAuth.getUsername())).thenReturn(hash);
         when(internalUsersModel.exists(validUsernameAuth.getUsername())).thenReturn(true);
         doReturn(true).when(internalAuthenticationBackend).passwordMatchesHash(Mockito.any(String.class), Mockito.any(char[].class));
 
-        //Act
+        // Act
         internalAuthenticationBackend.authenticate(validUsernameAuth);
 
         verify(internalAuthenticationBackend, times(1)).passwordMatchesHash(hash, array);
@@ -95,9 +91,11 @@ public class InternalAuthBackendTests {
         when(internalUsersModel.getHash("admin")).thenReturn(hash);
         when(internalUsersModel.exists("admin")).thenReturn(true);
 
-        OpenSearchSecurityException ex = Assert.assertThrows(OpenSearchSecurityException.class,
-                () -> internalAuthenticationBackend.authenticate(validUsernameAuth));
-        assert(ex.getMessage().contains("password does not match"));
+        OpenSearchSecurityException ex = Assert.assertThrows(
+            OpenSearchSecurityException.class,
+            () -> internalAuthenticationBackend.authenticate(validUsernameAuth)
+        );
+        assert (ex.getMessage().contains("password does not match"));
         verify(internalAuthenticationBackend, times(1)).passwordMatchesHash(hash, array);
     }
 
@@ -114,11 +112,13 @@ public class InternalAuthBackendTests {
         char[] array = createArrayFromPasswordBytes(validPasswordBytes);
 
         when(internalUsersModel.exists("ertyuiykgjjfguyifdghc")).thenReturn(false);
-        when(internalAuthenticationBackend.passwordMatchesHash(hash, array)).thenReturn(true); //Say that the password is correct
+        when(internalAuthenticationBackend.passwordMatchesHash(hash, array)).thenReturn(true); // Say that the password is correct
 
-        OpenSearchSecurityException ex = Assert.assertThrows(OpenSearchSecurityException.class,
-                () -> internalAuthenticationBackend.authenticate(invalidUsernameAuth));
-        assert(ex.getMessage().contains("not found"));
+        OpenSearchSecurityException ex = Assert.assertThrows(
+            OpenSearchSecurityException.class,
+            () -> internalAuthenticationBackend.authenticate(invalidUsernameAuth)
+        );
+        assert (ex.getMessage().contains("not found"));
         verify(internalAuthenticationBackend, times(1)).passwordMatchesHash(hash, array);
     }
 
@@ -136,10 +136,11 @@ public class InternalAuthBackendTests {
 
         when(internalUsersModel.exists("ertyuiykgjjfguyifdghc")).thenReturn(false);
 
-
-        OpenSearchSecurityException ex = Assert.assertThrows(OpenSearchSecurityException.class,
-                () -> internalAuthenticationBackend.authenticate(invalidUsernameAuth));
+        OpenSearchSecurityException ex = Assert.assertThrows(
+            OpenSearchSecurityException.class,
+            () -> internalAuthenticationBackend.authenticate(invalidUsernameAuth)
+        );
         verify(internalAuthenticationBackend, times(1)).passwordMatchesHash(hash, array);
-        assert(ex.getMessage().contains("not found"));
+        assert (ex.getMessage().contains("not found"));
     }
 }

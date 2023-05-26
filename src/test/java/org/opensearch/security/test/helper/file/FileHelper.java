@@ -1,29 +1,11 @@
 /*
- * Copyright 2015-2018 _floragunn_ GmbH
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-/*
+ * Copyright OpenSearch Contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * The OpenSearch Contributors require contributions made to
  * this file be licensed under the Apache-2.0 license or a
  * compatible open source license.
- *
- * Modifications Copyright OpenSearch Contributors. See
- * GitHub history for details.
  */
-
 package org.opensearch.security.test.helper.file;
 
 import java.io.BufferedReader;
@@ -57,90 +39,90 @@ import static org.opensearch.core.xcontent.DeprecationHandler.THROW_UNSUPPORTED_
 
 public class FileHelper {
 
-	protected final static Logger log = LogManager.getLogger(FileHelper.class);
+    protected final static Logger log = LogManager.getLogger(FileHelper.class);
 
-	public static KeyStore getKeystoreFromClassPath(final String fileNameFromClasspath, String password) throws Exception {
-	    Path path = getAbsoluteFilePathFromClassPath(fileNameFromClasspath);
-	    if(path==null) {
-	        return null;
-	    }
-	    
-	    KeyStore ks = KeyStore.getInstance("JKS");
-	    try (FileInputStream fin = new FileInputStream(path.toFile())) {
-	        ks.load(fin, password==null||password.isEmpty()?null:password.toCharArray());
-	    }
-	    return ks;
-	}
-	
-	public static Path getAbsoluteFilePathFromClassPath(final String fileNameFromClasspath) {
-		File file = null;
-		final URL fileUrl = FileHelper.class.getClassLoader().getResource(fileNameFromClasspath);
-		if (fileUrl != null) {
-			try {
-				file = new File(URLDecoder.decode(fileUrl.getFile(), "UTF-8"));
-			} catch (final UnsupportedEncodingException e) {
-				return null;
-			}
+    public static KeyStore getKeystoreFromClassPath(final String fileNameFromClasspath, String password) throws Exception {
+        Path path = getAbsoluteFilePathFromClassPath(fileNameFromClasspath);
+        if (path == null) {
+            return null;
+        }
 
-			if (file.exists() && file.canRead()) {
-				return Paths.get(file.getAbsolutePath());
-			} else {
-				log.error("Cannot read from {}, maybe the file does not exists? ", file.getAbsolutePath());
-			}
+        KeyStore ks = KeyStore.getInstance("JKS");
+        try (FileInputStream fin = new FileInputStream(path.toFile())) {
+            ks.load(fin, password == null || password.isEmpty() ? null : password.toCharArray());
+        }
+        return ks;
+    }
 
-		} else {
-			log.error("Failed to load {}", fileNameFromClasspath);
-		}
-		return null;
-	}
+    public static Path getAbsoluteFilePathFromClassPath(final String fileNameFromClasspath) {
+        File file = null;
+        final URL fileUrl = FileHelper.class.getClassLoader().getResource(fileNameFromClasspath);
+        if (fileUrl != null) {
+            try {
+                file = new File(URLDecoder.decode(fileUrl.getFile(), "UTF-8"));
+            } catch (final UnsupportedEncodingException e) {
+                return null;
+            }
 
-	public static final String loadFile(final String file) throws IOException {
-		final StringWriter sw = new StringWriter();
-		IOUtils.copy(FileHelper.class.getResourceAsStream("/" + file), sw, StandardCharsets.UTF_8);
-		return sw.toString();
-	}
-	
+            if (file.exists() && file.canRead()) {
+                return Paths.get(file.getAbsolutePath());
+            } else {
+                log.error("Cannot read from {}, maybe the file does not exists? ", file.getAbsolutePath());
+            }
+
+        } else {
+            log.error("Failed to load {}", fileNameFromClasspath);
+        }
+        return null;
+    }
+
+    public static final String loadFile(final String file) throws IOException {
+        final StringWriter sw = new StringWriter();
+        IOUtils.copy(FileHelper.class.getResourceAsStream("/" + file), sw, StandardCharsets.UTF_8);
+        return sw.toString();
+    }
+
     public static BytesReference readYamlContent(final String file) {
-        
+
         XContentParser parser = null;
         try {
-            parser = XContentFactory.xContent(XContentType.YAML).createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, new StringReader(loadFile(file)));
+            parser = XContentFactory.xContent(XContentType.YAML)
+                .createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, new StringReader(loadFile(file)));
             parser.nextToken();
             final XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.copyCurrentStructure(parser);
             return BytesReference.bytes(builder);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-        finally {
+        } finally {
             if (parser != null) {
                 try {
                     parser.close();
                 } catch (IOException e) {
-                    //ignore
+                    // ignore
                 }
             }
         }
-	}
-    
+    }
+
     public static BytesReference readYamlContentFromString(final String yaml) {
-        
+
         XContentParser parser = null;
         try {
-            parser = XContentFactory.xContent(XContentType.YAML).createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, new StringReader(yaml));
+            parser = XContentFactory.xContent(XContentType.YAML)
+                .createParser(NamedXContentRegistry.EMPTY, THROW_UNSUPPORTED_OPERATION, new StringReader(yaml));
             parser.nextToken();
             final XContentBuilder builder = XContentFactory.jsonBuilder();
             builder.copyCurrentStructure(parser);
             return BytesReference.bytes(builder);
         } catch (Exception e) {
             throw new RuntimeException(e);
-        }
-        finally {
+        } finally {
             if (parser != null) {
                 try {
                     parser.close();
                 } catch (IOException e) {
-                    //ignore
+                    // ignore
                 }
             }
         }

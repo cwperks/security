@@ -1,18 +1,11 @@
 /*
- *   Copyright OpenSearch Contributors
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
  *
- *   Licensed under the Apache License, Version 2.0 (the "License").
- *   You may not use this file except in compliance with the License.
- *   A copy of the License is located at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- *   or in the "license" file accompanying this file. This file is distributed
- *   on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- *   express or implied. See the License for the specific language governing
- *   permissions and limitations under the License.
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
  */
-
 package org.opensearch.security.auth;
 
 import java.util.Set;
@@ -54,8 +47,10 @@ final public class RolesInjector {
 
         String[] strs = injectedUserAndRoles.split("\\|");
         if (strs.length == 0) {
-            log.error("Roles injected string malformed, could not extract parts. User string was '{}.'" +
-                    " Roles injection failed.", injectedUserAndRoles);
+            log.error(
+                "Roles injected string malformed, could not extract parts. User string was '{}.'" + " Roles injection failed.",
+                injectedUserAndRoles
+            );
             return null;
         }
 
@@ -71,16 +66,20 @@ final public class RolesInjector {
         }
         Set<String> roles = ImmutableSet.copyOf(strs[1].split(","));
 
-        if(user != null && roles != null) {
+        if (user != null && roles != null) {
             addUser(user, transportRequest, action, task, ctx);
         }
         return roles;
     }
 
-    private void addUser(final User user, final TransportRequest transportRequest,
-                         final String action, final Task task, final ThreadContext threadContext) {
-        if(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER) != null)
-            return;
+    private void addUser(
+        final User user,
+        final TransportRequest transportRequest,
+        final String action,
+        final Task task,
+        final ThreadContext threadContext
+    ) {
+        if (threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER) != null) return;
 
         threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
     }

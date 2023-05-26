@@ -1,12 +1,11 @@
 /*
-* Copyright OpenSearch Contributors
-* SPDX-License-Identifier: Apache-2.0
-*
-* The OpenSearch Contributors require contributions made to
-* this file be licensed under the Apache-2.0 license or a
-* compatible open source license.
-*
-*/
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
 package org.opensearch.security;
 
 import java.io.File;
@@ -18,24 +17,30 @@ import static java.util.Objects.requireNonNull;
 
 class SecurityAdminLauncher {
 
-	private final TestCertificates certificates;
-	private int port;
+    private final TestCertificates certificates;
+    private int port;
 
-	public SecurityAdminLauncher(int port, TestCertificates certificates) {
-		this.port = port;
-		this.certificates = requireNonNull(certificates, "Certificates are required to communicate with cluster.");
-	}
+    public SecurityAdminLauncher(int port, TestCertificates certificates) {
+        this.port = port;
+        this.certificates = requireNonNull(certificates, "Certificates are required to communicate with cluster.");
+    }
 
-	public int updateRoleMappings(File roleMappingsConfigurationFile) throws Exception {
-		String[] commandLineArguments = {"-cacert", certificates.getRootCertificate().getAbsolutePath(),
-			"-cert", certificates.getAdminCertificate().getAbsolutePath(),
-			"-key", certificates.getAdminKey(null).getAbsolutePath(),
-			"-nhnv",
-			"-p", String.valueOf(port),
-			"-f", roleMappingsConfigurationFile.getAbsolutePath(),
-			"-t", "rolesmapping"
-		};
+    public int updateRoleMappings(File roleMappingsConfigurationFile) throws Exception {
+        String[] commandLineArguments = {
+            "-cacert",
+            certificates.getRootCertificate().getAbsolutePath(),
+            "-cert",
+            certificates.getAdminCertificate().getAbsolutePath(),
+            "-key",
+            certificates.getAdminKey(null).getAbsolutePath(),
+            "-nhnv",
+            "-p",
+            String.valueOf(port),
+            "-f",
+            roleMappingsConfigurationFile.getAbsolutePath(),
+            "-t",
+            "rolesmapping" };
 
-		return SecurityAdmin.execute(commandLineArguments);
-	}
+        return SecurityAdmin.execute(commandLineArguments);
+    }
 }
