@@ -229,6 +229,11 @@ public class TestSecurityConfig {
 				}
 				xContentBuilder.endObject();
 			}
+
+			if(onBehalfOfConfig != null) {
+				xContentBuilder.field("on_behalf_of", onBehalfOfConfig);
+			}
+
 			if(doNotFailOnForbidden != null) {
 				xContentBuilder.field("do_not_fail_on_forbidden", doNotFailOnForbidden);
 			}
