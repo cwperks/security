@@ -215,6 +215,11 @@ public class TestRestClient implements AutoCloseable {
 		return putJson("_plugins/_security/api/internalusers/" + userName, user);
 	}
 
+	public HttpResponse createIndex(String index) {
+		Objects.requireNonNull(index, "index is required");
+		return putJson(index, "{}");
+	}
+
 	public HttpResponse executeRequest(HttpUriRequest uriRequest, Header... requestSpecificHeaders) {
 		try(CloseableHttpClient httpClient = getHTTPClient()) {
 

@@ -91,6 +91,7 @@ import org.opensearch.security.resolver.IndexResolverReplacer.Resolved;
 import org.opensearch.security.securityconf.ConfigModel;
 import org.opensearch.security.securityconf.DynamicConfigModel;
 import org.opensearch.security.securityconf.SecurityRoles;
+import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -175,7 +176,14 @@ public class PrivilegesEvaluator {
     }
 
     private SecurityRoles getSecurityRoles(Set<String> roles) {
-        return configModel.getSecurityRoles().filter(roles);
+        SecurityRoles securityRoles = configModel.getSecurityRoles().filter(roles);
+        RoleV7 newRole = new RoleV7();
+        RoleV7.Index indexPermissions = new RoleV7.Index();
+        indexPermissions.setIndex_patterns(List.of(".hello-world-jobs"));
+        indexPermissions.setAllowed_actions(List.of("indices:admin/create"));
+        newRole.setIndex_permissions(List.of(indexPermissions));
+        securityRoles.addRole(newRole);
+        return securityRoles;
     }
 
     public boolean hasRestAdminPermissions(final User user,

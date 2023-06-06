@@ -299,7 +299,7 @@ public class ConfigModelV6 extends ConfigModel {
 
     //beans
 
-    public static class SecurityRoles implements org.opensearch.security.securityconf.SecurityRoles {
+    public class SecurityRoles implements org.opensearch.security.securityconf.SecurityRoles {
 
         protected final Logger log = LogManager.getLogger(this.getClass());
 

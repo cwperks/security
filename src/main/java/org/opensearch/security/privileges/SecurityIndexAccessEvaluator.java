@@ -68,6 +68,8 @@ public class SecurityIndexAccessEvaluator {
         this.systemIndexMatcher = WildcardMatcher.from(settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT));
         this.systemIndexEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_DEFAULT);
 
+        System.out.println("system indices: " + settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT));
+
         final boolean restoreSecurityIndexEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_UNSUPPORTED_RESTORE_SECURITYINDEX_ENABLED, false);
 
         final List<String> securityIndexDeniedActionPatternsList = new ArrayList<String>();
@@ -90,6 +92,8 @@ public class SecurityIndexAccessEvaluator {
     public PrivilegesEvaluatorResponse evaluate(final ActionRequest request, final Task task, final String action, final Resolved requestedResolved,
             final PrivilegesEvaluatorResponse presponse)  {
         final boolean isDebugEnabled = log.isDebugEnabled();
+        System.out.println("SecurityIndexAccessEvaluator Requested Resolved: " + requestedResolved);
+        System.out.println("action: " + action);
         if (securityDeniedActionMatcher.test(action)) {
             if(requestedResolved.isLocalAll()) {
                 if(filterSecurityIndex) {
@@ -121,6 +125,7 @@ public class SecurityIndexAccessEvaluator {
                     }
                     return presponse;
                 } else {
+                    System.out.println("SecurityIndexAccessEvaluator Requested Resolved: " + requestedResolved);
                     auditLog.logSecurityIndexAttempt(request, action, task);
                     final String foundSystemIndexes = getProtectedIndexes(requestedResolved).stream().collect(Collectors.joining(", "));
                     log.warn("{} for '{}' index is not allowed for a regular user", action, foundSystemIndexes);
@@ -156,6 +161,9 @@ public class SecurityIndexAccessEvaluator {
 
     private List<String> getProtectedIndexes(final Resolved requestedResolved) {
         final List<String> protectedIndexes = requestedResolved.getAllIndices().stream().filter(securityIndex::equals).collect(Collectors.toList());
+        System.out.println("systemIndexEnabled: " + systemIndexEnabled);
+        System.out.println("systemIndexMatcher: " + systemIndexMatcher);
+        System.out.println("all indices: " + requestedResolved.getAllIndices());
         if (systemIndexEnabled) {
             protectedIndexes.addAll(systemIndexMatcher.getMatchAny(requestedResolved.getAllIndices(), Collectors.toList()));
         }

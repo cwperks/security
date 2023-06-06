@@ -37,8 +37,9 @@ import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import org.opensearch.security.securityconf.Hideable;
+import org.opensearch.security.securityconf.Role;
 
-public class RoleV6 implements Hideable {
+public class RoleV6 implements Hideable, Role {
 
     private boolean readonly;
     private boolean hidden;

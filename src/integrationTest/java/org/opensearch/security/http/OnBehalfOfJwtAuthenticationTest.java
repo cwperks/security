@@ -61,6 +61,7 @@ public class OnBehalfOfJwtAuthenticationTest {
     @ClassRule
     public static final LocalCluster cluster = new LocalCluster.Builder()
             .clusterManager(ClusterManager.SINGLENODE).anonymousAuth(false)
+            .nodeSettings(Map.of("plugins.security.system_indices.indices", List.of(".hello-world-jobs"), "plugins.security.system_indices.enabled", true))
             .authc(AUTHC_HTTPBASIC_INTERNAL).onBehalfOf(new OnBehalfOfConfig().signing_key(SIGNING_KEY).encryption_key(ENCRYPTION_KEY))
             .build();
 
@@ -84,6 +85,28 @@ public class OnBehalfOfJwtAuthenticationTest {
             response.assertStatusCode(200);
             String username = response.getTextFromJsonBody(POINTER_USERNAME);
             assertThat("craig", equalTo(username));
+        }
+    }
+
+    @Test
+    public void shouldAuthenticateWithServiceAccountJwtToken_positive() throws Exception {
+        String issuer = "cluster_0";
+        LongSupplier currentTime = () -> (System.currentTimeMillis() / 1000);
+        Settings settings =  Settings.builder().put("signing_key", SIGNING_KEY).put("encryption_key", ENCRYPTION_KEY).build();
+
+        JwtVendor jwtVendor = new JwtVendor(settings, currentTime);
+        String encodedJwt = jwtVendor.createJwtForServiceAccount(issuer, "ext1");
+
+        try(TestRestClient client = cluster.getRestClient(new BasicHeader("Authorization", "Bearer " + encodedJwt))){
+            TestRestClient.HttpResponse resp1 = client.getAuthInfo();
+
+            resp1.assertStatusCode(200);
+            String username = resp1.getTextFromJsonBody(POINTER_USERNAME);
+            assertThat("ext1", equalTo(username));
+
+            TestRestClient.HttpResponse resp2 = client.createIndex(".hello-world-jobs");
+            System.out.println("Create Index Response: " + resp2);
+            resp2.assertStatusCode(200);
         }
     }
 }

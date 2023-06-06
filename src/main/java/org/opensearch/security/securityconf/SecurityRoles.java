@@ -55,4 +55,6 @@ public interface SecurityRoles {
 
     SecurityRoles filter(Set<String> roles);
 
+    default void addRole(Role role) {};
+
 }

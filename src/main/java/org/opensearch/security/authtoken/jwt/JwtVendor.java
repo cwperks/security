@@ -189,4 +189,35 @@ public class JwtVendor {
 
         return encodedJwt;
     }
+
+    public String createJwtForServiceAccount(String issuer, String subject) throws Exception {
+        long timeMillis = timeProvider.getAsLong();
+
+        jwtProducer.setSignatureProvider(JwsUtils.getSignatureProvider(signingKey));
+        JwtClaims jwtClaims = new JwtClaims();
+        JwtToken jwt = new JwtToken(jwtClaims);
+
+        jwtClaims.setIssuer(issuer);
+
+        jwtClaims.setIssuedAt(timeMillis / 1000);
+
+        jwtClaims.setSubject(subject);
+
+        jwtClaims.setProperty("type", "service_account_token");
+
+        String encodedJwt = jwtProducer.processJwt(jwt);
+
+        if (logger.isDebugEnabled()) {
+            logger.debug(
+                    "Created JWT: "
+                            + encodedJwt
+                            + "\n"
+                            + jsonMapReaderWriter.toJson(jwt.getJwsHeaders())
+                            + "\n"
+                            + JwtUtils.claimsToJson(jwt.getClaims())
+            );
+        }
+
+        return encodedJwt;
+    }
 }
