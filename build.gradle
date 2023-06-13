@@ -70,13 +70,15 @@ apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.pluginzip'
 apply plugin: 'opensearch.rest-test'
 apply plugin: 'opensearch.testclusters'
-//apply from: 'gradle/formatting.gradle'
+// apply from: 'gradle/formatting.gradle'
 
 spotless {
     java {
         // Normally this isn't necessary, but we have Java sources in
         // non-standard places
         target '**/com/amazon/dlic/**/*.java'
+        target '**/com/amazon/security/**/*.java'
+        target '**/test/**/*.java'
 
         removeUnusedImports()
         eclipse().configFile rootProject.file('formatter/formatterConfig.xml')
@@ -109,15 +111,11 @@ spotless {
         importOrder('java', 'javax', '', 'com.amazon', 'org.opensearch', '\\#')
         target '**/*.java'
         targetExclude '**/com/amazon/dlic/**/*.java'
-        targetExclude('src/integrationTest/**')
+        targetExclude '**/com/amazon/security/**/*.java'
+        targetExclude '**/test/**/*.java'
 
         trimTrailingWhitespace()
         endWithNewline();
-    }
-    format("integrationTest", JavaExtension) {
-        target('src/integrationTest/java/**/*.java')
-        importOrder('java', 'javax', '', 'com.amazon', 'org.opensearch', '\\#')
-        indentWithTabs(4)
     }
 }
 
@@ -338,6 +336,7 @@ configurations {
             force "io.netty:netty-transport:${versions.netty}"
             force "io.netty:netty-transport-native-unix-common:${versions.netty}"
             force "org.apache.bcel:bcel:6.6.0" // This line should be removed once Spotbugs is upgraded to 4.7.4
+            force "com.github.luben:zstd-jni:${versions.zstd}"
         }
     }
 
