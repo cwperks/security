@@ -138,6 +138,7 @@ public class HTTPOnBehalfOfJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
+        Assert.assertEquals(0, credentials.getSecurityRoles().size());
         Assert.assertEquals(0, credentials.getBackendRoles().size());
         Assert.assertEquals(2, credentials.getAttributes().size());
     }
@@ -183,7 +184,8 @@ public class HTTPOnBehalfOfJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
-        Assert.assertEquals(2, credentials.getBackendRoles().size());
+        Assert.assertEquals(2, credentials.getSecurityRoles().size());
+        Assert.assertEquals(0, credentials.getBackendRoles().size());
     }
 
     @Test
@@ -213,8 +215,8 @@ public class HTTPOnBehalfOfJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
-        Assert.assertEquals(1, credentials.getBackendRoles().size());
-        Assert.assertTrue(credentials.getBackendRoles().contains("123"));
+        Assert.assertEquals(1, credentials.getSecurityRoles().size());
+        Assert.assertTrue(credentials.getSecurityRoles().contains("123"));
     }
 
     @Test
@@ -229,6 +231,7 @@ public class HTTPOnBehalfOfJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
+        Assert.assertEquals(0, credentials.getSecurityRoles().size());
         Assert.assertEquals(0, credentials.getBackendRoles().size());
     }
 
@@ -281,10 +284,10 @@ public class HTTPOnBehalfOfJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Cluster_0", credentials.getUsername());
-        Assert.assertEquals(3, credentials.getBackendRoles().size());
-        Assert.assertTrue(credentials.getBackendRoles().contains("a"));
-        Assert.assertTrue(credentials.getBackendRoles().contains("b"));
-        Assert.assertTrue(credentials.getBackendRoles().contains("3rd"));
+        Assert.assertEquals(3, credentials.getSecurityRoles().size());
+        Assert.assertTrue(credentials.getSecurityRoles().contains("a"));
+        Assert.assertTrue(credentials.getSecurityRoles().contains("b"));
+        Assert.assertTrue(credentials.getSecurityRoles().contains("3rd"));
     }
 
     /** extracts a default user credential from a request header */

@@ -20,19 +20,20 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.WeakKeyException;
-import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.hc.core5.http.HttpHeaders;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.greenrobot.eventbus.Subscribe;
 
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.SpecialPermission;
@@ -41,7 +42,6 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.authtoken.jwt.EncryptionDecryptionUtil;
-import org.opensearch.security.securityconf.DynamicConfigModel;
 import org.opensearch.security.user.AuthCredentials;
 
 public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
@@ -54,7 +54,6 @@ public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
     //TODO: TO SEE IF WE NEED THE FINAL FOR FOLLOWING
     private JwtParser jwtParser;
     private String subjectKey;
-
     private String signingKey;
     private String encryptionKey;
 
@@ -129,6 +128,53 @@ public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
         return creds;
     }
 
+    private List<String> extractSecurityRolesFromClaims(Claims claims) {
+        Object rolesObject = ObjectUtils.firstNonNull(claims.get("er"), claims.get("dr"));
+        List<String> roles;
+
+        if (rolesObject == null) {
+            log.warn(
+                    "Failed to get roles from JWT claims. Check if this key is correct and available in the JWT payload.");
+            roles = List.of();
+        } else {
+            final String rolesClaim = rolesObject.toString();
+
+            // Extracting roles based on the compatbility mode
+            String decryptedRoles = rolesClaim;
+            if (rolesObject == claims.get("er")) {
+                //TODO: WHERE TO GET THE ENCRYTION KEY
+                decryptedRoles = EncryptionDecryptionUtil.decrypt(encryptionKey, rolesClaim);
+            }
+            roles = Arrays.stream(decryptedRoles.split(",")).map(String::trim).collect(Collectors.toList());
+        }
+
+        return roles;
+    }
+
+    private String[] extractBackendRolesFromClaims(Claims claims) {
+        //TODO: GET ROLESCLAIM DEPENDING ON THE STATUS OF BWC MODE. ON: er / OFF: dr
+        Object backendRolesObject = ObjectUtils.firstNonNull(claims.get("ebr"), claims.get("dbr"));
+        String[] backendRoles;
+
+        if (backendRolesObject == null) {
+            log.warn(
+                    "Failed to get backend roles from JWT claims. Check if this key is correct and available in the JWT payload.");
+            backendRoles = new String[0];
+        } else {
+            final String backendRolesClaim = backendRolesObject.toString();
+
+            // Extracting roles based on the compatibility mode
+            String decryptedBackendRoles = backendRolesClaim;
+            if (backendRolesObject == claims.get("ebr")) {
+                //TODO: WHERE TO GET THE ENCRYTION KEY
+                decryptedBackendRoles = EncryptionDecryptionUtil.decrypt(encryptionKey, backendRolesClaim);
+            }
+            backendRoles = Arrays.stream(decryptedBackendRoles.split(",")).map(String::trim).toArray(String[]::new);
+        }
+
+        return backendRoles;
+    }
+
     private AuthCredentials extractCredentials0(final RestRequest request) {
         if (jwtParser == null) {
             log.error("Missing Signing Key. JWT authentication will not work");
@@ -165,36 +211,9 @@ public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
             final String audience = claims.getAudience();
 
             //TODO: GET ROLESCLAIM DEPENDING ON THE STATUS OF BWC MODE. ON: er / OFF: dr
-            Object rolesObject = null;
-            String[] roles;
+            List<String> roles = extractSecurityRolesFromClaims(claims);
 
-            try {
-                rolesObject = claims.get("er");
-            } catch (Throwable e) {
-                    log.debug("No encrypted role founded in the claim, continue searching for decrypted roles.");
-            }
-
-            try {
-                rolesObject = claims.get("dr");
-            } catch (Throwable e) {
-                log.debug("No decrypted role founded in the claim.");
-            }
-
-            if (rolesObject == null) {
-                log.warn(
-                        "Failed to get roles from JWT claims. Check if this key is correct and available in the JWT payload.");
-                roles = new String[0];
-            } else {
-                final String rolesClaim = rolesObject.toString();
-
-                // Extracting roles based on the compatbility mode
-                String decryptedRoles = rolesClaim;
-                if (rolesObject == claims.get("er")) {
-                    //TODO: WHERE TO GET THE ENCRYTION KEY
-                    decryptedRoles = EncryptionDecryptionUtil.decrypt(encryptionKey, rolesClaim);
-                }
-                roles = Arrays.stream(decryptedRoles.split(",")).map(String::trim).toArray(String[]::new);
-            }
+            String[] backendRoles = extractBackendRolesFromClaims(claims);
 
             if (subject == null) {
                 log.error("No subject found in JWT token");
@@ -205,7 +224,7 @@ public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
                 log.error("No audience found in JWT token");
             }
 
-            final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
+            final AuthCredentials ac = new AuthCredentials(subject, roles, backendRoles).markComplete();
 
             for(Entry<String, Object> claim: claims.entrySet()) {
                 ac.addAttribute("attr.jwt."+claim.getKey(), String.valueOf(claim.getValue()));
@@ -258,15 +277,6 @@ public class HTTPOnBehalfOfJwtAuthenticator implements HTTPAuthenticator {
         X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
         KeyFactory kf = KeyFactory.getInstance(algo);
         return kf.generatePublic(spec);
-    }
-
-    @Subscribe
-    public void onDynamicConfigModelChanged(DynamicConfigModel dcm) {
-
-        //TODO: #2615 FOR CONFIGURATION
-        //For Testing
-        signingKey = "abcd1234";
-        encryptionKey = RandomStringUtils.randomAlphanumeric(16);
     }
 
 }
