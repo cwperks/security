@@ -47,7 +47,7 @@ public class ConfigConstants {
 
     public static final String OPENDISTRO_SECURITY_ORIGIN = OPENDISTRO_SECURITY_CONFIG_PREFIX+"origin";
     public static final String OPENDISTRO_SECURITY_ORIGIN_HEADER = OPENDISTRO_SECURITY_CONFIG_PREFIX+"origin_header";
-
+    public static final String OPENDISTRO_SECURITY_REST_LAYER_AUTHORIZED = OPENDISTRO_SECURITY_CONFIG_PREFIX+"rest_layer_authorized";
     public static final String OPENDISTRO_SECURITY_DLS_QUERY_HEADER = OPENDISTRO_SECURITY_CONFIG_PREFIX+"dls_query";
 
     public static final String OPENDISTRO_SECURITY_DLS_FILTER_LEVEL_QUERY_HEADER = OPENDISTRO_SECURITY_CONFIG_PREFIX+"dls_filter_level_query";

@@ -146,21 +146,24 @@ public class SecurityRestFilter {
     private boolean authorizeRequest(RestHandler original, RestRequest request, RestChannel channel, User user) {
 
         List<RestHandler.Route> restRoutes = original.routes();
+        System.out.println("restRoutes: " + restRoutes);
         Optional<RestHandler.Route> handler = restRoutes.stream()
                 .filter(rh -> rh.getMethod().equals(request.method()))
                 .filter(rh -> restPathMatches(request.path(), rh.getPath()))
                 .findFirst();
+        System.out.println("Handler: " + handler);
         if (handler.isPresent() && handler.get() instanceof NamedRoute) {
             PrivilegesEvaluatorResponse pres = new PrivilegesEvaluatorResponse();
             // if actionNames are present evaluate those first
             Set<String> actionNames = ((NamedRoute) handler.get()).actionNames();
-            if (!actionNames.isEmpty()) {
+            if (actionNames != null && !actionNames.isEmpty()) {
                 pres = evaluator.evaluate(user, actionNames);
             }
 
             // now if pres.allowed is still false check for the NamedRoute name as a permission\
             if (!pres.isAllowed()) {
                 String action = ((NamedRoute) handler.get()).name();
+                System.out.println("Evaluating REST Action: " + action);
                 pres = evaluator.evaluate(user, Set.of(action));
             }
 
@@ -170,6 +173,7 @@ public class SecurityRestFilter {
             if (pres.isAllowed()) {
                 // TODO make sure this is audit logged
                 log.debug("Request has been granted");
+                threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_REST_LAYER_AUTHORIZED, true);
                 // auditLog.logGrantedPrivileges(action, request, task);
             } else {
                 // auditLog.logMissingPrivileges(action, request, task);

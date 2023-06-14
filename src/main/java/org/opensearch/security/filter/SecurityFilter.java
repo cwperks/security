@@ -162,6 +162,10 @@ public class SecurityFilter implements ActionFilter {
                 threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, Origin.LOCAL.toString());
             }
 
+            if (threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REST_LAYER_AUTHORIZED) == null) {
+                threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_REST_LAYER_AUTHORIZED, false);
+            }
+
             final ComplianceConfig complianceConfig = auditLog.getComplianceConfig();
             if (complianceConfig != null && complianceConfig.isEnabled()) {
                 attachSourceFieldContext(request);
@@ -182,7 +186,8 @@ public class SecurityFilter implements ActionFilter {
             final boolean trustedClusterRequest = HeaderHelper.isTrustedClusterRequest(threadContext);
             final boolean confRequest = "true".equals(HeaderHelper.getSafeFromHeader(threadContext, ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER));
             final boolean passThroughRequest = action.startsWith("indices:admin/seq_no")
-                    || action.equals(WhoAmIAction.NAME);
+                    || action.equals(WhoAmIAction.NAME)
+                    || (boolean) threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REST_LAYER_AUTHORIZED);
 
             final boolean internalRequest =
                     (interClusterRequest || HeaderHelper.isDirectRequest(threadContext))
