@@ -17,9 +17,11 @@ import org.opensearch.common.inject.Provider;
 import org.opensearch.common.io.stream.StreamInput;
 import org.opensearch.common.io.stream.StreamOutput;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.transport.TransportAddress;
 import org.opensearch.security.auth.BackendRegistry;
 import org.opensearch.security.authtoken.jwt.JwtVendor;
 import org.opensearch.security.configuration.ConfigurationRepository;
+import org.opensearch.security.securityconf.ConfigModel;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.DynamicConfigModel;
 import org.opensearch.security.securityconf.impl.CType;
@@ -35,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
 
@@ -76,21 +79,23 @@ public class CreateOnBehalfOfToken extends BaseRestHandler {
 
     private JwtVendor vendor;
     private final ThreadPool threadPool;
+
+    private ConfigModel configModel;
+
     private DynamicConfigModel dcm;
+
+    @Subscribe
+    public void onConfigModelChanged(ConfigModel configModel) {
+        this.configModel = configModel;
+    }
 
     @Subscribe
     public void onDynamicConfigModelChanged(DynamicConfigModel dcm) {
         this.dcm = dcm;
         this.vendor = new JwtVendor(dcm.getDynamicOnBehalfOfSettings(), Optional.empty());
-        //TODO: NULL CHECK\
     }
 
     public CreateOnBehalfOfToken(final Settings settings, final ThreadPool threadPool) {
-        Settings testSettings =  Settings.builder()
-        .put("signing_key", "VGhpcyBpcyB0aGUgand0IHNpZ25pbmcga2V5IGZvciBhbiBvbiBiZWhhbGYgb2YgdG9rZW4gYXV0aGVudGljYXRpb24gYmFja2VuZCBmb3IgdGVzdGluZyBvZiBleHRlbnNpb25z")
-        .put("encryption_key", "ZW5jcnlwdGlvbktleQ==").build();
-
-        this.vendor = new JwtVendor(testSettings, Optional.empty());
         this.threadPool = threadPool;
     }
 
@@ -136,6 +141,8 @@ public class CreateOnBehalfOfToken extends BaseRestHandler {
 
                     final String source = "self-issued";
                     final User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+                    final TransportAddress caller = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
+                    Set<String> mappedRoles = mapRoles(user, caller);
         
                     builder.startObject();
                     builder.field("user", user.getName());
@@ -143,7 +150,7 @@ public class CreateOnBehalfOfToken extends BaseRestHandler {
                         user.getName(),
                         source,
                         tokenDuration,
-                        user.getSecurityRoles().stream().collect(Collectors.toList()));
+                        mappedRoles.stream().collect(Collectors.toList()));
                     builder.field("onBehalfOfToken", token);
                     builder.field("duration", tokenDuration);
                     builder.endObject();
@@ -161,6 +168,10 @@ public class CreateOnBehalfOfToken extends BaseRestHandler {
                 channel.sendResponse(response);
             }
         };
+    }
+
+    public Set<String> mapRoles(final User user, final TransportAddress caller) {
+        return this.configModel.mapSecurityRoles(user, caller);
     }
 
 }
