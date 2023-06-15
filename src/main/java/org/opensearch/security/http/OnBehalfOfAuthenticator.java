@@ -193,6 +193,10 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             }
         }
 
+        if (jwtToken == null) {
+            return null;
+        }
+
         try {
             final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
 

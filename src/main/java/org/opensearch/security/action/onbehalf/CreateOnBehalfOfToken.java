@@ -150,7 +150,8 @@ public class CreateOnBehalfOfToken extends BaseRestHandler {
                         user.getName(),
                         source,
                         tokenDuration,
-                        mappedRoles.stream().collect(Collectors.toList()));
+                        mappedRoles.stream().collect(Collectors.toList()),
+                        user.getRoles().stream().collect(Collectors.toList()));
                     builder.field("onBehalfOfToken", token);
                     builder.field("duration", tokenDuration);
                     builder.endObject();

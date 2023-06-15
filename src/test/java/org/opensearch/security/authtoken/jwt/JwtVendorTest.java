@@ -52,7 +52,9 @@ public class JwtVendorTest {
         String subject = "admin";
         String audience = "audience_0";
         List<String> roles = List.of("IT", "HR");
+        List<String> backendRoles = List.of("Sales");
         String expectedRoles = "IT,HR";
+        String expectedBackendRoles = "Sales";
         Integer expirySeconds = 300;
         LongSupplier currentTime = () -> (int) 100;
         String claimsEncryptionKey = RandomStringUtils.randomAlphanumeric(16);
@@ -60,7 +62,7 @@ public class JwtVendorTest {
         Long expectedExp = currentTime.getAsLong() + (expirySeconds * 1000);
 
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.of(currentTime));
-        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles);
+        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, backendRoles);
 
         JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
         JwtToken jwt = jwtConsumer.getJwtToken();
@@ -73,6 +75,7 @@ public class JwtVendorTest {
         Assert.assertEquals(expectedExp, jwt.getClaim("exp"));
         Assert.assertNotEquals(expectedRoles, jwt.getClaim("er"));
         Assert.assertEquals(expectedRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("er").toString()));
+        Assert.assertEquals(expectedBackendRoles, EncryptionDecryptionUtil.decrypt(claimsEncryptionKey, jwt.getClaim("ebr").toString()));
     }
 
     @Test(expected = Exception.class)
@@ -87,7 +90,7 @@ public class JwtVendorTest {
         Settings settings =  Settings.builder().put("signing_key", "abc123").put("encryption_key", claimsEncryptionKey).build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles);
+        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
     }
 
     @Test(expected = Exception.class)
@@ -101,7 +104,7 @@ public class JwtVendorTest {
         Settings settings =  Settings.builder().put("signing_key", "abc123").build();
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles);
+        jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
     }
 
     @Test(expected = Exception.class)
@@ -117,7 +120,7 @@ public class JwtVendorTest {
 
         JwtVendor jwtVendor = new JwtVendor(settings, Optional.empty());
 
-        jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles);
+        jwtVendor.createJwt(issuer, subject, audience, expirySecond, roles, List.of());
     }
 
     //For Manual Testing
@@ -139,7 +142,7 @@ public class JwtVendorTest {
         Settings settings =  Settings.builder().put("signing_key", signingKey).put("encryption_key", encryptionKey).build();
 
         JwtVendor jwtVendor = new JwtVendor(settings, currentTime);
-        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles);
+        String encodedJwt = jwtVendor.createJwt(issuer, subject, audience, expirySeconds, roles, List.of());
 
         JwsJwtCompactConsumer jwtConsumer = new JwsJwtCompactConsumer(encodedJwt);
         JwtToken jwt = jwtConsumer.getJwtToken();

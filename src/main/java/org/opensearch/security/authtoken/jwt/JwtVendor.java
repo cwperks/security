@@ -111,7 +111,7 @@ public class JwtVendor {
         }
     }
 
-    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, List<String> roles) throws Exception {
+    public String createJwt(String issuer, String subject, String audience, Integer expirySeconds, List<String> roles, List<String> backendRoles) throws Exception {
         long timeMillis = timeProvider.getAsLong();
         Instant now = Instant.ofEpochMilli(timeProvider.getAsLong());
 
@@ -145,6 +145,11 @@ public class JwtVendor {
             jwtClaims.setProperty("er", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfRoles));
         } else {
             throw new Exception("Roles cannot be null");
+        }
+
+        if (backendRoles != null) {
+            String listOfBackendRoles = String.join(",", backendRoles);
+            jwtClaims.setProperty("ebr", EncryptionDecryptionUtil.encrypt(claimsEncryptionKey, listOfBackendRoles));
         }
 
         String encodedJwt = jwtProducer.processJwt(jwt);
