@@ -85,6 +85,7 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.index.Index;
 import org.opensearch.index.IndexNotFoundException;
 import org.opensearch.index.reindex.ReindexRequest;
+import org.opensearch.script.mustache.SearchTemplateRequest;
 import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.configuration.ClusterInfoHolder;
 import org.opensearch.security.securityconf.DynamicConfigModel;
@@ -539,10 +540,19 @@ public class IndexResolverReplacer {
         if (isTraceEnabled) {
             log.trace("getOrReplaceAllIndices() for "+request.getClass());
         }
+        System.out.println("Request: " + request);
 
         boolean result = true;
 
-        if (request instanceof BulkRequest) {
+        System.out.println("Request class name: " + request.getClass());
+        ClassLoader currentClassLoader = getClass().getClassLoader();
+
+        if (request instanceof SearchTemplateRequest || request.getClass().getName().contains("org.opensearch.script.mustache.SearchTemplateRequest")) {
+            Thread.currentThread().setContextClassLoader(request.getClass().getClassLoader());
+            System.out.println("SearchTemplateRequest: " + request);
+            provider.provide(((SearchTemplateRequest) request).getRequest().indices(), request, false);
+            Thread.currentThread().setContextClassLoader(currentClassLoader);
+        } else if (request instanceof BulkRequest) {
 
             for (DocWriteRequest ar : ((BulkRequest) request).requests()) {
                 result = getOrReplaceAllIndices(ar, provider, false) && result;
@@ -722,9 +732,10 @@ public class IndexResolverReplacer {
         else if (RestoreSnapshotRequest.class.isInstance(localRequest)) {
             return ((RestoreSnapshotRequest) localRequest).indicesOptions();
         }
-        else {
-            return IndicesOptions.fromOptions(false, true, true, false, true);
+        else if (SearchTemplateRequest.class.isInstance(localRequest)) {
+            return ((SearchTemplateRequest) localRequest).getRequest().indicesOptions();
         }
+        return IndicesOptions.fromOptions(false, true, true, false, true);
     }
 
     @Subscribe

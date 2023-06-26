@@ -200,7 +200,7 @@ public class PrivilegesEvaluator {
             StringJoiner joiner = new StringJoiner("|");
             joiner.add(user.getName());
             joiner.add(String.join(",", user.getRoles()));
-            joiner.add(String.join(",", Sets.union(user.getSecurityRoles(), mappedRoles)));
+            joiner.add(String.join(",", Sets.union(Set.copyOf(user.getSecurityRoles()), mappedRoles)));
             String requestedTenant = user.getRequestedTenant();
             if (!Strings.isNullOrEmpty(requestedTenant)) {
                 joiner.add(requestedTenant);
@@ -477,8 +477,14 @@ public class PrivilegesEvaluator {
         }
 
         if (dcm.isMultiRolespanEnabled()) {
+            System.out.println("allIndexPermsRequiredA: " + allIndexPermsRequiredA);
+            System.out.println("securityRoles: " + securityRoles);
+            System.out.println("requestedResolved: " + requestedResolved);
             permGiven = securityRoles.impliesTypePermGlobal(requestedResolved, user, allIndexPermsRequiredA, resolver, clusterService);
         }  else {
+            System.out.println("allIndexPermsRequiredA: " + allIndexPermsRequiredA);
+            System.out.println("securityRoles: " + securityRoles);
+            System.out.println("requestedResolved: " + requestedResolved);
             permGiven = securityRoles.get(requestedResolved, user, allIndexPermsRequiredA, resolver, clusterService);
 
         }

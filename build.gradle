@@ -13,7 +13,7 @@ import org.opensearch.gradle.test.RestIntegTestTask
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "2.8.1-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.8.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
         buildVersionQualifier = System.getProperty("build.version_qualifier", "")
 
@@ -291,7 +291,10 @@ configurations.all {
 dependencies {
     implementation 'jakarta.annotation:jakarta.annotation-api:1.3.5'
     implementation "org.opensearch.plugin:transport-netty4-client:${opensearch_version}"
-    implementation "org.opensearch.client:opensearch-rest-high-level-client:${opensearch_version}"
+    implementation("org.opensearch.client:opensearch-rest-high-level-client:${opensearch_version}") {
+        exclude(group:'org.opensearch.plugin', module: 'lang-mustache-client' )
+    }
+    compileOnly "org.opensearch.plugin:lang-mustache-client:${opensearch_version}"
     implementation 'com.google.guava:guava:30.0-jre'
     implementation 'org.greenrobot:eventbus:3.2.0'
     implementation 'commons-cli:commons-cli:1.3.1'
