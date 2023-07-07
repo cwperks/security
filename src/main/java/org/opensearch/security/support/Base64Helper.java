@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Preconditions;
@@ -149,7 +150,7 @@ public class Base64Helper {
         @Override
         protected Object replaceObject(Object obj) throws IOException {
             Class<?> clazz = obj.getClass();
-            if (isSafeClass(clazz)) {
+            if (isSafeClass(clazz) || (AtomicReference.class.equals(clazz) && isSafeClass(((AtomicReference)obj).get().getClass()))) {
                 return obj;
             }
             throw new IOException("Unauthorized serialization attempt " + clazz.getName());
@@ -193,7 +194,7 @@ public class Base64Helper {
         protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
 
             Class<?> clazz = super.resolveClass(desc);
-            if (isSafeClass(clazz)) {
+            if (isSafeClass(clazz) || AtomicReference.class.equals(clazz)) {
                 return clazz;
             }
 
