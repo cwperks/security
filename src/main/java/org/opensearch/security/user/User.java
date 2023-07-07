@@ -33,10 +33,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -243,7 +245,7 @@ public class User implements Serializable, Writeable, CustomAttributesAware {
         out.writeStringCollection(new ArrayList<String>(roles));
         out.writeString(requestedTenant);
         out.writeMap(attributes, StreamOutput::writeString, StreamOutput::writeString);
-        out.writeStringCollection(securityRoles ==null?Collections.emptyList():new ArrayList<String>(securityRoles.get()));
+        out.writeStringCollection(securityRoles.get() ==null?Collections.emptyList():new ArrayList<String>(securityRoles.get()));
     }
 
     /**
@@ -260,7 +262,8 @@ public class User implements Serializable, Writeable, CustomAttributesAware {
     
     public final void addSecurityRoles(final Collection<String> securityRoles) {
         if(securityRoles != null && this.securityRoles != null) {
-            this.securityRoles.get().addAll(securityRoles);
+            List<String> filteredRoles = securityRoles.stream().filter(r -> r != null).collect(Collectors.toList());
+            this.securityRoles.get().addAll(filteredRoles);
         }
     }
     
