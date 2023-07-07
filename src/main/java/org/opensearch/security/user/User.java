@@ -265,6 +265,6 @@ public class User implements Serializable, Writeable, CustomAttributesAware {
     }
     
     public final Set<String> getSecurityRoles() {
-        return this.securityRoles == null ? Collections.synchronizedSet(Collections.emptySet()) : ImmutableSet.copyOf(this.securityRoles.get());
+        return this.securityRoles.get() == null ? Collections.synchronizedSet(Collections.emptySet()) : ImmutableSet.copyOf(this.securityRoles.get());
     }
 }
