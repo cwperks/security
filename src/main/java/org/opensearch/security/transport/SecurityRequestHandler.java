@@ -95,7 +95,6 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
         final TransportChannel transportChannel,
         Task task
     ) throws Exception {
-
         String resolvedActionClass = request.getClass().getSimpleName();
 
         if (request instanceof BulkShardRequest) {
