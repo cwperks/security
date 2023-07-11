@@ -406,6 +406,7 @@ allprojects {
 
 bundlePlugin {
     from('plugin-security.policy')
+    from('plugin-security-settings.yml')
     from('config') {
         into 'config'
     }

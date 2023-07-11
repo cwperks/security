@@ -43,6 +43,7 @@
             <includes>
                 <include>plugin-descriptor.properties</include>
                 <include>plugin-security.policy</include>
+                <include>plugin-security-settings.yml</include>
             </includes>
         </fileSet>
     </fileSets>

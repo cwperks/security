@@ -912,8 +912,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
         NodeEnvironment nodeEnvironment,
         NamedWriteableRegistry namedWriteableRegistry,
         IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        Settings securitySettings
     ) {
+
+        System.out.println("OpenSearch Security Settings: " + securitySettings);
 
         SSLConfig.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
         if (SSLConfig.isSslOnlyMode()) {
