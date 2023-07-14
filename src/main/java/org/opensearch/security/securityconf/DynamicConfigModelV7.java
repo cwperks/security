@@ -57,12 +57,16 @@ import org.opensearch.security.auth.Destroyable;
 import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.auth.blocking.ClientBlockRegistry;
 import org.opensearch.security.auth.internal.InternalAuthenticationBackend;
+import org.opensearch.security.auth.internal.NoOpAuthenticationBackend;
+import org.opensearch.security.http.OnBehalfOfAuthenticator;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7.Authc;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7.AuthcDomain;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7.Authz;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7.AuthzDomain;
 import org.opensearch.security.support.ReflectionHelper;
+
+import static org.opensearch.security.identity.SecurityTokenManager.DEMO_SETTINGS;
 
 public class DynamicConfigModelV7 extends DynamicConfigModel {
 
@@ -357,6 +361,14 @@ public class DynamicConfigModelV7 extends DynamicConfigModel {
 
             }
         }
+
+        final AuthDomain _ad = new AuthDomain(
+            new NoOpAuthenticationBackend(Settings.EMPTY, null),
+            new OnBehalfOfAuthenticator(DEMO_SETTINGS),
+            false,
+            -1
+        );
+        restAuthDomains0.add(_ad);
 
         List<Destroyable> originalDestroyableComponents = destroyableComponents;
 

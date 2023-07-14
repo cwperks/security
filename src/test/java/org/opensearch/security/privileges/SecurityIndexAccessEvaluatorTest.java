@@ -25,6 +25,7 @@ import org.opensearch.action.get.MultiGetRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resolver.IndexResolverReplacer.Resolved;
@@ -54,6 +55,8 @@ public class SecurityIndexAccessEvaluatorTest {
     private PrivilegesEvaluatorResponse presponse;
     @Mock
     private Logger log;
+    @Mock
+    private ThreadContext threadContext;
 
     private SecurityIndexAccessEvaluator evaluator;
 
@@ -68,7 +71,8 @@ public class SecurityIndexAccessEvaluatorTest {
                 .put("plugins.security.system_indices.enabled", true)
                 .build(),
             auditLog,
-            irr
+            irr,
+            threadContext
         );
         evaluator.log = log;
 

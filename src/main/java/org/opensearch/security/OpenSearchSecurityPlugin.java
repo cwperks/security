@@ -100,12 +100,16 @@ import org.opensearch.extensions.ExtensionsManager;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
 import org.opensearch.core.index.Index;
+import org.opensearch.identity.Subject;
+import org.opensearch.identity.tokens.TokenManager;
 import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
 import org.opensearch.indices.IndicesService;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.indices.breaker.CircuitBreakerService;
 import org.opensearch.plugins.ClusterPlugin;
+import org.opensearch.plugins.ExtensionAwarePlugin;
+import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
@@ -145,6 +149,8 @@ import org.opensearch.security.filter.SecurityRestFilter;
 import org.opensearch.security.http.SecurityHttpServerTransport;
 import org.opensearch.security.http.SecurityNonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
+import org.opensearch.security.identity.SecuritySubject;
+import org.opensearch.security.identity.SecurityTokenManager;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
@@ -193,7 +199,12 @@ import org.opensearch.transport.TransportService;
 import org.opensearch.watcher.ResourceWatcherService;
 // CS-ENFORCE-SINGLE
 
-public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin implements ClusterPlugin, MapperPlugin {
+public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
+    implements
+        ClusterPlugin,
+        MapperPlugin,
+        ExtensionAwarePlugin,
+        IdentityPlugin {
 
     private static final String KEYWORD = ".keyword";
     private static final Logger actionTrace = LogManager.getLogger("opendistro_security_action_trace");
@@ -212,6 +223,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     private volatile ConfigurationRepository cr;
     private volatile AdminDNs adminDns;
     private volatile ClusterService cs;
+    private volatile SecuritySubject subject = new SecuritySubject();
+    private volatile SecurityTokenManager tokenManager;
     private static volatile DiscoveryNode localNode;
     private volatile AuditLog auditLog;
     private volatile BackendRegistry backendRegistry;
@@ -225,6 +238,13 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
     private volatile DlsFlsRequestValve dlsFlsValve = null;
     private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
+
+    public static Setting RESERVED_INDICES_SETTING = Setting.listSetting(
+        "reserved_indices",
+        List.of(),
+        Function.identity(),
+        Property.ExtensionScope
+    );
 
     public static boolean isActionTraceEnabled() {
         return actionTrace.isTraceEnabled();
@@ -990,6 +1010,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
 
         cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog);
 
+        subject.setThreadContext(threadPool.getThreadContext());
+        tokenManager = new SecurityTokenManager(cs);
+
         userService = new UserService(cs, cr, settings, localClient);
 
         final XFFResolver xffResolver = new XFFResolver(threadPool);
@@ -1105,6 +1128,13 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
             builder.put(NetworkModule.HTTP_TYPE_KEY, "org.opensearch.security.http.SecurityHttpServerTransport");
         }
         return builder.build();
+    }
+
+    @Override
+    public List<Setting<?>> getExtensionSettings() {
+        List<Setting<?>> settings = new ArrayList<Setting<?>>();
+        settings.add(RESERVED_INDICES_SETTING);
+        return settings;
     }
 
     @Override
@@ -1892,6 +1922,16 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin 
 
     public static void setLocalNode(DiscoveryNode node) {
         localNode = node;
+    }
+
+    @Override
+    public Subject getSubject() {
+        return subject;
+    }
+
+    @Override
+    public TokenManager getTokenManager() {
+        return tokenManager;
     }
 
     public static class GuiceHolder implements LifecycleComponent {
