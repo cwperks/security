@@ -48,8 +48,9 @@ buildscript {
         opensearch_group = "org.opensearch"
     }
     repositories {
-        mavenCentral()
+        mavenLocal()
         maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+        mavenCentral()
         maven { url "https://plugins.gradle.org/m2/" }
     }
 
@@ -59,8 +60,9 @@ buildscript {
 }
 
 repositories {
-    mavenCentral()
+    mavenLocal()
     maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
+    mavenCentral()
     maven { url "https://plugins.gradle.org/m2/" }
 }
 
@@ -82,8 +84,19 @@ String baseName = "securityBwcCluster"
 String bwcFilePath = "src/test/resources/"
 String projectVersion = nextVersion
 
-String previousOpenSearch  = extractVersion(previousVersion);
-String nextOpenSearch  = extractVersion(nextVersion);
+boolean isSnapshot = bwcVersion.contains("-SNAPSHOT")
+String bwcVersionNoQualifier = isSnapshot ? bwcVersion - "-SNAPSHOT" : bwcVersion
+boolean nextVersionIsSnapshot = projectVersion.contains("-SNAPSHOT")
+String projectVersionNoQualifier = nextVersionIsSnapshot ? projectVersion = "-SNAPSHOT" : projectVersion
+
+String previousOpenSearch  = extractVersion(bwcVersionNoQualifier);
+if (isSnapshot) {
+    previousOpenSearch += "-SNAPSHOT"
+}
+String nextOpenSearch  = extractVersion(projectVersionNoQualifier);
+if (nextVersionIsSnapshot) {
+    nextOpenSearch += "-SNAPSHOT"
+}
 
 println previousOpenSearch + nextOpenSearch;
 
