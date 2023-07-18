@@ -165,7 +165,7 @@ public class PrivilegesEvaluator {
         this.clusterInfoHolder = clusterInfoHolder;
         this.irr = irr;
         snapshotRestoreEvaluator = new SnapshotRestoreEvaluator(settings, auditLog);
-        securityIndexAccessEvaluator = new SecurityIndexAccessEvaluator(settings, auditLog, irr);
+        securityIndexAccessEvaluator = new SecurityIndexAccessEvaluator(settings, auditLog, irr, threadPool.getThreadContext());
         protectedIndexAccessEvaluator = new ProtectedIndexAccessEvaluator(settings, auditLog);
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();
