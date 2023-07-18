@@ -1,14 +1,17 @@
 package org.opensearch.security.identity;
 
 import org.apache.cxf.rs.security.jose.jwt.JwtConstants;
+import org.greenrobot.eventbus.Subscribe;
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.transport.TransportAddress;
 import org.opensearch.identity.Subject;
 import org.opensearch.identity.tokens.AuthToken;
 import org.opensearch.identity.tokens.BearerAuthToken;
 import org.opensearch.identity.tokens.TokenManager;
 import org.opensearch.security.authtoken.jwt.JwtVendor;
+import org.opensearch.security.securityconf.ConfigModel;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
@@ -17,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class SecurityTokenManager implements TokenManager {
 
@@ -30,11 +34,11 @@ public class SecurityTokenManager implements TokenManager {
                     )
                 )
         )
-        .put("encryption_key",  Base64.getEncoder().encodeToString("encryptionKey".getBytes(StandardCharsets.UTF_8)))
+        .put("encryption_key", Base64.getEncoder().encodeToString("encryptionKey".getBytes(StandardCharsets.UTF_8)))
         .build();
 
+    private ConfigModel configModel;
     private ClusterService cs;
-
     private ThreadPool threadPool;
 
     public SecurityTokenManager(ClusterService cs, ThreadPool threadPool) {
@@ -54,6 +58,9 @@ public class SecurityTokenManager implements TokenManager {
             throw new OpenSearchSecurityException("Cannot issue on behalf of token without an audience claim.");
         }
 
+        final TransportAddress caller = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
+
+        Set<String> mappedRoles = mapRoles(user, caller);
         String encodedJwt = null;
         try {
             encodedJwt = jwtVendor.issueOnBehalfOfToken(
@@ -61,7 +68,7 @@ public class SecurityTokenManager implements TokenManager {
                 user.getName(),
                 (String) claims.get(JwtConstants.CLAIM_AUDIENCE),
                 null,
-                user.getSecurityRoles(),
+                mappedRoles,
                 user.getRoles()
             );
         } catch (Exception e) {
@@ -83,5 +90,14 @@ public class SecurityTokenManager implements TokenManager {
     @Override
     public Subject authenticateToken(AuthToken authToken) {
         return null;
+    }
+
+    public Set<String> mapRoles(final User user, final TransportAddress caller) {
+        return this.configModel.mapSecurityRoles(user, caller);
+    }
+
+    @Subscribe
+    public void onConfigModelChanged(ConfigModel configModel) {
+        this.configModel = configModel;
     }
 }
