@@ -12,7 +12,7 @@
 package org.opensearch.security.authtoken.jwt;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.function.LongSupplier;
 
@@ -97,13 +97,13 @@ public class JwtVendor {
         }
     }
 
-    public String createJwt(
+    public String issueOnBehalfOfToken(
         String issuer,
         String subject,
         String audience,
         Integer expirySeconds,
-        List<String> roles,
-        List<String> backendRoles
+        Collection<String> roles,
+        Collection<String> backendRoles
     ) throws Exception {
         long timeMillis = timeProvider.getAsLong();
         Instant now = Instant.ofEpochMilli(timeProvider.getAsLong());
