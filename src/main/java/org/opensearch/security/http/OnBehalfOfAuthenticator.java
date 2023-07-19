@@ -184,7 +184,7 @@ public class OnBehalfOfAuthenticator implements HTTPAuthenticator {
             List<String> roles = extractSecurityRolesFromClaims(claims);
             String[] backendRoles = extractBackendRolesFromClaims(claims);
 
-            final AuthCredentials ac = new AuthCredentials(subject, List.of()).markComplete();
+            final AuthCredentials ac = new AuthCredentials(subject, roles, backendRoles).markComplete();
 
             for (Entry<String, Object> claim : claims.entrySet()) {
                 ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
