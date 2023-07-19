@@ -51,6 +51,7 @@ import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 import org.opensearch.tasks.Task;
 
+import static org.opensearch.security.OpenSearchSecurityPlugin.PERMISSIONS_SETTING;
 import static org.opensearch.security.OpenSearchSecurityPlugin.RESERVED_INDICES_SETTING;
 
 public class SecurityIndexAccessEvaluator {
@@ -171,6 +172,8 @@ public class SecurityIndexAccessEvaluator {
                             .getAdditionalSettings()
                             .get(RESERVED_INDICES_SETTING);
                         System.out.println("Reserved indices for " + authenticatedUser.getName() + ": " + reservedIndices);
+                        Settings permissions = (Settings) matchingExtension.get().getAdditionalSettings().get(PERMISSIONS_SETTING);
+                        System.out.println("Permissions for " + authenticatedUser.getName() + ": " + permissions.keySet());
                         if (matchAllReservedIndices(requestedResolved, reservedIndices)) {
                             log.info(
                                 "{} for '{}' index is allowed for service account of extension reserving the indices",

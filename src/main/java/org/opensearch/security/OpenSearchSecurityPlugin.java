@@ -246,7 +246,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         Property.ExtensionScope
     );
 
-    public static Setting SEND_BACKEND_ROLES = Setting.boolSetting("send_backend_roles", false, Property.ExtensionScope);
+    public static Setting PERMISSIONS_SETTING = Setting.groupSetting("permissions.", Property.ExtensionScope);
+
+    public static Setting SEND_BACKEND_ROLES_SETTING = Setting.boolSetting("send_backend_roles", false, Property.ExtensionScope);
 
     public static boolean isActionTraceEnabled() {
         return actionTrace.isTraceEnabled();
@@ -1137,7 +1139,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public List<Setting<?>> getExtensionSettings() {
         List<Setting<?>> settings = new ArrayList<Setting<?>>();
         settings.add(RESERVED_INDICES_SETTING);
-        settings.add(SEND_BACKEND_ROLES);
+        settings.add(SEND_BACKEND_ROLES_SETTING);
+        settings.add(PERMISSIONS_SETTING);
         return settings;
     }
 
