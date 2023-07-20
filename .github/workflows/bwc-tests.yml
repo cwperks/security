@@ -19,7 +19,7 @@ jobs:
       uses: ./.github/actions/run-bwc-suite
       with:
         plugin-previous-branch: "1.3"
-        plugin-next-branch: "current_branch"
+        plugin-next-branch: "2.x"
         report-artifact-name: BWC-Last-Supported-Major
 
   current-to-next-unreleased-major:
@@ -37,6 +37,6 @@ jobs:
     - id: build-previous
       uses: ./.github/actions/run-bwc-suite
       with:
-        plugin-previous-branch: "current_branch"
+        plugin-previous-branch: "2.x"
         plugin-next-branch: "main"
         report-artifact-name: BWC-Next-Major
