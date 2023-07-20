@@ -19,6 +19,9 @@ runs:
       run: git config --system core.longpaths true
       shell: pwsh
 
+    - name: echo input
+      run: echo "${{ inputs.plugin-branch }}"
+
     - name: Checkout Branch from Fork
       if: ${{ inputs.plugin-branch == 'current_branch' }}
       uses: actions/checkout@v2
