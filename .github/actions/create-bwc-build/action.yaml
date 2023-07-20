@@ -21,6 +21,7 @@ runs:
 
     - name: echo input
       run: echo "${{ inputs.plugin-branch }}"
+      shell: bash
 
     - name: Checkout Branch from Fork
       if: ${{ inputs.plugin-branch == 'current_branch' }}
