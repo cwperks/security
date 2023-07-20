@@ -51,7 +51,6 @@ import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 import org.opensearch.tasks.Task;
 
-import static org.opensearch.security.OpenSearchSecurityPlugin.PERMISSIONS_SETTING;
 import static org.opensearch.security.OpenSearchSecurityPlugin.RESERVED_INDICES_SETTING;
 
 public class SecurityIndexAccessEvaluator {
@@ -122,8 +121,10 @@ public class SecurityIndexAccessEvaluator {
         final Resolved requestedResolved,
         final PrivilegesEvaluatorResponse presponse
     ) {
+        System.out.println("SecurityIndexAccessEvaluator");
         final boolean isDebugEnabled = log.isDebugEnabled();
         if (securityDeniedActionMatcher.test(action)) {
+            System.out.println("requestedResolved: " + requestedResolved);
             if (requestedResolved.isLocalAll()) {
                 if (filterSecurityIndex) {
                     irr.replace(request, false, "*", "-" + securityIndex);
@@ -144,6 +145,7 @@ public class SecurityIndexAccessEvaluator {
                     return presponse.markComplete();
                 }
             } else if (matchAnySystemIndices(requestedResolved)) {
+                System.out.println("matchAnySystemIndices");
                 if (filterSecurityIndex) {
                     Set<String> allWithoutSecurity = new HashSet<>(requestedResolved.getAllIndices());
                     allWithoutSecurity.remove(securityIndex);
@@ -161,19 +163,14 @@ public class SecurityIndexAccessEvaluator {
                     return presponse;
                 } else {
                     User authenticatedUser = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
-                    System.out.println("Authenticated User is " + authenticatedUser.getName());
                     Optional<ExtensionsSettings.Extension> matchingExtension = OpenSearchSecurityPlugin.GuiceHolder.getExtensionsManager()
                         .lookupExtensionSettingsById(authenticatedUser.getName());
-                    System.out.println("Matching Extension " + matchingExtension);
                     auditLog.logSecurityIndexAttempt(request, action, task);
                     final String foundSystemIndexes = getProtectedIndexes(requestedResolved).stream().collect(Collectors.joining(", "));
                     if (matchingExtension.isPresent()) {
                         List<String> reservedIndices = (List<String>) matchingExtension.get()
                             .getAdditionalSettings()
                             .get(RESERVED_INDICES_SETTING);
-                        System.out.println("Reserved indices for " + authenticatedUser.getName() + ": " + reservedIndices);
-                        Settings permissions = (Settings) matchingExtension.get().getAdditionalSettings().get(PERMISSIONS_SETTING);
-                        System.out.println("Permissions for " + authenticatedUser.getName() + ": " + permissions.keySet());
                         if (matchAllReservedIndices(requestedResolved, reservedIndices)) {
                             log.info(
                                 "{} for '{}' index is allowed for service account of extension reserving the indices",

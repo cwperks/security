@@ -30,6 +30,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.common.settings.Settings;
+import org.opensearch.extensions.ExtensionsSettings;
+import org.opensearch.security.OpenSearchSecurityPlugin;
+
+import static org.opensearch.security.OpenSearchSecurityPlugin.SEND_BACKEND_ROLES_SETTING;
 
 public class JwtVendor {
     private static final Logger logger = LogManager.getLogger(JwtVendor.class);
@@ -130,6 +134,17 @@ public class JwtVendor {
             jwtClaims.setExpiryTime(expiryTime);
         } else {
             throw new Exception("The expiration time should be a positive integer");
+        }
+
+        Optional<ExtensionsSettings.Extension> matchingExtension = OpenSearchSecurityPlugin.GuiceHolder.getExtensionsManager()
+            .lookupExtensionSettingsById(audience);
+        if (matchingExtension.isPresent()) {
+            boolean sendBackendRoles = (boolean) matchingExtension.get().getAdditionalSettings().get(SEND_BACKEND_ROLES_SETTING);
+            System.out.println("sendBackendRoles: " + sendBackendRoles);
+            System.out.println("backendRoles: " + backendRoles);
+            if (sendBackendRoles) {
+                jwtClaims.setProperty("br", backendRoles);
+            }
         }
 
         if (roles != null) {
