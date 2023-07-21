@@ -338,7 +338,7 @@ public class ConfigModelV7 extends ConfigModel {
             }
 
             RoleV7 roleToAdd = (RoleV7) role;
-            SecurityRole.Builder _securityRole = new SecurityRole.Builder("empheral");
+            SecurityRole.Builder _securityRole = new SecurityRole.Builder("ephemeral");
 
             final Set<String> permittedClusterActions = agr.resolvedActions(roleToAdd.getCluster_permissions());
             _securityRole.addClusterPerms(permittedClusterActions);
