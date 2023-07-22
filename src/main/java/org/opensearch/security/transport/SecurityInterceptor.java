@@ -290,6 +290,15 @@ public class SecurityInterceptor {
             } else if (StringUtils.isNotEmpty(injectedUserString)) {
                 getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, injectedUserString);
             }
+
+            final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
+            if (origUser == null && userHeader != null) {
+                System.out.println("Somehow got here");
+                getThreadContext().putTransient(
+                    ConfigConstants.OPENDISTRO_SECURITY_USER,
+                    Objects.requireNonNull((User) Base64Helper.deserializeObject(userHeader))
+                );
+            }
         } else {
             if (transportAddress != null) {
                 getThreadContext().putHeader(
