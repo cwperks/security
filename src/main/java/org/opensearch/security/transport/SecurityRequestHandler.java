@@ -144,8 +144,18 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
             // bypass non-netty requests
             if (getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER) != null
                 || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER) != null
-                || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES) != null
-                || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS) != null) {
+                || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES) != null) {
+
+                final String originalRemoteAddress = getThreadContext().getHeader(
+                    ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER
+                );
+
+                if (!Strings.isNullOrEmpty(originalRemoteAddress)) {
+                    getThreadContext().putTransient(
+                        ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS,
+                        new TransportAddress((InetSocketAddress) Base64Helper.deserializeObject(originalRemoteAddress))
+                    );
+                }
 
                 final String rolesValidation = getThreadContext().getHeader(
                     ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_VALIDATION_HEADER

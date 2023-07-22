@@ -267,45 +267,37 @@ public class SecurityInterceptor {
             getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN_HEADER, Origin.LOCAL.toString());
         }
 
-        TransportAddress transportAddress = null;
         if (remoteAdr != null && remoteAdr instanceof TransportAddress) {
+
             String remoteAddressHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER);
+
             if (remoteAddressHeader == null) {
-                transportAddress = (TransportAddress) remoteAdr;
+                getThreadContext().putHeader(
+                    ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER,
+                    Base64Helper.serializeObject(((TransportAddress) remoteAdr).address())
+                );
             }
         }
 
-        // we put headers as transient for same node requests
-        if (isSameNodeRequest) {
-            if (transportAddress != null) {
-                getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS, transportAddress);
-            }
+        String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
 
+        if (userHeader == null) {
             if (origUser != null) {
-                // if request is going to be handled by same node, we directly put transient value as the thread context is not going to be
-                // stah.
-                getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, origUser);
-            } else if (StringUtils.isNotEmpty(injectedRolesString)) {
-                getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES, injectedRolesString);
-            } else if (StringUtils.isNotEmpty(injectedUserString)) {
-                getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, injectedUserString);
-            }
-        } else {
-            if (transportAddress != null) {
-                getThreadContext().putHeader(
-                    ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER,
-                    Base64Helper.serializeObject(transportAddress.address())
-                );
-            }
-
-            final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
-            if (userHeader == null) {
-                // put as headers for other requests
-                if (origUser != null) {
+                if (isSameNodeRequest) {
+                    getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, origUser);
+                } else {
                     getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER, Base64Helper.serializeObject(origUser));
-                } else if (StringUtils.isNotEmpty(injectedRolesString)) {
+                }
+            } else if (StringUtils.isNotEmpty(injectedRolesString)) {
+                if (isSameNodeRequest) {
+                    getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES, injectedRolesString);
+                } else {
                     getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_HEADER, injectedRolesString);
-                } else if (StringUtils.isNotEmpty(injectedUserString)) {
+                }
+            } else if (StringUtils.isNotEmpty(injectedUserString)) {
+                if (isSameNodeRequest) {
+                    getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, injectedUserString);
+                } else {
                     getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER_HEADER, injectedUserString);
                 }
             }
