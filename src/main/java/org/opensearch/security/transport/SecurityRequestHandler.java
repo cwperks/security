@@ -147,11 +147,19 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
                 || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES) != null
                 || getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS) != null) {
 
+                System.out.println("Transient user: " + getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER));
+                System.out.println("Transient remote address: " + getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS));
+
                 final String rolesValidation = getThreadContext().getHeader(
                     ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_VALIDATION_HEADER
                 );
                 if (!Strings.isNullOrEmpty(rolesValidation)) {
                     getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_VALIDATION, rolesValidation);
+                }
+
+                final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
+                if (userHeader != null) {
+                    throw new OpenSearchSecurityException("userHeader not null on a same node request: " + getThreadContext().getHeaders());
                 }
 
                 if (isActionTraceEnabled()) {

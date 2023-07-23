@@ -341,6 +341,8 @@ public class SecurityFilter implements ActionFilter {
                         user = User.DEFAULT_TRANSPORT_USER;
                         threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
                     } else {
+                        System.out.println("Task: " + task);
+                        System.out.println("Request: " + request);
                         log.error(
                             "No user found for "
                                 + action

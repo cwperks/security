@@ -38,6 +38,9 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.action.bulk.BulkShardRequest;
+import org.opensearch.action.support.replication.TransportReplicationAction.ConcreteShardRequest;
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.action.admin.cluster.shards.ClusterSearchShardsAction;
 import org.opensearch.action.admin.cluster.shards.ClusterSearchShardsResponse;
 import org.opensearch.action.get.GetRequest;
@@ -133,7 +136,8 @@ public class SecurityInterceptor {
         TransportResponseHandler<T> handler
     ) {
         final Map<String, String> origHeaders0 = getThreadContext().getHeaders();
-        final User user0 = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+        // final User user0 = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+        final User user0 = (User) getThreadContext().getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
         final String injectedUserString = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER);
         final String injectedRolesString = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES);
         final String injectedRolesValidationString = getThreadContext().getTransient(
@@ -226,7 +230,19 @@ public class SecurityInterceptor {
 
             getThreadContext().putHeader(headerMap);
 
-            ensureCorrectHeaders(remoteAddress0, user0, origin0, injectedUserString, injectedRolesString, isSameNodeRequest);
+            String resolvedActionClass = request.getClass().getSimpleName();
+
+            if (request instanceof BulkShardRequest) {
+                if (((BulkShardRequest) request).items().length == 1) {
+                    resolvedActionClass = ((BulkShardRequest) request).items()[0].request().getClass().getSimpleName();
+                }
+            }
+
+            if (request instanceof ConcreteShardRequest) {
+                resolvedActionClass = ((ConcreteShardRequest<?>) request).getRequest().getClass().getSimpleName();
+            }
+
+            ensureCorrectHeaders(remoteAddress0, user0, origin0, injectedUserString, injectedRolesString, isSameNodeRequest, resolvedActionClass, action);
 
             if (isActionTraceEnabled()) {
                 getThreadContext().putHeader(
@@ -253,7 +269,9 @@ public class SecurityInterceptor {
         final String origin,
         final String injectedUserString,
         final String injectedRolesString,
-        boolean isSameNodeRequest
+        boolean isSameNodeRequest,
+        String resolvedActionClass,
+        String action
     ) {
         // keep original address
 
@@ -274,6 +292,28 @@ public class SecurityInterceptor {
                 transportAddress = (TransportAddress) remoteAdr;
             }
         }
+        if ("IndexRequest".equals(resolvedActionClass)) {
+            System.out.println("original Request");
+            System.out.println("origUser: " + origUser);
+            System.out.println("transportAddress: " + transportAddress);
+            System.out.println("localNode: " + OpenSearchSecurityPlugin.getLocalNode());
+            System.out.println("isSameNodeRequest: " + isSameNodeRequest);
+            final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
+            System.out.println("userHeader: " + userHeader);
+            System.out.println("action: " + action);
+            System.out.println("is same name and user exists: " + (isSameNodeRequest && origUser != null));
+        }
+        if ("IndexRequest".equals(getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INITIAL_ACTION_CLASS_HEADER))) {
+            System.out.println("derivative Request");
+            System.out.println("origUser: " + origUser);
+            System.out.println("transportAddress: " + transportAddress);
+            System.out.println("localNode: " + OpenSearchSecurityPlugin.getLocalNode());
+            System.out.println("threadcontext headers: " + getThreadContext().getHeaders());
+            System.out.println("isSameNodeRequest: " + isSameNodeRequest);
+            final String userHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER);
+            System.out.println("userHeader: " + userHeader);
+            System.out.println("action: " + action);
+        }
 
         // we put headers as transient for same node requests
         if (isSameNodeRequest) {
@@ -282,6 +322,9 @@ public class SecurityInterceptor {
             }
 
             if (origUser != null) {
+                if ("IndexRequest".equals(resolvedActionClass)) {
+                    System.out.println("Writing origUser " + origUser + " to transient threadcontext header");
+                }
                 // if request is going to be handled by same node, we directly put transient value as the thread context is not going to be
                 // stah.
                 getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, origUser);

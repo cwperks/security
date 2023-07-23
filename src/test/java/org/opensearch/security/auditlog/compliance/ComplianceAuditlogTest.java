@@ -415,12 +415,16 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
             .build();
 
         setup(additionalSettings);
+        final boolean sendAdminCertificate = rh.sendAdminCertificate;
+        final String keystore = rh.keystore;
+        rh.sendAdminCertificate = false;
 
         try (Client tc = getClient()) {
             tc.prepareIndex("humanresources").setRefreshPolicy(RefreshPolicy.IMMEDIATE).setSource("Age", 456).execute().actionGet();
         }
 
         TestAuditlogImpl.doThenWaitForMessage(() -> {
+            System.out.println("Creating emp doc as admin");
             final String body = "{\"doc\": {\"Age\":123}}";
             final HttpResponse response = rh.executePostRequest(
                 "humanresources/_doc/100?pretty",
@@ -432,6 +436,7 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
         Assert.assertTrue(TestAuditlogImpl.sb.toString().split(".*audit_compliance_diff_content.*replace.*").length == 1);
 
         TestAuditlogImpl.doThenWaitForMessage(() -> {
+            System.out.println("Creating emp doc2 as admin");
             final String body = "{\"doc\": {\"Age\":555}}";
             final HttpResponse response = rh.executePostRequest(
                 "humanresources/_update/100?pretty",
@@ -441,5 +446,39 @@ public class ComplianceAuditlogTest extends AbstractAuditlogiUnitTest {
             Assert.assertEquals(HttpStatus.SC_OK, response.getStatusCode());
         });
         Assert.assertTrue(TestAuditlogImpl.sb.toString().split(".*audit_compliance_diff_content.*replace.*").length == 1);
+        rh.sendAdminCertificate = sendAdminCertificate;
+    }
+
+    @Test
+    public void testMany() throws Exception {
+
+        Settings additionalSettings = Settings.builder()
+            .put("plugins.security.audit.type", TestAuditlogImpl.class.getName())
+            .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_ENABLE_TRANSPORT, false)
+            .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_ENABLE_REST, false)
+            .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_RESOLVE_BULK_REQUESTS, true)
+            .put(ConfigConstants.OPENDISTRO_SECURITY_COMPLIANCE_HISTORY_EXTERNAL_CONFIG_ENABLED, false)
+            .put(ConfigConstants.SECURITY_COMPLIANCE_HISTORY_INTERNAL_CONFIG_ENABLED, false)
+            .put(ConfigConstants.OPENDISTRO_SECURITY_COMPLIANCE_HISTORY_WRITE_WATCHED_INDICES, "finance")
+            .put(
+                ConfigConstants.OPENDISTRO_SECURITY_COMPLIANCE_HISTORY_READ_WATCHED_FIELDS,
+                "humanresources,Designation,FirstName,LastName"
+            )
+            .build();
+
+        setup(additionalSettings);
+
+        for (int i = 0; i < 10; i++) {
+            try (Client tc = getClient()) {
+                tc.prepareIndex("humanresources" + i).setRefreshPolicy(RefreshPolicy.IMMEDIATE).setSource("Age", 456).execute().actionGet();
+            }
+
+            final String body = "{\"doc\": {\"Age\":123}}";
+            final HttpResponse response = rh.executePostRequest(
+                "humanresources" + i + "/_doc/100?pretty",
+                body,
+                encodeBasicHeader("admin", "admin")
+            );
+        }
     }
 }
