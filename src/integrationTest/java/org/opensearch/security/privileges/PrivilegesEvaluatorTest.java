@@ -46,14 +46,14 @@ public class PrivilegesEvaluatorTest {
     );
 
     protected final static TestSecurityConfig.User SEARCH_TEMPLATE = new TestSecurityConfig.User("search_template_user").roles(
-        new Role("search_template_role").indexPermissions("read").on("/^[a-z].*/").clusterPermissions("indices:data/read/search/template")
+        new Role("search_template_role").indexPermissions("read").on("movies")
     );
 
     @ClassRule
     public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS)
         .plugin(MustacheModulePlugin.class)
         .authc(AUTHC_HTTPBASIC_INTERNAL)
-        .users(NEGATIVE_LOOKAHEAD, NEGATED_REGEX, SEARCH_TEMPLATE)
+        .users(NEGATIVE_LOOKAHEAD, NEGATED_REGEX, SEARCH_TEMPLATE, TestSecurityConfig.User.USER_ADMIN)
         .build();
 
     @Test
@@ -76,14 +76,33 @@ public class PrivilegesEvaluatorTest {
     }
 
     @Test
-    public void testSearchTemplateRequest() {
+    public void testSearchTemplateRequest_positive() {
+        try (TestRestClient adminClient = cluster.getRestClient(TestSecurityConfig.User.USER_ADMIN)) {
+            adminClient.put("movies");
+        }
         try (TestRestClient client = cluster.getRestClient(SEARCH_TEMPLATE)) {
             assertThat(
                 client.getWithJsonBody(
-                    "r*/_search/template",
-                    "{\"source\":{\"query\":{\"match\":{\"service\":\"{{service_name}}\"}}},\"params\":{\"service_name\":\"Oracle\"}}"
+                    "movies/_search/template",
+                    "{\"source\":{\"query\":{\"match\":{\"title\":\"{{title}}\"}}},\"params\":{\"title\":\"Titanic\"}}"
                 ).getStatusCode(),
                 equalTo(HttpStatus.SC_OK)
+            );
+        }
+    }
+
+    @Test
+    public void testSearchTemplateRequest_negative() {
+        try (TestRestClient adminClient = cluster.getRestClient(TestSecurityConfig.User.USER_ADMIN)) {
+            adminClient.put("logs");
+        }
+        try (TestRestClient client = cluster.getRestClient(SEARCH_TEMPLATE)) {
+            assertThat(
+                client.getWithJsonBody(
+                    "logs/_search/template",
+                    "{\"source\":{\"query\":{\"match\":{\"log_level\":\"{{log_level}}\"}}},\"params\":{\"log_level\":\"INFO\"}}"
+                ).getStatusCode(),
+                equalTo(HttpStatus.SC_FORBIDDEN)
             );
         }
     }
