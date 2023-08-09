@@ -20,8 +20,8 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.client.Client;
-import org.opensearch.common.Strings;
 import org.opensearch.common.xcontent.XContentType;
+import org.opensearch.core.common.Strings;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 
 public class DlsTest extends AbstractDlsFlsTest {
@@ -111,7 +111,8 @@ public class DlsTest extends AbstractDlsFlsTest {
         );
         Assert.assertTrue(res.getBody().contains("\"value\" : 1,\n      \"relation"));
         Assert.assertTrue(res.getBody().contains("\"failed\" : 0"));
-        Assert.assertEquals(res.getHeaders().toString(), 2, res.getHeaders().size());
+
+        Assert.assertEquals(res.getHeaders().toString(), 3, res.getHeaders().size());
 
         Assert.assertEquals(
             HttpStatus.SC_OK,
