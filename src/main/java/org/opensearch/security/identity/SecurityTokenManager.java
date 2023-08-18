@@ -1,14 +1,15 @@
 package org.opensearch.security.identity;
 
-import org.apache.cxf.rs.security.jose.jwt.JwtConstants;
+import joptsimple.internal.Strings;
 import org.greenrobot.eventbus.Subscribe;
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.transport.TransportAddress;
+import org.opensearch.core.common.transport.TransportAddress;
 import org.opensearch.identity.Subject;
 import org.opensearch.identity.tokens.AuthToken;
 import org.opensearch.identity.tokens.BearerAuthToken;
+import org.opensearch.identity.tokens.OnBehalfOfClaims;
 import org.opensearch.identity.tokens.TokenManager;
 import org.opensearch.security.authtoken.jwt.JwtVendor;
 import org.opensearch.security.securityconf.ConfigModel;
@@ -18,7 +19,6 @@ import org.opensearch.threadpool.ThreadPool;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -49,12 +49,12 @@ public class SecurityTokenManager implements TokenManager {
     private JwtVendor jwtVendor = new JwtVendor(DEMO_SETTINGS, Optional.empty());
 
     @Override
-    public AuthToken issueOnBehalfOfToken(Map<String, Object> claims) {
+    public AuthToken issueOnBehalfOfToken(Subject subject, OnBehalfOfClaims claims) {
         User user = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         if (user == null) {
             throw new OpenSearchSecurityException("Cannot issue on behalf of token.");
         }
-        if (!claims.containsKey(JwtConstants.CLAIM_AUDIENCE)) {
+        if (Strings.isNullOrEmpty(claims.getAudience())) {
             throw new OpenSearchSecurityException("Cannot issue on behalf of token without an audience claim.");
         }
 
@@ -66,7 +66,7 @@ public class SecurityTokenManager implements TokenManager {
             encodedJwt = jwtVendor.issueOnBehalfOfToken(
                 cs.getClusterName().value(),
                 user.getName(),
-                (String) claims.get(JwtConstants.CLAIM_AUDIENCE),
+                claims.getAudience(),
                 null,
                 mappedRoles,
                 user.getRoles()
