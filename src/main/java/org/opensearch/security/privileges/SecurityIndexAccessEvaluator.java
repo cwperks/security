@@ -29,6 +29,7 @@ package org.opensearch.security.privileges;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -39,12 +40,18 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.RealtimeRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.extensions.ExtensionsSettings;
+import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resolver.IndexResolverReplacer.Resolved;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
+import org.opensearch.security.user.User;
 import org.opensearch.tasks.Task;
+
+import static org.opensearch.security.OpenSearchSecurityPlugin.RESERVED_INDICES_SETTING;
 
 public class SecurityIndexAccessEvaluator {
 
@@ -58,15 +65,22 @@ public class SecurityIndexAccessEvaluator {
 
     // for system-indices configuration
     private final WildcardMatcher systemIndexMatcher;
+    private final ThreadContext threadContext;
     private final boolean systemIndexEnabled;
 
-    public SecurityIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
+    public SecurityIndexAccessEvaluator(
+        final Settings settings,
+        AuditLog auditLog,
+        IndexResolverReplacer irr,
+        ThreadContext threadContext
+    ) {
         this.securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
         );
         this.auditLog = auditLog;
         this.irr = irr;
+        this.threadContext = threadContext;
         this.filterSecurityIndex = settings.getAsBoolean(ConfigConstants.SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS, false);
         this.systemIndexMatcher = WildcardMatcher.from(
             settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
@@ -107,8 +121,10 @@ public class SecurityIndexAccessEvaluator {
         final Resolved requestedResolved,
         final PrivilegesEvaluatorResponse presponse
     ) {
+        System.out.println("SecurityIndexAccessEvaluator");
         final boolean isDebugEnabled = log.isDebugEnabled();
         if (securityDeniedActionMatcher.test(action)) {
+            System.out.println("requestedResolved: " + requestedResolved);
             if (requestedResolved.isLocalAll()) {
                 if (filterSecurityIndex) {
                     irr.replace(request, false, "*", "-" + securityIndex);
@@ -129,6 +145,7 @@ public class SecurityIndexAccessEvaluator {
                     return presponse.markComplete();
                 }
             } else if (matchAnySystemIndices(requestedResolved)) {
+                System.out.println("matchAnySystemIndices");
                 if (filterSecurityIndex) {
                     Set<String> allWithoutSecurity = new HashSet<>(requestedResolved.getAllIndices());
                     allWithoutSecurity.remove(securityIndex);
@@ -145,8 +162,25 @@ public class SecurityIndexAccessEvaluator {
                     }
                     return presponse;
                 } else {
+                    User authenticatedUser = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
+                    Optional<ExtensionsSettings.Extension> matchingExtension = OpenSearchSecurityPlugin.GuiceHolder.getExtensionsManager()
+                        .lookupExtensionSettingsById(authenticatedUser.getName());
                     auditLog.logSecurityIndexAttempt(request, action, task);
                     final String foundSystemIndexes = getProtectedIndexes(requestedResolved).stream().collect(Collectors.joining(", "));
+                    if (matchingExtension.isPresent()) {
+                        List<String> reservedIndices = (List<String>) matchingExtension.get()
+                            .getAdditionalSettings()
+                            .get(RESERVED_INDICES_SETTING);
+                        if (matchAllReservedIndices(requestedResolved, reservedIndices)) {
+                            log.info(
+                                "{} for '{}' index is allowed for service account of extension reserving the indices",
+                                action,
+                                foundSystemIndexes
+                            );
+                            presponse.allowed = true;
+                            return presponse.markComplete();
+                        }
+                    }
                     log.warn("{} for '{}' index is not allowed for a regular user", action, foundSystemIndexes);
                     presponse.allowed = false;
                     return presponse.markComplete();
@@ -188,5 +222,16 @@ public class SecurityIndexAccessEvaluator {
             protectedIndexes.addAll(systemIndexMatcher.getMatchAny(requestedResolved.getAllIndices(), Collectors.toList()));
         }
         return protectedIndexes;
+    }
+
+    private boolean matchAllReservedIndices(final Resolved requestedResolved, final List<String> reservedIndices) {
+        final List<String> requestedIndexes = requestedResolved.getAllIndices()
+            .stream()
+            .filter(securityIndex::equals)
+            .collect(Collectors.toList());
+        if (systemIndexEnabled) {
+            return reservedIndices.containsAll(requestedIndexes);
+        }
+        return true;
     }
 }
