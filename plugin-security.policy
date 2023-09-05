@@ -82,3 +82,15 @@ grant {
 grant codeBase "${codebase.netty-common}" {
   permission java.lang.RuntimePermission "loadLibrary.*";
 };
+
+grant codeBase "${codebase.bcprov-jdk15to18}" {
+  permission java.security.SecurityPermission "putProviderProperty.BC";
+  permission java.security.SecurityPermission "insertProvider.BC";
+  permission java.security.SecurityPermission "removeProviderProperty.BC";
+};
+
+grant codeBase "${codebase.opensearch-encryption-sdk}" {
+  permission java.security.SecurityPermission "putProviderProperty.BC";
+  permission java.security.SecurityPermission "insertProvider.BC";
+  permission java.security.SecurityPermission "removeProviderProperty.BC";
+};
