@@ -62,6 +62,7 @@ import javax.crypto.spec.PBEKeySpec;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 import org.opensearch.OpenSearchException;
@@ -70,6 +71,7 @@ import org.opensearch.env.Environment;
 
 public final class PemKeyReader {
 
+    private static BouncyCastleProvider bcProvider = new BouncyCastleProvider();
     private static final Logger log = LogManager.getLogger(PemKeyReader.class);
     static final String JKS = "JKS";
     static final String PKCS12 = "PKCS12";
@@ -148,7 +150,7 @@ public final class PemKeyReader {
         PBEKeySpec pbeKeySpec = new PBEKeySpec(password);
         SecretKey pbeKey = keyFactory.generateSecret(pbeKeySpec);
 
-        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
+        Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName(), bcProvider);
         cipher.init(Cipher.DECRYPT_MODE, pbeKey, encryptedPrivateKeyInfo.getAlgParameters());
 
         return encryptedPrivateKeyInfo.getKeySpec(cipher);

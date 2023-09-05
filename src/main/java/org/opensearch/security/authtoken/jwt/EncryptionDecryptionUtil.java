@@ -11,6 +11,8 @@
 
 package org.opensearch.security.authtoken.jwt;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -21,6 +23,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class EncryptionDecryptionUtil {
 
+    private static BouncyCastleProvider bcProvider = new BouncyCastleProvider();
     private final Cipher encryptCipher;
     private final Cipher decryptCipher;
 
@@ -42,7 +45,7 @@ public class EncryptionDecryptionUtil {
     private static Cipher createCipherFromSecret(final String secret, final CipherMode mode) {
         try {
             final byte[] decodedKey = Base64.getDecoder().decode(secret);
-            final Cipher cipher = Cipher.getInstance("AES");
+            final Cipher cipher = Cipher.getInstance("AES", bcProvider);
             final SecretKey originalKey = new SecretKeySpec(Arrays.copyOf(decodedKey, 16), "AES");
             cipher.init(mode.opmode, originalKey);
             return cipher;
