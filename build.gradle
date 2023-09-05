@@ -478,7 +478,9 @@ check.dependsOn integrationTest
 
 dependencies {
     implementation "org.opensearch.plugin:transport-netty4-client:${opensearch_version}"
-    implementation "org.opensearch.client:opensearch-rest-high-level-client:${opensearch_version}"
+    implementation("org.opensearch.client:opensearch-rest-high-level-client:${opensearch_version}") {
+        exclude(group: 'org.bouncycastle:bcprov-jdk15to18', module: "${versions.bouncycastle}")
+    }
     implementation "org.apache.httpcomponents.client5:httpclient5-cache:${versions.httpclient5}"
     implementation "org.apache.httpcomponents:httpclient:${versions.httpclient}"
     implementation "org.apache.httpcomponents:httpcore:${versions.httpcore}"
@@ -486,7 +488,7 @@ dependencies {
     implementation "com.google.guava:guava:${guava_version}"
     implementation 'org.greenrobot:eventbus-java:3.3.1'
     implementation 'commons-cli:commons-cli:1.5.0'
-    implementation "org.bouncycastle:bcprov-jdk15to18:${versions.bouncycastle}"
+    implementation"org.bouncycastle:bcprov-jdk15to18:${versions.bouncycastle}"
     implementation 'org.ldaptive:ldaptive:1.2.3'
 
     //JWT
