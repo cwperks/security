@@ -70,6 +70,8 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
 
     private RestClient testUserAuthClient;
 
+    private int bulkIndexCounter = 1;
+
     @Before
     private void testSetup() {
         final String bwcsuiteString = System.getProperty("tests.rest.bwcsuite");
@@ -278,6 +280,7 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
             Map<String, Map<String, String>> indexRequest = new HashMap<>();
             indexRequest.put("index", new HashMap<>() {{
                 put("_index", index);
+                put("_id", bulkIndexCounter++);
             }});
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(indexRequest)));
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(song.asJson())));
