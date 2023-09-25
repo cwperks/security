@@ -271,7 +271,7 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
             indexRequest.put("index", new HashMap<>() {
                 {
                     put("_index", index);
-                    put("_id", bulkIndexCounter++);
+                    put("_id", "" + bulkIndexCounter++);
                 }
             });
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(indexRequest)));
