@@ -63,7 +63,7 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     private String CLUSTER_NAME;
 
     private static final String TEST_USER = "user";
-    private static final String TEST_PASSWORD = UUID.randomUUID().toString();
+    private static final String TEST_PASSWORD = "testPassword123_";
 
     private static final String TEST_ROLE = "test-dls-fls-role";
 
