@@ -277,6 +277,9 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(song.asJson())));
         }
 
+        System.out.println("testUserAuthClient: " + testUserAuthClient);
+        System.out.println("bulkRequestBody: " + bulkRequestBody.toString());
+
         Response response = TestHelper.makeRequest(
             testUserAuthClient,
             "POST",
