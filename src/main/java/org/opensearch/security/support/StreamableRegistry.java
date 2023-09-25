@@ -25,7 +25,6 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 
-
 /**
  * Registry for any class that does NOT implement the <code>Writeable</code> interface
  * and needs to be serialized over the wire. Supports registration of writer and reader via <code>registerStreamable</code>

@@ -10,7 +10,6 @@ package org.opensearch.security.bwc;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +116,6 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
             .build();
     }
 
-
     protected RestClient buildClient(Settings settings, HttpHost[] hosts, String username, String password) {
         RestClientBuilder builder = RestClient.builder(hosts);
         configureHttpsClient(builder, settings, username, password);
@@ -129,9 +127,9 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     @Override
     protected RestClient buildClient(Settings settings, HttpHost[] hosts) {
         String userName = Optional.ofNullable(System.getProperty("tests.opensearch.username"))
-                .orElseThrow(() -> new RuntimeException("user name is missing"));
+            .orElseThrow(() -> new RuntimeException("user name is missing"));
         String password = Optional.ofNullable(System.getProperty("tests.opensearch.password"))
-                .orElseThrow(() -> new RuntimeException("password is missing"));
+            .orElseThrow(() -> new RuntimeException("password is missing"));
         return buildClient(settings, hosts, userName, password);
     }
 
@@ -243,58 +241,52 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     }
 
     private void createIndex(String index) throws IOException {
-//        String settings = "{\n" +
-//                "  \"settings\": {\n" +
-//                "    \"index\": {\n" +
-//                "      \"number_of_shards\": 3,\n" +
-//                "      \"number_of_replicas\": 1\n" +
-//                "    }\n" +
-//                "  },\n" +
-//                "  \"mappings\": {\n" +
-//                "    \"properties\": {\n" +
-//                "      \"age\": {\n" +
-//                "        \"type\": \"integer\"\n" +
-//                "      }\n" +
-//                "    }\n" +
-//                "  },\n" +
-//                "  \"aliases\": {\n" +
-//                "    \"sample-alias1\": {}\n" +
-//                "  }\n" +
-//                "}";
-        Response response = TestHelper.makeRequest(
-                client(),
-                "PUT",
-                index,
-                null,
-                TestHelper.toHttpEntity("{}"),
-                null,
-                false
-        );
+        // String settings = "{\n" +
+        // " \"settings\": {\n" +
+        // " \"index\": {\n" +
+        // " \"number_of_shards\": 3,\n" +
+        // " \"number_of_replicas\": 1\n" +
+        // " }\n" +
+        // " },\n" +
+        // " \"mappings\": {\n" +
+        // " \"properties\": {\n" +
+        // " \"age\": {\n" +
+        // " \"type\": \"integer\"\n" +
+        // " }\n" +
+        // " }\n" +
+        // " },\n" +
+        // " \"aliases\": {\n" +
+        // " \"sample-alias1\": {}\n" +
+        // " }\n" +
+        // "}";
+        Response response = TestHelper.makeRequest(client(), "PUT", index, null, TestHelper.toHttpEntity("{}"), null, false);
         logger.info(response.getStatusLine());
     }
 
     private void ingestData(String index) throws IOException {
         StringBuilder bulkRequestBody = new StringBuilder();
         ObjectMapper objectMapper = new ObjectMapper();
-        for(Song song : Song.SONGS) {
+        for (Song song : Song.SONGS) {
             Map<String, Map<String, String>> indexRequest = new HashMap<>();
-            indexRequest.put("index", new HashMap<>() {{
-                put("_index", index);
-                put("_id", bulkIndexCounter++);
-            }});
+            indexRequest.put("index", new HashMap<>() {
+                {
+                    put("_index", index);
+                    put("_id", bulkIndexCounter++);
+                }
+            });
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(indexRequest)));
             bulkRequestBody.append(String.format("%s\n", objectMapper.writeValueAsString(song.asJson())));
         }
 
         Response response = TestHelper.makeRequest(
-                testUserAuthClient,
-                "POST",
-                "_bulk",
-                null,
-                TestHelper.toHttpEntity(bulkRequestBody.toString()),
-                // Collections.singletonList(encodeBasicHeader(TEST_USER, TEST_PASSWORD)),
-                null,
-                false
+            testUserAuthClient,
+            "POST",
+            "_bulk",
+            null,
+            TestHelper.toHttpEntity(bulkRequestBody.toString()),
+            // Collections.singletonList(encodeBasicHeader(TEST_USER, TEST_PASSWORD)),
+            null,
+            false
         );
 
         Assert.assertEquals(200, response.getStatusLine().getStatusCode());
@@ -303,23 +295,19 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     }
 
     private void searchMatchAll(String index) throws IOException {
-        String matchAllQuery = "{\n" +
-                "    \"query\": {\n" +
-                "        \"match_all\": {}\n" +
-                "    }\n" +
-                "}";
+        String matchAllQuery = "{\n" + "    \"query\": {\n" + "        \"match_all\": {}\n" + "    }\n" + "}";
 
         String url = String.format("%s/_search", index);
 
         Response response = TestHelper.makeRequest(
-                testUserAuthClient,
-                "POST",
-                url,
-                null,
-                TestHelper.toHttpEntity(matchAllQuery),
-//                 Collections.singletonList(encodeBasicHeader(TEST_USER, TEST_PASSWORD)),
-                null,
-                false
+            testUserAuthClient,
+            "POST",
+            url,
+            null,
+            TestHelper.toHttpEntity(matchAllQuery),
+            // Collections.singletonList(encodeBasicHeader(TEST_USER, TEST_PASSWORD)),
+            null,
+            false
         );
 
         Assert.assertEquals(200, response.getStatusLine().getStatusCode());
@@ -327,28 +315,21 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
 
     private void createDLSFLSTestRole() throws IOException {
         String url = String.format("_plugins/_security/api/roles/%s", TEST_ROLE);
-        String roleSettings = "{\"cluster_permissions\":[\"unlimited\"],\"index_permissions\":[{\"index_patterns\":[\"test_index*\"],\"dls\":\"{\\n        \\\"bool\\\": {\\n                \\\"must\\\": {\\n                        \\\"match\\\": {\\n                                \\\"genre\\\": \\\"rock\\\"\\n                        }\\n                }\\n        }\\n }\",\"fls\":[\"~lyrics\"],\"masked_fields\":[\"artist\"],\"allowed_actions\":[\"read\", \"write\"]}],\"tenant_permissions\":[]}";
-        Response response = TestHelper.makeRequest(
-                adminClient(),
-                "PUT",
-                url,
-                null,
-                TestHelper.toHttpEntity(roleSettings),
-                null,
-                false
-        );
+        String roleSettings =
+            "{\"cluster_permissions\":[\"unlimited\"],\"index_permissions\":[{\"index_patterns\":[\"test_index*\"],\"dls\":\"{\\n        \\\"bool\\\": {\\n                \\\"must\\\": {\\n                        \\\"match\\\": {\\n                                \\\"genre\\\": \\\"rock\\\"\\n                        }\\n                }\\n        }\\n }\",\"fls\":[\"~lyrics\"],\"masked_fields\":[\"artist\"],\"allowed_actions\":[\"read\", \"write\"]}],\"tenant_permissions\":[]}";
+        Response response = TestHelper.makeRequest(adminClient(), "PUT", url, null, TestHelper.toHttpEntity(roleSettings), null, false);
 
         int statusCode = response.getStatusLine().getStatusCode();
         Assert.assertTrue(statusCode == 200 || statusCode == 201);
     }
 
-    private boolean resourceExists(String url) throws IOException{
+    private boolean resourceExists(String url) throws IOException {
         try {
             Response r = TestHelper.get(adminClient(), url);
             logger.info("GET {} \n {}", url, new String(r.getEntity().getContent().readAllBytes()));
             return true;
         } catch (ResponseException e) {
-            if(e.getResponse().getStatusLine().getStatusCode() == 404) {
+            if (e.getResponse().getStatusLine().getStatusCode() == 404) {
                 return false;
             } else {
                 throw e;
@@ -365,22 +346,14 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     }
 
     private void createUser() throws IOException {
-        if(!userExists()) {
+        if (!userExists()) {
             String url = String.format("_plugins/_security/api/internalusers/%s", TEST_USER);
-            String userSettings = String.format("{\n" +
-                    "  \"password\": \"%s\",\n" +
-                    "  \"opendistro_security_roles\": [\"%s\"],\n" +
-                    "  \"backend_roles\": []\n" +
-                    "}", TEST_PASSWORD, TEST_ROLE);
-            Response response = TestHelper.makeRequest(
-                    adminClient(),
-                    "PUT",
-                    url,
-                    null,
-                    TestHelper.toHttpEntity(userSettings),
-                    null,
-                    false
+            String userSettings = String.format(
+                "{\n" + "  \"password\": \"%s\",\n" + "  \"opendistro_security_roles\": [\"%s\"],\n" + "  \"backend_roles\": []\n" + "}",
+                TEST_PASSWORD,
+                TEST_ROLE
             );
+            Response response = TestHelper.makeRequest(adminClient(), "PUT", url, null, TestHelper.toHttpEntity(userSettings), null, false);
             assertEquals(201, response.getStatusLine().getStatusCode());
         }
     }
@@ -392,9 +365,9 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
 
     public static Header encodeBasicHeader(final String username, final String password) {
         return new BasicHeader(
-                "Authorization",
-                "Basic "
-                        + Base64.getEncoder().encodeToString((username + ":" + Objects.requireNonNull(password)).getBytes(StandardCharsets.UTF_8))
+            "Authorization",
+            "Basic "
+                + Base64.getEncoder().encodeToString((username + ":" + Objects.requireNonNull(password)).getBytes(StandardCharsets.UTF_8))
         );
     }
 }
