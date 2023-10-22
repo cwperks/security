@@ -56,7 +56,6 @@ public class SecuritySSLNettyHttpServerTransport extends Netty4HttpServerTranspo
     private final SecurityKeyStore sks;
     private final SslExceptionHandler errorHandler;
     private final ChannelInboundHandlerAdapter headerVerifier;
-    private final ChannelInboundHandlerAdapter conditionalDecompressor;
 
     public SecuritySSLNettyHttpServerTransport(
         final Settings settings,
@@ -86,7 +85,6 @@ public class SecuritySSLNettyHttpServerTransport extends Netty4HttpServerTranspo
         this.sks = sks;
         this.errorHandler = errorHandler;
         headerVerifier = new Netty4HttpRequestHeaderVerifier(restFilter, threadPool, settings);
-        conditionalDecompressor = new Netty4ConditionalDecompressor();
     }
 
     @Override
@@ -135,6 +133,6 @@ public class SecuritySSLNettyHttpServerTransport extends Netty4HttpServerTranspo
 
     @Override
     protected ChannelInboundHandlerAdapter createDecompressor() {
-        return conditionalDecompressor;
+        return new Netty4ConditionalDecompressor();
     }
 }
