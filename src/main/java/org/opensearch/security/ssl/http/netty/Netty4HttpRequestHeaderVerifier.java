@@ -13,6 +13,7 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.util.ReferenceCountUtil;
+
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.common.util.concurrent.ThreadContext;
 
@@ -34,16 +35,16 @@ import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.OpenSearchSecurityException;
 
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 
 import static com.amazon.dlic.auth.http.saml.HTTPSamlAuthenticator.API_AUTHTOKEN_SUFFIX;
 import static org.opensearch.security.filter.SecurityRestFilter.HEALTH_SUFFIX;
 import static org.opensearch.security.filter.SecurityRestFilter.PATTERN_PATH_PREFIX;
 import static org.opensearch.security.filter.SecurityRestFilter.WHO_AM_I_SUFFIX;
-import static org.opensearch.security.http.SecurityHttpServerTransport.CONTEXT_TO_RESTORE;
-import static org.opensearch.security.http.SecurityHttpServerTransport.EARLY_RESPONSE;
-import static org.opensearch.security.http.SecurityHttpServerTransport.SHOULD_DECOMPRESS;
-import static org.opensearch.security.http.SecurityHttpServerTransport.IS_AUTHENTICATED;
+import static org.opensearch.security.http.SecurityHttpServerTransport.REQUEST_CONTEXTS;
+import static org.opensearch.security.http.SecurityHttpServerTransport.REQUEST_COUNTER;
 
 @Sharable
 public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler<DefaultHttpRequest> {
@@ -78,9 +79,10 @@ public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler
             return;
         }
 
-        // Start by setting this value to false, only requests that meet all the criteria will be decompressed
-        ctx.channel().attr(SHOULD_DECOMPRESS).set(Boolean.FALSE);
-        ctx.channel().attr(IS_AUTHENTICATED).set(Boolean.FALSE);
+        Netty4RequestContext requestContext = new Netty4RequestContext();
+        Map<String, Netty4RequestContext> requestContexts = ctx.channel().attr(REQUEST_CONTEXTS).get();
+
+        // ctx.channel().attr(SHOULD_DECOMPRESS).set(Boolean.TRUE);
 
         final Netty4HttpChannel httpChannel = ctx.channel().attr(Netty4HttpServerTransport.HTTP_CHANNEL_KEY).get();
         String rawPath = SecurityRestUtils.path(msg.uri());
@@ -107,23 +109,35 @@ public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler
             }
 
             ThreadContext.StoredContext contextToRestore = threadPool.getThreadContext().newStoredContext(false);
-            ctx.channel().attr(CONTEXT_TO_RESTORE).set(contextToRestore);
+            requestContext.storedContext = contextToRestore;
+            // ctx.channel().attr(CONTEXT_TO_RESTORE).set(contextToRestore);
 
-            requestChannel.getQueuedResponse().ifPresent(response -> ctx.channel().attr(EARLY_RESPONSE).set(response));
+            requestChannel.getQueuedResponse().ifPresent(response -> {
+                // ctx.channel().attr(EARLY_RESPONSE).set(response);
+                requestContext.earlyResponse = response;
+            });
 
+            // TODO Check if response code on queued response is 4XX
             boolean shouldDecompress = !shouldSkipAuthentication && requestChannel.getQueuedResponse().isEmpty();
 
             if (requestChannel.getQueuedResponse().isEmpty() || shouldSkipAuthentication) {
                 // Only allow decompression on authenticated requests that also aren't one of those ^
-                ctx.channel().attr(SHOULD_DECOMPRESS).set(Boolean.valueOf(shouldDecompress));
-                ctx.channel().attr(IS_AUTHENTICATED).set(Boolean.TRUE);
+                requestContext.shouldDecompress = Boolean.valueOf(shouldDecompress);
+                requestContext.isAuthenticated = Boolean.TRUE;
+                // ctx.channel().attr(SHOULD_DECOMPRESS).set(Boolean.valueOf(shouldDecompress));
+                // ctx.channel().attr(IS_AUTHENTICATED).set(Boolean.TRUE);
             }
         } catch (final OpenSearchSecurityException e) {
             final SecurityResponse earlyResponse = new SecurityResponse(ExceptionsHelper.status(e).getStatus(), e);
-            ctx.channel().attr(EARLY_RESPONSE).set(earlyResponse);
+            requestContext.earlyResponse = earlyResponse;
+            // ctx.channel().attr(EARLY_RESPONSE).set(earlyResponse);
         } catch (final SecurityRequestChannelUnsupported srcu) {
             // Use defaults for unsupported channels
         } finally {
+            AtomicInteger requestCounter = ctx.channel().attr(REQUEST_COUNTER).get();
+            int requestId = requestCounter.incrementAndGet();
+            msg.headers().add("X-Channel-Request-ID", requestId);
+            requestContexts.put(String.valueOf(requestId), requestContext);
             ctx.fireChannelRead(msg);
         }
     }

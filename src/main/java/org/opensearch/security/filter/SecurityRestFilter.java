@@ -28,6 +28,7 @@ package org.opensearch.security.filter;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -56,6 +57,7 @@ import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.securityconf.impl.AllowlistingSettings;
 import org.opensearch.security.securityconf.impl.WhitelistingSettings;
+import org.opensearch.security.ssl.http.netty.Netty4RequestContext;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.ssl.util.SSLRequestHelper;
@@ -68,9 +70,7 @@ import org.opensearch.threadpool.ThreadPool;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
-import static org.opensearch.security.http.SecurityHttpServerTransport.CONTEXT_TO_RESTORE;
-import static org.opensearch.security.http.SecurityHttpServerTransport.EARLY_RESPONSE;
-import static org.opensearch.security.http.SecurityHttpServerTransport.IS_AUTHENTICATED;
+import static org.opensearch.security.ssl.http.netty.SecuritySSLNettyHttpServerTransport.REQUEST_CONTEXTS;;
 
 public class SecurityRestFilter {
 
@@ -131,31 +131,37 @@ public class SecurityRestFilter {
      */
     public RestHandler wrap(RestHandler original, AdminDNs adminDNs) {
         return (request, channel, client) -> {
-
-            final Optional<SecurityResponse> maybeSavedResponse = NettyAttribute.popFrom(request, EARLY_RESPONSE);
-            if (maybeSavedResponse.isPresent()) {
-                NettyAttribute.clearAttribute(request, CONTEXT_TO_RESTORE);
-                NettyAttribute.clearAttribute(request, IS_AUTHENTICATED);
-                channel.sendResponse(maybeSavedResponse.get().asRestResponse());
-                return;
-            }
-
-            NettyAttribute.popFrom(request, CONTEXT_TO_RESTORE).ifPresent(storedContext -> {
-                // X_OPAQUE_ID will be overritten on restore - save to apply after restoring the saved context
-                final String xOpaqueId = threadContext.getHeader(Task.X_OPAQUE_ID);
-                storedContext.restore();
-                if (xOpaqueId != null) {
-                    threadContext.putHeader(Task.X_OPAQUE_ID, xOpaqueId);
-                }
-            });
+            final Optional<Map<String, Netty4RequestContext>> requestContexts = NettyAttribute.peekFrom(request, REQUEST_CONTEXTS);
+            String requestId = request.header("X-Channel-Request-ID");
 
             final SecurityRequestChannel requestChannel = SecurityRequestFactory.from(request, channel);
 
-            // Authenticate request
-            if (!NettyAttribute.popFrom(request, IS_AUTHENTICATED).orElse(false)) {
-                // we aren't authenticated so we should skip this step
+            if (requestContexts.isPresent() && requestId != null && requestContexts.get().get(requestId) != null) {
+                Netty4RequestContext requestContext = requestContexts.get().get(requestId);
+                requestContexts.get().remove(requestId);
+                if (requestContext.earlyResponse != null) {
+                    channel.sendResponse(requestContext.earlyResponse.asRestResponse());
+                    return;
+                }
+
+                // Authenticate request
+                if (!requestContext.isAuthenticated) {
+                    // we aren't authenticated so we should skip this step
+                    checkAndAuthenticateRequest(requestChannel);
+                } else {
+                    ThreadContext.StoredContext storedContext = requestContext.storedContext;
+                    // X_OPAQUE_ID will be overritten on restore - save to apply after restoring the saved context
+                    final String xOpaqueId = threadContext.getHeader(Task.X_OPAQUE_ID);
+                    storedContext.restore();
+                    if (xOpaqueId != null) {
+                        threadContext.putHeader(Task.X_OPAQUE_ID, xOpaqueId);
+                    }
+                }
+
+            } else {
                 checkAndAuthenticateRequest(requestChannel);
             }
+
             if (requestChannel.getQueuedResponse().isPresent()) {
                 channel.sendResponse(requestChannel.getQueuedResponse().get().asRestResponse());
                 return;

@@ -22,6 +22,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.util.AttributeKey;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -41,6 +47,10 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.SharedGroupFactory;
 
 public class SecuritySSLNettyHttpServerTransport extends Netty4HttpServerTransport {
+    public static final AttributeKey<Map<String, Netty4RequestContext>> REQUEST_CONTEXTS = AttributeKey.newInstance(
+        "opensearch-http-request-contexts"
+    );
+    public static final AttributeKey<AtomicInteger> REQUEST_COUNTER = AttributeKey.newInstance("opensearch-http-request-counter");
 
     private static final Logger logger = LogManager.getLogger(SecuritySSLNettyHttpServerTransport.class);
     private final SecurityKeyStore sks;
@@ -113,6 +123,8 @@ public class SecuritySSLNettyHttpServerTransport extends Netty4HttpServerTranspo
             super.initChannel(ch);
             final SslHandler sslHandler = new SslHandler(SecuritySSLNettyHttpServerTransport.this.sks.createHTTPSSLEngine());
             ch.pipeline().addFirst("ssl_http", sslHandler);
+            ch.attr(REQUEST_CONTEXTS).set(new HashMap<>());
+            ch.attr(REQUEST_COUNTER).set(new AtomicInteger(0));
         }
     }
 

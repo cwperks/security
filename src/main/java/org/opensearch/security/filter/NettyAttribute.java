@@ -30,6 +30,17 @@ public class NettyAttribute {
     }
 
     /**
+     * Gets an attribute value from the request context
+     */
+    public static <T> Optional<T> peekFrom(final RestRequest request, final AttributeKey<T> attribute) {
+        if (request.getHttpChannel() instanceof Netty4HttpChannel) {
+            Channel nettyChannel = ((Netty4HttpChannel) request.getHttpChannel()).getNettyChannel();
+            return Optional.ofNullable(nettyChannel.attr(attribute).get());
+        }
+        return Optional.empty();
+    }
+
+    /**
      * Gets an attribute value from the channel handler context
      */
     public static <T> Optional<T> peekFrom(final ChannelHandlerContext ctx, final AttributeKey<T> attribute) {
