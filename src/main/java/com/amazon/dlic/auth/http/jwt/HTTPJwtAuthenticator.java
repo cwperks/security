@@ -11,10 +11,13 @@
 
 package com.amazon.dlic.auth.http.jwt;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Base64;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -28,18 +31,26 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.SpecialPermission;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.common.Strings;
 import org.opensearch.security.auth.HTTPAuthenticator;
 import org.opensearch.security.filter.SecurityRequest;
 import org.opensearch.security.filter.SecurityResponse;
 import org.opensearch.security.user.AuthCredentials;
-import org.opensearch.security.util.KeyUtils;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtParser;
-import io.jsonwebtoken.JwtParserBuilder;
+import com.amazon.dlic.auth.http.jwt.keybyoidc.AuthenticatorUnavailableException;
+import com.amazon.dlic.auth.http.jwt.keybyoidc.BadCredentialsException;
+import com.amazon.dlic.auth.http.jwt.keybyoidc.JwtVerifier;
+import com.amazon.dlic.auth.http.jwt.keybyoidc.KeyProvider;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
+import com.nimbusds.jwt.JWTClaimsSet;
 import io.jsonwebtoken.security.WeakKeyException;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
+import static org.opensearch.security.authtoken.jwt.KeyPaddingUtil.padSecret;
+import static com.amazon.dlic.auth.http.jwt.AbstractHTTPJwtAuthenticator.DEFAULT_CLOCK_SKEW_TOLERANCE_SECONDS;
 
 public class HTTPJwtAuthenticator implements HTTPAuthenticator {
 
@@ -48,14 +59,17 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     private static final Pattern BASIC = Pattern.compile("^\\s*Basic\\s.*", Pattern.CASE_INSENSITIVE);
     private static final String BEARER = "bearer ";
 
-    private final JwtParser jwtParser;
+    private KeyProvider keyProvider;
+    private JwtVerifier jwtVerifier;
     private final String jwtHeaderName;
     private final boolean isDefaultAuthHeader;
     private final String jwtUrlParameter;
     private final String rolesKey;
     private final String subjectKey;
-    private final String requireAudience;
-    private final String requireIssuer;
+    private final List<String> requiredAudience;
+    private final String requiredIssuer;
+
+    private final int clockSkewToleranceSeconds;
 
     public HTTPJwtAuthenticator(final Settings settings, final Path configPath) {
         super();
@@ -66,27 +80,46 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         isDefaultAuthHeader = AUTHORIZATION.equalsIgnoreCase(jwtHeaderName);
         rolesKey = settings.get("roles_key");
         subjectKey = settings.get("subject_key");
-        requireAudience = settings.get("required_audience");
-        requireIssuer = settings.get("required_issuer");
+        clockSkewToleranceSeconds = settings.getAsInt("jwt_clock_skew_tolerance_seconds", DEFAULT_CLOCK_SKEW_TOLERANCE_SECONDS);
+        requiredAudience = settings.getAsList("required_audience");
+        requiredIssuer = settings.get("required_issuer");
 
-        final JwtParserBuilder jwtParserBuilder = KeyUtils.createJwtParserBuilderFromSigningKey(signingKey, log);
-        if (jwtParserBuilder == null) {
-            jwtParser = null;
-        } else {
-            if (requireAudience != null) {
-                jwtParserBuilder.requireAudience(requireAudience);
-            }
+        try {
+            this.keyProvider = this.initKeyProvider(settings, configPath);
+            jwtVerifier = new JwtVerifier(keyProvider, clockSkewToleranceSeconds, requiredIssuer, requiredAudience);
 
-            if (requireIssuer != null) {
-                jwtParserBuilder.requireIssuer(requireIssuer);
-            }
-
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                sm.checkPermission(new SpecialPermission());
-            }
-            jwtParser = AccessController.doPrivileged((PrivilegedAction<JwtParser>) jwtParserBuilder::build);
+        } catch (Exception e) {
+            log.error("Error creating JWT authenticator. JWT authentication will not work", e);
+            throw new RuntimeException(e);
         }
+    }
+
+    private KeyProvider initKeyProvider(Settings settings, Path configPath) throws Exception {
+        return new KeyProvider() {
+
+            @Override
+            public JWK getKeyAfterRefresh(String kid) throws AuthenticatorUnavailableException, BadCredentialsException {
+                return getSigningKey(settings);
+            }
+
+            @Override
+            public JWK getKey(String kid) throws AuthenticatorUnavailableException, BadCredentialsException {
+                return getSigningKey(settings);
+            }
+        };
+    }
+
+    private JWK getSigningKey(Settings settings) {
+        String signingKey = settings.get("signing_key");
+
+        if (!Strings.isNullOrEmpty(signingKey)) {
+            signingKey = padSecret(new String(Base64.getUrlDecoder().decode(signingKey), StandardCharsets.UTF_8), JWSAlgorithm.HS512);
+
+            return new OctetSequenceKey.Builder(signingKey.getBytes(StandardCharsets.UTF_8)).algorithm(JWSAlgorithm.HS512)
+                .keyUse(KeyUse.SIGNATURE)
+                .build();
+        }
+        return null;
     }
 
     @Override
@@ -110,7 +143,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     }
 
     private AuthCredentials extractCredentials0(final SecurityRequest request) {
-        if (jwtParser == null) {
+        if (jwtVerifier == null) {
             log.error("Missing Signing Key. JWT authentication will not work");
             return null;
         }
@@ -148,7 +181,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         }
 
         try {
-            final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
+            final JWTClaimsSet claims = jwtVerifier.getVerifiedJwtToken(jwtToken).getJWTClaimsSet();
 
             final String subject = extractSubject(claims, request);
 
@@ -161,7 +194,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
 
             final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
 
-            for (Entry<String, Object> claim : claims.entrySet()) {
+            for (Entry<String, Object> claim : claims.getClaims().entrySet()) {
                 ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
             }
 
@@ -171,6 +204,7 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
             log.error("Cannot authenticate user with JWT because of ", e);
             return null;
         } catch (Exception e) {
+            System.out.println("Caught Exception: " + e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug("Invalid or expired JWT token.", e);
             }
@@ -190,11 +224,11 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         return "jwt";
     }
 
-    protected String extractSubject(final Claims claims, final SecurityRequest request) {
+    protected String extractSubject(final JWTClaimsSet claims, final SecurityRequest request) {
         String subject = claims.getSubject();
         if (subjectKey != null) {
             // try to get roles from claims, first as Object to avoid having to catch the ExpectedTypeException
-            Object subjectObject = claims.get(subjectKey, Object.class);
+            Object subjectObject = claims.getClaim(subjectKey);
             if (subjectObject == null) {
                 log.warn("Failed to get subject from JWT claims, check if subject_key '{}' is correct.", subjectKey);
                 return null;
@@ -214,13 +248,13 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     }
 
     @SuppressWarnings("unchecked")
-    protected String[] extractRoles(final Claims claims, final SecurityRequest request) {
+    protected String[] extractRoles(final JWTClaimsSet claims, final SecurityRequest request) {
         // no roles key specified
         if (rolesKey == null) {
             return new String[0];
         }
         // try to get roles from claims, first as Object to avoid having to catch the ExpectedTypeException
-        final Object rolesObject = claims.get(rolesKey, Object.class);
+        final Object rolesObject = claims.getClaim(rolesKey);
         if (rolesObject == null) {
             log.warn(
                 "Failed to get roles from JWT claims with roles_key '{}'. Check if this key is correct and available in the JWT payload.",

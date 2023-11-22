@@ -483,6 +483,70 @@ public class HTTPJwtAuthenticatorTest {
     }
 
     @Test
+    public void testRequiredAudienceWithMultipleAcceptableAudiencesAndCorrectAudience() {
+
+        final AuthCredentials credentials1 = extractCredentialsFromJwtHeader(
+            Settings.builder()
+                .put("signing_key", BaseEncoding.base64().encode(secretKeyBytes))
+                .putList("required_audience", "test_audience1", "test_audience2"),
+            Jwts.builder().subject("Leonard McCoy").audience().add("test_audience1").and()
+        );
+
+        Assert.assertNotNull(credentials1);
+        Assert.assertEquals("Leonard McCoy", credentials1.getUsername());
+
+        final AuthCredentials credentials2 = extractCredentialsFromJwtHeader(
+            Settings.builder()
+                .put("signing_key", BaseEncoding.base64().encode(secretKeyBytes))
+                .putList("required_audience", "test_audience1", "test_audience2"),
+            Jwts.builder().subject("Leonard McCoy").audience().add("test_audience2").and()
+        );
+
+        Assert.assertNotNull(credentials2);
+        Assert.assertEquals("Leonard McCoy", credentials2.getUsername());
+    }
+
+    @Test
+    public void testRequiredAudienceWithMultipleAcceptableAudiencesAndCorrectAudiences() {
+
+        final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+            Settings.builder()
+                .put("signing_key", BaseEncoding.base64().encode(secretKeyBytes))
+                .putList("required_audience", "test_audience1", "test_audience2"),
+            Jwts.builder().subject("Leonard McCoy").audience().add("test_audience1").add("test_audience2").and()
+        );
+
+        Assert.assertNotNull(credentials);
+        Assert.assertEquals("Leonard McCoy", credentials.getUsername());
+    }
+
+    @Test
+    public void testRequiredAudienceWithMultipleAcceptableAudiencesAndIncorrectAudiences() {
+        // This JWT has one correct audience and one incorrect audience
+        final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+            Settings.builder()
+                .put("signing_key", BaseEncoding.base64().encode(secretKeyBytes))
+                .putList("required_audience", "test_audience1", "test_audience2"),
+            Jwts.builder().subject("Leonard McCoy").audience().add("test_audience1").add("wrong_audience").and()
+        );
+
+        Assert.assertNull(credentials);
+    }
+
+    @Test
+    public void testRequiredAudienceWithMultipleAcceptableAudiencesAndIncorrectAudience() {
+
+        final AuthCredentials credentials = extractCredentialsFromJwtHeader(
+            Settings.builder()
+                .put("signing_key", BaseEncoding.base64().encode(secretKeyBytes))
+                .putList("required_audience", "test_audience1", "test_audience2"),
+            Jwts.builder().subject("Leonard McCoy").audience().add("wrong_audience").and()
+        );
+
+        Assert.assertNull(credentials);
+    }
+
+    @Test
     public void testRequiredIssuerWithCorrectAudience() {
 
         final AuthCredentials credentials = extractCredentialsFromJwtHeader(
@@ -509,8 +573,10 @@ public class HTTPJwtAuthenticatorTest {
     private AuthCredentials extractCredentialsFromJwtHeader(final Settings.Builder settingsBuilder, final JwtBuilder jwtBuilder) {
         final Settings settings = settingsBuilder.build();
         final String jwsToken = jwtBuilder.signWith(secretKey, SignatureAlgorithm.HS512).compact();
+        System.out.println("jwsToken: " + jwsToken);
         final HTTPJwtAuthenticator jwtAuth = new HTTPJwtAuthenticator(settings, null);
         final Map<String, String> headers = Map.of("Authorization", jwsToken);
+        System.out.println("Calling on extractCredentials");
         return jwtAuth.extractCredentials(new FakeRestRequest(headers, new HashMap<>()).asSecurityRequest(), null);
     }
 
