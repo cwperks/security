@@ -212,6 +212,18 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
         StringBuilder bulkRequestBody = new StringBuilder();
         ObjectMapper objectMapper = new ObjectMapper();
         int numberOfRequests = Randomness.get().nextInt(1000);
+        List<HttpHost> clusterHosts = super.getClusterHosts();
+        List<RestClient> nodeRestClients = new ArrayList<RestClient>();
+        for (HttpHost host : clusterHosts) {
+            RestClient nodeClient = buildClient(
+                super.restClientSettings(),
+                List.of(host).toArray(new HttpHost[0]),
+                TEST_USER,
+                TEST_PASSWORD
+            );
+            nodeRestClients.add(nodeClient);
+        }
+        
         while (numberOfRequests-- > 0) {
             for (int i = 0; i < Randomness.get().nextInt(100); i++) {
                 Map<String, Map<String, String>> indexRequest = new HashMap<>();
@@ -223,13 +235,15 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
                 bulkRequestBody.append(objectMapper.writeValueAsString(indexRequest) + "\n");
                 bulkRequestBody.append(objectMapper.writeValueAsString(Song.randomSong().asJson()) + "\n");
             }
-            List<Response> responses = RestHelper.requestAgainstAllNodes(
-                testUserRestClient,
-                "POST",
-                "_bulk?refresh=wait_for",
-                RestHelper.toHttpEntity(bulkRequestBody.toString())
-            );
-            responses.forEach(r -> assertEquals(200, r.getStatusLine().getStatusCode()));
+            for (RestClient nodeClient : nodeRestClients) {
+                List<Response> responses = RestHelper.requestAgainstAllNodes(
+                    nodeRestClients,
+                    "POST",
+                    "_bulk?refresh=wait_for",
+                    RestHelper.toHttpEntity(bulkRequestBody.toString())
+                );
+                responses.forEach(r -> assertEquals(200, r.getStatusLine().getStatusCode()));
+            }
         }
     }
 

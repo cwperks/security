@@ -18,7 +18,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicHeader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.opensearch.client.Node;
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
@@ -77,9 +76,10 @@ public class RestHelper {
         HttpEntity entity,
         List<Header> headers
     ) throws IOException {
+        int nodeCount = client.getNodes().size();
         List<Response> responses = new ArrayList<>();
-        for (Node node : client.getNodes()) {
-            responses.add(makeRequest(RestClient.builder(node).build(), method, endpoint, entity, headers));
+        while (nodeCount-- > 0) {
+            responses.add(makeRequest(client, method, endpoint, entity, headers));
         }
         return responses;
     }
