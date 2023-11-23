@@ -237,7 +237,7 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
             }
             for (RestClient nodeClient : nodeRestClients) {
                 List<Response> responses = RestHelper.requestAgainstAllNodes(
-                    nodeRestClients,
+                    nodeClient,
                     "POST",
                     "_bulk?refresh=wait_for",
                     RestHelper.toHttpEntity(bulkRequestBody.toString())
