@@ -49,7 +49,7 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.equalTo;
 
-@ThreadLeakScope(Scope.NONE)
+@ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
 
     private ClusterType CLUSTER_TYPE;
