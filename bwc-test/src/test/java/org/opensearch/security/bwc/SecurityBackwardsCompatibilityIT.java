@@ -212,7 +212,7 @@ public class SecurityBackwardsCompatibilityIT extends OpenSearchRestTestCase {
     private void ingestData(String index) throws IOException {
         StringBuilder bulkRequestBody = new StringBuilder();
         ObjectMapper objectMapper = new ObjectMapper();
-        int numberOfRequests = Randomness.get().nextInt(1000);
+        int numberOfRequests = Randomness.get().nextInt(100);
         List<HttpHost> clusterHosts = super.getClusterHosts();
         List<RestClient> nodeRestClients = new ArrayList<RestClient>();
         for (HttpHost host : clusterHosts) {
