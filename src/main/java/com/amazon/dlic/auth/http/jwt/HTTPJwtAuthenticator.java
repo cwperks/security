@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.http.HttpStatus;
@@ -35,6 +36,7 @@ import org.opensearch.security.filter.SecurityResponse;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.KeyUtils;
 
+import com.nimbusds.jwt.proc.BadJWTException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.JwtParserBuilder;
@@ -55,8 +57,8 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     private final String jwtUrlParameter;
     private final String rolesKey;
     private final String subjectKey;
-    private final List<String> requireAudience;
-    private final String requireIssuer;
+    private final List<String> requiredAudience;
+    private final String requiredIssuer;
 
     public HTTPJwtAuthenticator(final Settings settings, final Path configPath) {
         super();
@@ -67,21 +69,15 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         isDefaultAuthHeader = AUTHORIZATION.equalsIgnoreCase(jwtHeaderName);
         rolesKey = settings.get("roles_key");
         subjectKey = settings.get("subject_key");
-        requireAudience = settings.getAsList("required_audience");
-        requireIssuer = settings.get("required_issuer");
+        requiredAudience = settings.getAsList("required_audience");
+        requiredIssuer = settings.get("required_issuer");
 
         final JwtParserBuilder jwtParserBuilder = KeyUtils.createJwtParserBuilderFromSigningKey(signingKey, log);
         if (jwtParserBuilder == null) {
             jwtParser = null;
         } else {
-            if (requireAudience != null && !requireAudience.isEmpty()) {
-                for (String aud : requireAudience) {
-                    jwtParserBuilder.requireAudience(aud);
-                }
-            }
-
-            if (requireIssuer != null) {
-                jwtParserBuilder.requireIssuer(requireIssuer);
+            if (requiredIssuer != null) {
+                jwtParserBuilder.requireIssuer(requiredIssuer);
             }
 
             final SecurityManager sm = System.getSecurityManager();
@@ -153,6 +149,8 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         try {
             final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
 
+            validateRequiredAudience(claims);
+
             final String subject = extractSubject(claims, request);
 
             if (subject == null) {
@@ -174,11 +172,22 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
             log.error("Cannot authenticate user with JWT because of ", e);
             return null;
         } catch (Exception e) {
-            System.out.println("Caught Exception: " + e.getMessage());
             if (log.isDebugEnabled()) {
                 log.debug("Invalid or expired JWT token.", e);
             }
             return null;
+        }
+    }
+
+    private void validateRequiredAudience(Claims claims) throws BadJWTException {
+        Set<String> audience = claims.getAudience();
+
+        if (requiredAudience.isEmpty()) {
+            return;
+        }
+
+        if (!requiredAudience.containsAll(audience)) {
+            throw new BadJWTException("Invalid audience");
         }
     }
 

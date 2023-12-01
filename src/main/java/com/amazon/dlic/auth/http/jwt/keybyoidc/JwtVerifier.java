@@ -134,7 +134,7 @@ public class JwtVerifier {
         List<String> audience = claims.getAudience();
         String issuer = claims.getIssuer();
 
-        if (requiredAudience.isEmpty() || !requiredAudience.containsAll(audience)) {
+        if (!requiredAudience.isEmpty() && !requiredAudience.containsAll(audience)) {
             throw new BadJWTException("Invalid audience");
         }
 
