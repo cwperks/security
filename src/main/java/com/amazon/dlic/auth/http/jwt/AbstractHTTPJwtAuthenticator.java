@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +141,15 @@ public abstract class AbstractHTTPJwtAuthenticator implements HTTPAuthenticator 
         final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
 
         for (Entry<String, Object> claim : claimsSet.getClaims().entrySet()) {
-            ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
+            if (claim.getValue() instanceof Collection<?>) {
+                List<String> values = new ArrayList<>();
+                for (Object value : (Collection<?>) claim.getValue()) {
+                    values.add(String.valueOf(value));
+                }
+                ac.addAttribute("attr.jwt." + claim.getKey(), String.join(",", values));
+            } else {
+                ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
+            }
         }
 
         return ac;

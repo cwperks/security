@@ -11,6 +11,7 @@
 
 package com.amazon.dlic.auth.http.jwt.keybyoidc;
 
+import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
@@ -35,18 +36,23 @@ class TestJwts {
 
     static final String TEST_AUDIENCE = "TestAudience";
 
+    static final String TEST_AUDIENCE2 = "TestAudience2";
+
     static final String MCCOY_SUBJECT = "Leonard McCoy";
 
     static final String TEST_ISSUER = "TestIssuer";
 
     static final JWTClaimsSet MC_COY = create(MCCOY_SUBJECT, TEST_AUDIENCE, TEST_ISSUER, ROLES_CLAIM, TEST_ROLES_STRING);
-
     static final JWTClaimsSet MC_COY_2 = create(MCCOY_SUBJECT, TEST_AUDIENCE, TEST_ISSUER, ROLES_CLAIM, TEST_ROLES_STRING);
-
-    static final JWTClaimsSet MC_COY_NO_AUDIENCE = create(MCCOY_SUBJECT, null, TEST_ISSUER, ROLES_CLAIM, TEST_ROLES_STRING);
-
+    static final JWTClaimsSet MC_COY_NO_AUDIENCE = create(MCCOY_SUBJECT, List.of(), TEST_ISSUER, ROLES_CLAIM, TEST_ROLES_STRING);
+    static final JWTClaimsSet MC_COY_MULTIPLE_AUDIENCES = create(
+        MCCOY_SUBJECT,
+        List.of(TEST_AUDIENCE, TEST_AUDIENCE2),
+        TEST_ISSUER,
+        ROLES_CLAIM,
+        TEST_ROLES_STRING
+    );
     static final JWTClaimsSet MC_COY_NO_ISSUER = create(MCCOY_SUBJECT, TEST_AUDIENCE, null, ROLES_CLAIM, TEST_ROLES_STRING);
-
     static final JWTClaimsSet MC_COY_EXPIRED = create(
         MCCOY_SUBJECT,
         TEST_AUDIENCE,
@@ -63,6 +69,7 @@ class TestJwts {
 
     static final String MC_COY_SIGNED_NO_AUDIENCE_OCT_1 = createSigned(MC_COY_NO_AUDIENCE, TestJwk.OCT_1);
     static final String MC_COY_SIGNED_NO_ISSUER_OCT_1 = createSigned(MC_COY_NO_ISSUER, TestJwk.OCT_1);
+    static final String MC_COY_SIGNED_MULTIPLE_AUDIENCES_OCT_1 = createSigned(MC_COY_MULTIPLE_AUDIENCES, TestJwk.OCT_1);
 
     static final String MC_COY_SIGNED_OCT_1_INVALID_KID = createSigned(MC_COY, TestJwk.FORWARD_SLASH_KID_OCT_1);
 
@@ -88,6 +95,27 @@ class TestJwts {
         claimsBuilder.subject(subject);
         if (audience != null) {
             claimsBuilder.audience(audience);
+        }
+        if (issuer != null) {
+            claimsBuilder.issuer(issuer);
+        }
+
+        if (moreClaims != null) {
+            for (int i = 0; i < moreClaims.length; i += 2) {
+                claimsBuilder.claim(String.valueOf(moreClaims[i]), moreClaims[i + 1]);
+            }
+        }
+
+        // JwtToken result = new JwtToken(claimsBuilder);
+        return claimsBuilder.build();
+    }
+
+    static JWTClaimsSet create(String subject, List<String> audiences, String issuer, Object... moreClaims) {
+        JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
+
+        claimsBuilder.subject(subject);
+        if (audiences != null && !audiences.isEmpty()) {
+            claimsBuilder.audience(audiences);
         }
         if (issuer != null) {
             claimsBuilder.issuer(issuer);

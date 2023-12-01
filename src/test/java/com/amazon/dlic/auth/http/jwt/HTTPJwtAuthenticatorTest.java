@@ -518,6 +518,7 @@ public class HTTPJwtAuthenticatorTest {
 
         Assert.assertNotNull(credentials);
         Assert.assertEquals("Leonard McCoy", credentials.getUsername());
+        Assert.assertEquals("test_audience1,test_audience2", credentials.getAttributes().get("attr.jwt.aud"));
     }
 
     @Test
@@ -573,10 +574,8 @@ public class HTTPJwtAuthenticatorTest {
     private AuthCredentials extractCredentialsFromJwtHeader(final Settings.Builder settingsBuilder, final JwtBuilder jwtBuilder) {
         final Settings settings = settingsBuilder.build();
         final String jwsToken = jwtBuilder.signWith(secretKey, SignatureAlgorithm.HS512).compact();
-        System.out.println("jwsToken: " + jwsToken);
         final HTTPJwtAuthenticator jwtAuth = new HTTPJwtAuthenticator(settings, null);
         final Map<String, String> headers = Map.of("Authorization", jwsToken);
-        System.out.println("Calling on extractCredentials");
         return jwtAuth.extractCredentials(new FakeRestRequest(headers, new HashMap<>()).asSecurityRequest(), null);
     }
 
