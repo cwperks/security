@@ -119,7 +119,7 @@ public class JwtVerifier {
 
         if (claims != null) {
             DefaultJWTClaimsVerifier<SimpleSecurityContext> claimsVerifier = new DefaultJWTClaimsVerifier<>(
-                requiredAudience,
+                requiredAudience.isEmpty() ? null : requiredAudience,
                 null,
                 Collections.emptySet(),
                 null
