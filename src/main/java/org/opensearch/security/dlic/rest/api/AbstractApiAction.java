@@ -344,8 +344,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
             if (configuration.exists(securityConfiguration.entityName())) {
                 CEntry existingEntry = (CEntry) configuration.getCEntry(securityConfiguration.entityName());
                 System.out.println("Existing CEntry: " + existingEntry);
+                System.out.println("centry.getCreatedAt(): " + existingEntry.getCreatedAt());
                 System.out.println("Setting updatedAt only");
-                if (centry.getCreatedAt() == null) {
+                if (existingEntry.getCreatedAt() == null) {
                     centry.setCreatedAt(Instant.now().getEpochSecond());
                 } else {
                     centry.setCreatedAt(existingEntry.getCreatedAt());

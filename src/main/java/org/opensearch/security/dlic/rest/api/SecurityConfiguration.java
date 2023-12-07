@@ -12,12 +12,9 @@
 package org.opensearch.security.dlic.rest.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 
 import javax.swing.*;
-import java.time.Instant;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
