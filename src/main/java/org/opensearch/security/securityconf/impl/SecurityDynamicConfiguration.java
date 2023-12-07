@@ -101,6 +101,10 @@ public class SecurityDynamicConfiguration<T> implements ToXContent {
             sdc = new SecurityDynamicConfiguration<T>();
         }
 
+        if (CType.INTERNALUSERS.equals(ctype)) {
+            System.out.println("sdc: " + sdc);
+        }
+
         sdc.ctype = ctype;
         sdc.seqNo = seqNo;
         sdc.primaryTerm = primaryTerm;

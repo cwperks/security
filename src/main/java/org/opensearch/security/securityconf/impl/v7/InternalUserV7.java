@@ -37,9 +37,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.opensearch.security.securityconf.Hashed;
 import org.opensearch.security.securityconf.Hideable;
 import org.opensearch.security.securityconf.StaticDefinable;
+import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.v6.InternalUserV6;
 
-public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
+public class InternalUserV7 extends CEntry implements Hideable, Hashed, StaticDefinable {
 
     private String hash;
     private boolean reserved;
@@ -165,6 +166,10 @@ public class InternalUserV7 implements Hideable, Hashed, StaticDefinable {
             + attributes
             + ", description="
             + description
+            + ", createdAt="
+            + createdAt
+            + ", updatedAt="
+            + updatedAt
             + "]";
     }
 

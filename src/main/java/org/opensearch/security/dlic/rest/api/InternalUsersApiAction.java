@@ -113,14 +113,16 @@ public class InternalUsersApiAction extends AbstractApiAction {
             .onChangeRequest(Method.PATCH, this::processPatchRequest)
             .onChangeRequest(
                 Method.PUT,
-                request -> endpointValidator.withRequiredEntityName(nameParam(request))
-                    .map(username -> loadConfigurationWithRequestContent(username, request))
-                    .map(endpointValidator::isAllowedToChangeImmutableEntity)
-                    .map(this::validateSecurityRoles)
-                    .map(securityConfiguration -> createOrUpdateAccount(request, securityConfiguration))
-                    .map(this::validateAndUpdatePassword)
-                    .map(this::addEntityToConfig)
-            );
+                request -> {
+                    System.out.println("InternalUsers PUT Request");
+                    return endpointValidator.withRequiredEntityName(nameParam(request))
+                            .map(username -> loadConfigurationWithRequestContent(username, request))
+                            .map(endpointValidator::isAllowedToChangeImmutableEntity)
+                            .map(this::validateSecurityRoles)
+                            .map(securityConfiguration -> createOrUpdateAccount(request, securityConfiguration))
+                            .map(this::validateAndUpdatePassword)
+                            .map(this::addEntityToConfig);
+                });
     }
 
     ValidationResult<String> withAuthTokenPath(final RestRequest request) throws IOException {

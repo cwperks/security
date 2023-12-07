@@ -11,6 +11,15 @@
 
 package org.opensearch.security.dlic.rest.api;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
 import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -51,6 +60,7 @@ import org.opensearch.security.dlic.rest.validation.RequestContentValidator;
 import org.opensearch.security.dlic.rest.validation.ValidationResult;
 import org.opensearch.security.filter.SecurityRequestFactory;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
+import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.support.ConfigConstants;
@@ -315,6 +325,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
     protected final ValidationResult<SecurityConfiguration> processPutRequest(final String entityName, final RestRequest request)
         throws IOException {
+        System.out.println("processPutRequest");
         return endpointValidator.withRequiredEntityName(entityName)
             .map(ignore -> loadConfigurationWithRequestContent(entityName, request))
             .map(endpointValidator::onConfigChange)
@@ -323,8 +334,29 @@ public abstract class AbstractApiAction extends BaseRestHandler {
 
     protected final ValidationResult<SecurityConfiguration> addEntityToConfig(final SecurityConfiguration securityConfiguration)
         throws IOException {
+        System.out.println("addEntityToConfig");
+        System.out.println("configuration.getImplementingClass(): " + securityConfiguration.configuration().getImplementingClass());
         final var configuration = securityConfiguration.configuration();
         final var entityObjectConfig = Utils.toConfigObject(securityConfiguration.requestContent(), configuration.getImplementingClass());
+        if (CEntry.class.isAssignableFrom(configuration.getImplementingClass())) {
+            System.out.println("securityConfig: " + configuration);
+            CEntry centry = (CEntry) entityObjectConfig;
+            if (configuration.exists(securityConfiguration.entityName())) {
+                CEntry existingEntry = (CEntry) configuration.getCEntry(securityConfiguration.entityName());
+                System.out.println("Existing CEntry: " + existingEntry);
+                System.out.println("Setting updatedAt only");
+                if (centry.getCreatedAt() == null) {
+                    centry.setCreatedAt(Instant.now().getEpochSecond());
+                } else {
+                    centry.setCreatedAt(existingEntry.getCreatedAt());
+                }
+                centry.setUpdatedAt(Instant.now().getEpochSecond());
+            } else {
+                System.out.println("Setting createdAt and updatedAt");
+                centry.setCreatedAt(Instant.now().getEpochSecond());
+                centry.setUpdatedAt(Instant.now().getEpochSecond());
+            }
+        }
         configuration.putCObject(securityConfiguration.entityName(), entityObjectConfig);
         return ValidationResult.success(securityConfiguration);
     }
@@ -371,6 +403,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         final boolean logComplianceEvent
     ) {
         final var configuration = load(cType, logComplianceEvent);
+        if (CType.INTERNALUSERS.equals(cType)) {
+            System.out.println("Configuration loaded for ctype " + cType + ": " + configuration);
+        }
         if (configuration.getSeqNo() < 0) {
 
             return ValidationResult.error(

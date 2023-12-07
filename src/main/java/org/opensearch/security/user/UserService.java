@@ -42,6 +42,7 @@ import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.Hashed;
+import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.support.ConfigConstants;
@@ -119,9 +120,13 @@ public class UserService {
      */
     public SecurityDynamicConfiguration<?> createOrUpdateAccount(ObjectNode contentAsNode) throws IOException {
 
+        System.out.println("contentAsNode Before: " + contentAsNode);
+
         SecurityJsonNode securityJsonNode = new SecurityJsonNode(contentAsNode);
 
         final SecurityDynamicConfiguration<?> internalUsersConfiguration = load(getUserConfigName(), false);
+        System.out.println("createOrUpdateAccount");
+        System.out.println("internalUsersConfiguration: " + internalUsersConfiguration);
 
         String accountName = securityJsonNode.get("name").asString();
 
@@ -185,8 +190,16 @@ public class UserService {
             contentAsNode.put("hash", hash);
         }
 
+        if (userExisted) {
+            CEntry centry = (CEntry) internalUsersConfiguration.getCEntry(accountName);
+            contentAsNode.put("createdAt", centry.getCreatedAt());
+            contentAsNode.put("updatedAt", centry.getUpdatedAt());
+        }
+
         internalUsersConfiguration.remove(accountName);
         contentAsNode.remove("name");
+
+        System.out.println("contentAsNode After: " + contentAsNode);
 
         internalUsersConfiguration.putCObject(
             accountName,
