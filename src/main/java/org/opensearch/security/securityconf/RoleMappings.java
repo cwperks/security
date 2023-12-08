@@ -11,10 +11,12 @@
 
 package org.opensearch.security.securityconf;
 
+import org.opensearch.security.securityconf.impl.CEntry;
+
 import java.util.Collections;
 import java.util.List;
 
-public class RoleMappings {
+public class RoleMappings extends CEntry {
 
     private List<String> hosts = Collections.emptyList();
     private List<String> users = Collections.emptyList();

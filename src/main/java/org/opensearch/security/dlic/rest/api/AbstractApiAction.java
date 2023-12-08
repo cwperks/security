@@ -346,11 +346,6 @@ public abstract class AbstractApiAction extends BaseRestHandler {
                 System.out.println("Existing CEntry: " + existingEntry);
                 System.out.println("centry.getCreatedAt(): " + existingEntry.getCreatedAt());
                 System.out.println("Setting updatedAt only");
-                if (existingEntry.getCreatedAt() == null) {
-                    centry.setCreatedAt(Instant.now().getEpochSecond());
-                } else {
-                    centry.setCreatedAt(existingEntry.getCreatedAt());
-                }
                 centry.setUpdatedAt(Instant.now().getEpochSecond());
             } else {
                 System.out.println("Setting createdAt and updatedAt");

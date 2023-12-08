@@ -52,9 +52,11 @@ import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
-import org.opensearch.security.securityconf.RoleMappings;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.securityconf.impl.v6.RoleMappingsV6;
+import org.opensearch.security.securityconf.impl.v7.ConfigV7;
+import org.opensearch.security.securityconf.impl.v7.RoleMappingsV7;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
@@ -170,8 +172,15 @@ public class TenantInfoAction extends BaseRestHandler {
             if (Strings.isNullOrEmpty(dashboardsOpenSearchRole)) {
                 return false;
             }
-            RoleMappings roleMapping = (RoleMappings) rolesMappingConfiguration.getCEntries().getOrDefault(dashboardsOpenSearchRole, null);
-            return roleMapping != null && roleMapping.getUsers().contains(user.getName());
+            if (rolesMappingConfiguration.getImplementingClass() == ConfigV7.class) {
+                RoleMappingsV7 roleMapping = (RoleMappingsV7) rolesMappingConfiguration.getCEntries()
+                    .getOrDefault(dashboardsOpenSearchRole, null);
+                return roleMapping != null && roleMapping.getUsers().contains(user.getName());
+            } else {
+                RoleMappingsV6 roleMapping = (RoleMappingsV6) rolesMappingConfiguration.getCEntries()
+                    .getOrDefault(dashboardsOpenSearchRole, null);
+                return roleMapping != null && roleMapping.getUsers().contains(user.getName());
+            }
         }
 
         return false;

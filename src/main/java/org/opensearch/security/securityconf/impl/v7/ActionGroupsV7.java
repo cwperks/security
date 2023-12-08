@@ -34,9 +34,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.opensearch.security.securityconf.Hideable;
 import org.opensearch.security.securityconf.StaticDefinable;
+import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.v6.ActionGroupsV6;
 
-public class ActionGroupsV7 implements Hideable, StaticDefinable {
+public class ActionGroupsV7 extends CEntry implements Hideable, StaticDefinable {
 
     private boolean reserved;
     private boolean hidden;
@@ -128,6 +129,10 @@ public class ActionGroupsV7 implements Hideable, StaticDefinable {
             + type
             + ", description="
             + description
+            + ", created_at="
+            + createdAt
+            + ", updated_at="
+            + updatedAt
             + "]";
     }
 

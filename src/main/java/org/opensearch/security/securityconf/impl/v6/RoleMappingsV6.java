@@ -34,12 +34,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.opensearch.security.securityconf.Hideable;
-import org.opensearch.security.securityconf.RoleMappings;
 
-public class RoleMappingsV6 extends RoleMappings implements Hideable {
+public class RoleMappingsV6 implements Hideable {
 
     private boolean readonly;
     private boolean hidden;
+
+    private List<String> hosts = Collections.emptyList();
+    private List<String> users = Collections.emptyList();
     private List<String> backendroles = Collections.emptyList();
     private List<String> andBackendroles = Collections.emptyList();
 
@@ -78,6 +80,22 @@ public class RoleMappingsV6 extends RoleMappings implements Hideable {
 
     public void setAndBackendroles(List<String> andBackendroles) {
         this.andBackendroles = andBackendroles;
+    }
+
+    public void setHosts(List<String> hosts) {
+        this.hosts = hosts;
+    }
+
+    public List<String> getHosts() {
+        return hosts;
+    }
+
+    public void setUsers(List<String> users) {
+        this.users = users;
+    }
+
+    public List<String> getUsers() {
+        return users;
     }
 
     @Override

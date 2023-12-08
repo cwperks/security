@@ -31,13 +31,15 @@ import java.util.Collections;
 import java.util.List;
 
 import org.opensearch.security.securityconf.Hideable;
-import org.opensearch.security.securityconf.RoleMappings;
+import org.opensearch.security.securityconf.impl.CEntry;
 import org.opensearch.security.securityconf.impl.v6.RoleMappingsV6;
 
-public class RoleMappingsV7 extends RoleMappings implements Hideable {
+public class RoleMappingsV7 extends CEntry implements Hideable {
 
     private boolean reserved;
     private boolean hidden;
+    private List<String> hosts = Collections.emptyList();
+    private List<String> users = Collections.emptyList();
     private List<String> backend_roles = Collections.emptyList();
     private List<String> and_backend_roles = Collections.emptyList();
     private String description;
@@ -97,6 +99,22 @@ public class RoleMappingsV7 extends RoleMappings implements Hideable {
         this.description = description;
     }
 
+    public void setHosts(List<String> hosts) {
+        this.hosts = hosts;
+    }
+
+    public List<String> getHosts() {
+        return hosts;
+    }
+
+    public void setUsers(List<String> users) {
+        this.users = users;
+    }
+
+    public List<String> getUsers() {
+        return users;
+    }
+
     @Override
     public String toString() {
         return "RoleMappingsV7 [reserved="
@@ -113,6 +131,10 @@ public class RoleMappingsV7 extends RoleMappings implements Hideable {
             + and_backend_roles
             + ", description="
             + description
+            + ", created_at="
+            + createdAt
+            + ", updated_at="
+            + updatedAt
             + "]";
     }
 

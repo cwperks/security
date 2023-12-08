@@ -31,8 +31,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import org.opensearch.security.securityconf.Hideable;
 import org.opensearch.security.securityconf.StaticDefinable;
+import org.opensearch.security.securityconf.impl.CEntry;
 
-public class TenantV7 implements Hideable, StaticDefinable {
+public class TenantV7 extends CEntry implements Hideable, StaticDefinable {
 
     private boolean reserved;
     private boolean hidden;
@@ -76,7 +77,19 @@ public class TenantV7 implements Hideable, StaticDefinable {
 
     @Override
     public String toString() {
-        return "TenantV7 [reserved=" + reserved + ", hidden=" + hidden + ", _static=" + _static + ", description=" + description + "]";
+        return "TenantV7 [reserved="
+            + reserved
+            + ", hidden="
+            + hidden
+            + ", _static="
+            + _static
+            + ", description="
+            + description
+            + ", created_at="
+            + createdAt
+            + ", updated_at="
+            + updatedAt
+            + "]";
     }
 
 }
