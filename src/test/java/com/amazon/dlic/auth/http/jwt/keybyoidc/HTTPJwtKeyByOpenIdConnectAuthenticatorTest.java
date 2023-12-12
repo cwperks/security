@@ -11,7 +11,6 @@
 package com.amazon.dlic.auth.http.jwt.keybyoidc;
 
 import java.util.HashMap;
-import java.util.List;
 
 import com.google.common.collect.ImmutableMap;
 import org.junit.AfterClass;
@@ -59,7 +58,30 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(0, creds.getBackendRoles().size());
+        Assert.assertEquals(4, creds.getAttributes().size());
+    }
+
+    @Test
+    public void basicTestWithMultipleAudiences() {
+        Settings settings = Settings.builder()
+            .put("openid_connect_url", mockIdpServer.getDiscoverUri())
+            .put("required_issuer", TestJwts.TEST_ISSUER)
+            .putList("required_audience", TestJwts.TEST_AUDIENCE, TestJwts.TEST_AUDIENCE2)
+            .build();
+
+        HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(settings, null);
+
+        AuthCredentials creds = jwtAuth.extractCredentials(
+            new FakeRestRequest(ImmutableMap.of("Authorization", TestJwts.MC_COY_SIGNED_MULTIPLE_AUDIENCES_OCT_1), new HashMap<>())
+                .asSecurityRequest(),
+            null
+        );
+
+        Assert.assertNotNull(creds);
+        Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE + "," + TestJwts.TEST_AUDIENCE2, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }
@@ -81,7 +103,7 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }
@@ -154,6 +176,24 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
     }
 
     @Test
+    public void jwksNotMatchingRequiredAudiencesInClaimTest() {
+        Settings settings = Settings.builder()
+            .put("jwks_uri", mockIdpServer.getJwksUri())
+            .putList("required_audience", TestJwts.TEST_AUDIENCE, "Wrong Audience")
+            .build();
+
+        HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(settings, null);
+
+        AuthCredentials creds = jwtAuth.extractCredentials(
+            new FakeRestRequest(ImmutableMap.of("Authorization", TestJwts.MC_COY_SIGNED_MULTIPLE_AUDIENCES_OCT_1), new HashMap<>())
+                .asSecurityRequest(),
+            null
+        );
+
+        Assert.assertNull(creds);
+    }
+
+    @Test
     public void jwksUriMissingTest() {
         var exception = Assert.assertThrows(Exception.class, () -> {
             HTTPJwtKeyByOpenIdConnectAuthenticator jwtAuth = new HTTPJwtKeyByOpenIdConnectAuthenticator(Settings.builder().build(), null);
@@ -187,7 +227,7 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }
@@ -210,7 +250,7 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }
@@ -345,7 +385,7 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }
@@ -383,7 +423,7 @@ public class HTTPJwtKeyByOpenIdConnectAuthenticatorTest {
 
         Assert.assertNotNull(creds);
         Assert.assertEquals(TestJwts.MCCOY_SUBJECT, creds.getUsername());
-        Assert.assertEquals(List.of(TestJwts.TEST_AUDIENCE).toString(), creds.getAttributes().get("attr.jwt.aud"));
+        Assert.assertEquals(TestJwts.TEST_AUDIENCE, creds.getAttributes().get("attr.jwt.aud"));
         Assert.assertEquals(0, creds.getBackendRoles().size());
         Assert.assertEquals(4, creds.getAttributes().size());
     }

@@ -14,10 +14,13 @@ package com.amazon.dlic.auth.http.jwt;
 import java.nio.file.Path;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.http.HttpStatus;
@@ -34,6 +37,7 @@ import org.opensearch.security.filter.SecurityResponse;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.KeyUtils;
 
+import com.nimbusds.jwt.proc.BadJWTException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.JwtParserBuilder;
@@ -54,8 +58,8 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
     private final String jwtUrlParameter;
     private final String rolesKey;
     private final String subjectKey;
-    private final String requireAudience;
-    private final String requireIssuer;
+    private final List<String> requiredAudience;
+    private final String requiredIssuer;
 
     public HTTPJwtAuthenticator(final Settings settings, final Path configPath) {
         super();
@@ -66,19 +70,15 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         isDefaultAuthHeader = AUTHORIZATION.equalsIgnoreCase(jwtHeaderName);
         rolesKey = settings.get("roles_key");
         subjectKey = settings.get("subject_key");
-        requireAudience = settings.get("required_audience");
-        requireIssuer = settings.get("required_issuer");
+        requiredAudience = settings.getAsList("required_audience");
+        requiredIssuer = settings.get("required_issuer");
 
         final JwtParserBuilder jwtParserBuilder = KeyUtils.createJwtParserBuilderFromSigningKey(signingKey, log);
         if (jwtParserBuilder == null) {
             jwtParser = null;
         } else {
-            if (requireAudience != null) {
-                jwtParserBuilder.requireAudience(requireAudience);
-            }
-
-            if (requireIssuer != null) {
-                jwtParserBuilder.requireIssuer(requireIssuer);
+            if (requiredIssuer != null) {
+                jwtParserBuilder.requireIssuer(requiredIssuer);
             }
 
             final SecurityManager sm = System.getSecurityManager();
@@ -150,6 +150,8 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
         try {
             final Claims claims = jwtParser.parseClaimsJws(jwtToken).getBody();
 
+            validateRequiredAudience(claims);
+
             final String subject = extractSubject(claims, request);
 
             if (subject == null) {
@@ -162,7 +164,15 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
             final AuthCredentials ac = new AuthCredentials(subject, roles).markComplete();
 
             for (Entry<String, Object> claim : claims.entrySet()) {
-                ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
+                if (claim.getValue() instanceof Collection) {
+                    List<String> values = new ArrayList<>();
+                    for (Object value : (Collection<?>) claim.getValue()) {
+                        values.add(String.valueOf(value));
+                    }
+                    ac.addAttribute("attr.jwt." + claim.getKey(), String.join(",", values));
+                } else {
+                    ac.addAttribute("attr.jwt." + claim.getKey(), String.valueOf(claim.getValue()));
+                }
             }
 
             return ac;
@@ -175,6 +185,14 @@ public class HTTPJwtAuthenticator implements HTTPAuthenticator {
                 log.debug("Invalid or expired JWT token.", e);
             }
             return null;
+        }
+    }
+
+    private void validateRequiredAudience(Claims claims) throws BadJWTException {
+        Set<String> audience = claims.getAudience();
+
+        if (!requiredAudience.isEmpty() && !requiredAudience.containsAll(audience)) {
+            throw new BadJWTException("Invalid audience");
         }
     }
 
