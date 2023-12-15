@@ -95,7 +95,6 @@ runs:
       if: ${{ runner.os == 'Linux'}}
       run: |
         sudo useradd opensearch
-        sudo passwd opensearch
         sudo chown -R opensearch:opensearch /usr/share/opensearch/
         sudo chown -R opensearch:opensearch /var/lib/opensearch/
         sudo chown -R opensearch:opensearch /var/log/opensearch/
