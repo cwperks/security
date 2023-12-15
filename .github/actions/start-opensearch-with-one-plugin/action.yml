@@ -18,6 +18,10 @@ inputs:
     description: 'The admin password uses for the cluster'
     required: true
 
+  wait-time:
+    description: 'Wait time for opensearch to come up in seconds'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -105,7 +109,7 @@ runs:
     - name: Sleep while OpenSearch starts
       uses: peternied/action-sleep@v1
       with:
-        seconds: 90
+        seconds: ${{ inputs.wait-time }}
 
     # Verify that the server is operational
     - name: Check OpenSearch Running on Linux
