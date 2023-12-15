@@ -105,7 +105,7 @@ runs:
       if: ${{ runner.os == 'Linux'}}
       run: |
         su - opensearch
-        /bin/bash -c "./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &"
+        /bin/bash -c "./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch"
       shell: bash
 
     - name: Run OpenSearch with plugin on Windows
