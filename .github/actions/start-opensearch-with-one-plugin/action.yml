@@ -22,6 +22,10 @@ inputs:
     description: 'Wait time for opensearch to come up in seconds'
     required: true
 
+  bg:
+    description: 'Run opensearch in the background'
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -95,9 +99,14 @@ runs:
       shell: pwsh
 
     # Run OpenSearch
-    - name: Run OpenSearch with plugin on Linux
-      if: ${{ runner.os == 'Linux'}}
+    - name: Run OpenSearch with plugin on Linux in the Background
+      if: ${{ runner.os == 'Linux' && inputs.bg == 'true }}
       run: nohup ./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &
+      shell: bash
+
+    - name: Run OpenSearch with plugin on Linux in the Foreground
+      if: ${{ runner.os == 'Linux' && inputs.bg == 'false }}
+      run: ./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch
       shell: bash
 
     - name: Run OpenSearch with plugin on Windows
