@@ -101,7 +101,7 @@ runs:
     # Run OpenSearch
     - name: Run OpenSearch with plugin on Linux in the Background
       if: ${{ runner.os == 'Linux' && inputs.bg == 'true' }}
-      run: nohup ./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &
+      run: /bin/bash -c "./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &"
       shell: bash
 
     - name: Run OpenSearch with plugin on Linux in the Foreground
