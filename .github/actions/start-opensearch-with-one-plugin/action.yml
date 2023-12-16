@@ -102,7 +102,7 @@ runs:
     - name: Run OpenSearch with plugin on Linux in the Background
       if: ${{ runner.os == 'Linux' && inputs.bg == 'true' }}
       run: |
-        ((./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &)&)
+        RUNNER_TRACKING_ID="" && (nohup ./opensearch-${{ inputs.opensearch-version }}-SNAPSHOT/bin/opensearch &)
         sleep 60
       shell: bash
 
