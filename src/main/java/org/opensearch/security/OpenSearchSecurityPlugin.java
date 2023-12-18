@@ -584,8 +584,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         Objects.requireNonNull(auditLog),
                         sks,
                         Objects.requireNonNull(userService),
-                        sslCertReloadEnabled,
-                        backendRegistry
+                        sslCertReloadEnabled
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());
