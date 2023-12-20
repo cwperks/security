@@ -30,13 +30,16 @@ import java.io.File;
 import java.util.Iterator;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.commons.io.FileUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpVersion;
 import org.apache.hc.core5.http2.HttpVersionPolicy;
 import org.apache.http.HttpStatus;
+import org.awaitility.Awaitility;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.node.info.NodesInfoRequest;
@@ -49,6 +52,7 @@ import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.transport.TransportAddress;
+import org.opensearch.env.Environment;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
@@ -60,6 +64,8 @@ import org.opensearch.security.test.helper.cluster.ClusterHelper;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
+
+import static org.hamcrest.Matchers.equalTo;
 
 public class InitializationIntegrationTests extends SingleClusterTest {
 
@@ -281,9 +287,10 @@ public class InitializationIntegrationTests extends SingleClusterTest {
         final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true).build();
         setup(Settings.EMPTY, null, settings, false);
         RestHelper rh = nonSslRestHelper();
-        Thread.sleep(10000);
 
-        Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode());
+        Awaitility.await()
+            .alias("Load default configuration")
+            .until(() -> rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode(), equalTo(HttpStatus.SC_OK));
         HttpResponse res = rh.executeGetRequest("/_cluster/health", encodeBasicHeader("admin", "admin"));
         Assert.assertEquals(res.getBody(), HttpStatus.SC_OK, res.getStatusCode());
     }
@@ -291,29 +298,38 @@ public class InitializationIntegrationTests extends SingleClusterTest {
     @Test
     public void testInvalidDefaultConfig() throws Exception {
         try {
-            System.out.println("Existing defaultInitDirectory: " + System.getProperty("security.default_init.dir"));
-            System.out.println(
-                "Setting defaultInitDirectory: " + (new File(TEST_RESOURCE_RELATIVE_PATH + "invalid_config").getAbsolutePath())
+            final TemporaryFolder tmpFolder = TemporaryFolder.builder().assureDeletion().build();
+            tmpFolder.create();
+            System.clearProperty("security.default_init.dir");
+
+            final Settings settings = Settings.builder()
+                .put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true)
+                .put(Environment.PATH_HOME_SETTING.getKey(), tmpFolder.getRoot().getAbsolutePath().toLowerCase())
+                .build();
+            FileUtils.copyDirectory(
+                new File(TEST_RESOURCE_RELATIVE_PATH + "invalid_config"),
+                new File(settings.get(Environment.PATH_HOME_SETTING.getKey()) + "/config/opensearch-security")
             );
-            final String defaultInitDirectory = ClusterHelper.updateDefaultDirectory(
-                new File(TEST_RESOURCE_RELATIVE_PATH + "invalid_config").getAbsolutePath()
-            );
-            final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true).build();
+
             setup(Settings.EMPTY, null, settings, false);
-            RestHelper rh = nonSslRestHelper();
+
             Thread.sleep(10000);
             Assert.assertEquals(
                 HttpStatus.SC_SERVICE_UNAVAILABLE,
-                rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode()
+                nonSslRestHelper().executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode()
             );
 
-            System.out.println("Setting defaultInitDirectory: " + defaultInitDirectory);
-
-            ClusterHelper.updateDefaultDirectory(defaultInitDirectory);
+            FileUtils.copyDirectory(
+                new File(TEST_RESOURCE_RELATIVE_PATH + "config"),
+                new File(settings.get(Environment.PATH_HOME_SETTING.getKey()) + "/config/opensearch-security")
+            );
             restart(Settings.EMPTY, null, settings, false);
-            rh = nonSslRestHelper();
-            Thread.sleep(10000);
-            Assert.assertEquals(HttpStatus.SC_OK, rh.executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode());
+            Awaitility.await()
+                .alias("Load default configuration")
+                .until(
+                    () -> nonSslRestHelper().executeGetRequest("", encodeBasicHeader("admin", "admin")).getStatusCode(),
+                    equalTo(HttpStatus.SC_OK)
+                );
         } finally {
             ClusterHelper.resetSystemProperties();
         }
