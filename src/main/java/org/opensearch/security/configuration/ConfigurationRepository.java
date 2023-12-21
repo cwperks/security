@@ -121,6 +121,7 @@ public class ConfigurationRepository {
         cl = new ConfigurationLoaderSecurity7(client, threadPool, settings, clusterService);
 
         configCache = CacheBuilder.newBuilder().build();
+        System.out.println("Creating new ConfigurationRepository");
 
         bgThread = new Thread(() -> {
             try {
