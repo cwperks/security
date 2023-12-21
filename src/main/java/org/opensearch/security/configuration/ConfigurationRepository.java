@@ -360,7 +360,7 @@ public class ConfigurationRepository {
                     securityIndex
                 );
                 System.out.println("do not run bgThread");
-                bgThreadRunner.complete(null);
+                bgThreadRunner = CompletableFuture.completedFuture(null);
             }
         } catch (Throwable e2) {
             LOGGER.error("Error during node initialization: {}", e2, e2);
