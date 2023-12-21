@@ -327,6 +327,7 @@ public class ConfigurationRepository {
 
     public void close() {
         if (bgThread != null) {
+            System.out.println("Interrupting bgThread");
             bgThread.interrupt();
         }
     }
