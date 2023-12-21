@@ -268,6 +268,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         if (auditLog != null) {
             auditLog.close();
         }
+        if (cr != null) {
+            System.out.println("Closing ConfigurationRepository");
+            cr.close();
+        }
     }
 
     private final SslExceptionHandler evaluateSslExceptionHandler() {
@@ -1858,6 +1862,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public void onNodeStarted(DiscoveryNode localNode) {
         log.info("Node started");
+        System.out.println("Node started");
         if (!SSLConfig.isSslOnlyMode() && !client && !disabled) {
             cr.initOnNodeStart();
         }

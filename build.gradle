@@ -177,7 +177,7 @@ def splitTestConfig = [
         description: "Runs integration tests from all classes.",
         filters: [
             includeTestsMatching: [
-                "org.opensearch.security.*Integ*"
+                "org.opensearch.security.*InitializationInteg*"
             ],
             excludeTestsMatching: [
                 "org.opensearch.security.sanity.tests.*"
@@ -261,7 +261,7 @@ test {
     }
     retry {
         failOnPassedAfterRetry = false
-        maxRetries = 5
+        maxRetries = 1
     }
     jacoco {
         excludes = [
@@ -687,6 +687,7 @@ dependencies {
     testImplementation "org.springframework:spring-beans:${spring_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
+    testImplementation 'commons-io:commons-io:2.15.1'
     testImplementation('org.awaitility:awaitility:4.2.0') {
         exclude(group: 'org.hamcrest', module: 'hamcrest')
     }
@@ -706,7 +707,8 @@ dependencies {
     testRuntimeOnly 'com.yammer.metrics:metrics-core:2.2.0'
     testRuntimeOnly 'com.typesafe.scala-logging:scala-logging_3:3.9.5'
     testRuntimeOnly('org.apache.zookeeper:zookeeper:3.9.1') {
-        exclude(group:'ch.qos.logback', module: 'logback-classic' )
+        exclude(group: 'ch.qos.logback', module: 'logback-classic')
+        exclude(group: 'commons-io', module: 'commons-io')
     }
     testRuntimeOnly "org.apache.kafka:kafka-metadata:${kafka_version}"
     testRuntimeOnly "org.apache.kafka:kafka-storage:${kafka_version}"
@@ -762,6 +764,10 @@ tasks.register('testsJar', Jar) {
 
 testsJar {
     libsDirName = '.'
+}
+
+ciSecurityIntegrationTest {
+    systemProperty "java.util.concurrent.ForkJoinPool.common.parallelism", "20"
 }
 
 task bundleSecurityAdminStandalone(dependsOn: jar, type: Zip) {

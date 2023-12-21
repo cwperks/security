@@ -131,6 +131,7 @@ public final class ClusterHelper {
         Integer nodes
     ) throws Exception {
 
+        System.out.println("clusterState: " + clusterState);
         switch (clusterState) {
             case UNINITIALIZED:
                 deleteTestsDataDirectory();
@@ -340,10 +341,12 @@ public final class ClusterHelper {
 
     private static void closeNode(Node node) {
         try {
+            System.out.println("Closing node: " + node);
             node.close();
             node.awaitClose(250, TimeUnit.MILLISECONDS);
         } catch (Throwable e) {
             // ignore
+            System.out.println("Received error while closing node: " + e.getMessage());
         }
     }
 
