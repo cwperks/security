@@ -343,6 +343,7 @@ public class ConfigurationRepository {
     public void initOnNodeStart() {
         System.out.println("initOnNodeStart");
         System.out.println("Pool size: " + (Runtime.getRuntime().availableProcessors() - 1));
+        System.out.println("getParallelism=" +ForkJoinPool.commonPool().getParallelism());
         try {
             if (settings.getAsBoolean(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, false)) {
                 LOGGER.info("Will attempt to create index {} and default configs if they are absent", securityIndex);
