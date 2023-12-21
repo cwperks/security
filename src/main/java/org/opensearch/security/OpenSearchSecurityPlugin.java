@@ -1858,6 +1858,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public void onNodeStarted(DiscoveryNode localNode) {
         log.info("Node started");
+        System.out.println("Node started");
         if (!SSLConfig.isSslOnlyMode() && !client && !disabled) {
             cr.initOnNodeStart();
         }

@@ -323,26 +323,31 @@ public class ConfigurationRepository {
     }
 
     public void initOnNodeStart() {
+        System.out.println("initOnNodeStart");
         try {
             if (settings.getAsBoolean(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, false)) {
                 LOGGER.info("Will attempt to create index {} and default configs if they are absent", securityIndex);
                 installDefaultConfig.set(true);
+                System.out.println("bgThreadRunner executed");
                 bgThreadRunner = CompletableFuture.runAsync(new AccessControllerWrappedThread(bgThread));
             } else if (settings.getAsBoolean(ConfigConstants.SECURITY_BACKGROUND_INIT_IF_SECURITYINDEX_NOT_EXIST, true)) {
                 LOGGER.info(
                     "Will not attempt to create index {} and default configs if they are absent. Use securityadmin to initialize cluster",
                     securityIndex
                 );
+                System.out.println("bgThreadRunner executed, security index not exist");
                 bgThreadRunner = CompletableFuture.runAsync(new AccessControllerWrappedThread(bgThread));
             } else {
                 LOGGER.info(
                     "Will not attempt to create index {} and default configs if they are absent. Will not perform background initialization",
                     securityIndex
                 );
+                System.out.println("do not run bgThread");
                 bgThreadRunner.complete(null);
             }
         } catch (Throwable e2) {
             LOGGER.error("Error during node initialization: {}", e2, e2);
+            System.out.println("bgThreadRunner executed. Exception caught: " + e2.getMessage());
             bgThreadRunner = CompletableFuture.runAsync(new AccessControllerWrappedThread(bgThread));
         }
     }
