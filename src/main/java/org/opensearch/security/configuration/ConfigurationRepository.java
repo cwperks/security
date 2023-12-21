@@ -144,8 +144,10 @@ public class ConfigurationRepository {
                             try (StoredContext ctx = threadContext.stashContext()) {
                                 threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
 
-                                createSecurityIndexIfAbsent();
+                                boolean securityIndexCreated = createSecurityIndexIfAbsent();
+                                System.out.println("securityIndexCreated: " + securityIndexCreated);
                                 waitForSecurityIndexToBeAtLeastYellow();
+                                System.out.println("Trying to upload default configs");
 
                                 ConfigHelper.uploadFile(client, cd + "config.yml", securityIndex, CType.CONFIG, DEFAULT_CONFIG_VERSION);
                                 ConfigHelper.uploadFile(client, cd + "roles.yml", securityIndex, CType.ROLES, DEFAULT_CONFIG_VERSION);
@@ -220,6 +222,7 @@ public class ConfigurationRepository {
                 }
 
                 while (!dynamicConfigFactory.isInitialized()) {
+                    System.out.println("Waiting for dynamic config factory to be initialized ...");
                     try {
                         LOGGER.debug("Try to load config ...");
                         final ThreadContext threadContext = threadPool.getThreadContext();
@@ -384,6 +387,8 @@ public class ConfigurationRepository {
     public boolean reloadConfiguration(Collection<CType> configTypes) throws ConfigUpdateAlreadyInProgressException {
         final ThreadContext threadContext = threadPool.getThreadContext();
         Boolean isBgThread = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_BG_THREAD_HEADER);
+        System.out.println("isBgThread: " + isBgThread);
+        System.out.println("bgThreadRunner.isDone(): " + bgThreadRunner.isDone());
         if (!Boolean.TRUE.equals(isBgThread) && !bgThreadRunner.isDone()) {
             return false;
         }
