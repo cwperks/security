@@ -123,8 +123,6 @@ public class ConfigurationRepository {
         configCache = CacheBuilder.newBuilder().build();
         System.out.println("Creating new ConfigurationRepository");
 
-        bgThreadRunner = new CompletableFuture<>();
-
         bgThread = new Thread(() -> {
             System.out.println("Starting background thread");
             try {
