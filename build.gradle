@@ -766,6 +766,10 @@ testsJar {
     libsDirName = '.'
 }
 
+ciSecurityIntegrationTest {
+    systemProperty "java.util.concurrent.ForkJoinPool.common.parallelism", "20"
+}
+
 task bundleSecurityAdminStandalone(dependsOn: jar, type: Zip) {
     archiveClassifier = 'securityadmin-standalone'
     from(configurations.runtimeClasspath) {
