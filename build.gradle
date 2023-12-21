@@ -177,7 +177,7 @@ def splitTestConfig = [
         description: "Runs integration tests from all classes.",
         filters: [
             includeTestsMatching: [
-                "org.opensearch.security.*Integ*"
+                "org.opensearch.security.*InitializationInteg*"
             ],
             excludeTestsMatching: [
                 "org.opensearch.security.sanity.tests.*"

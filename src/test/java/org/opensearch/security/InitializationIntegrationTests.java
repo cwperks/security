@@ -323,11 +323,7 @@ public class InitializationIntegrationTests extends SingleClusterTest {
                 new File(TEST_RESOURCE_RELATIVE_PATH + "config"),
                 new File(settings.get(Environment.PATH_HOME_SETTING.getKey()) + "/config/opensearch-security")
             );
-            final Settings settings2 = Settings.builder()
-                .put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true)
-                .put(Environment.PATH_HOME_SETTING.getKey(), tmpFolder.getRoot().getAbsolutePath().toLowerCase())
-                .build();
-            restart(Settings.EMPTY, null, settings2, false);
+            restart(Settings.EMPTY, null, settings, false);
             Awaitility.await()
                 .alias("Load default configuration")
                 .until(
