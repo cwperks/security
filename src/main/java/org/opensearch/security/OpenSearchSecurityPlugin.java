@@ -269,6 +269,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             auditLog.close();
         }
         if (cr != null) {
+            System.out.println("Closing ConfigurationRepository");
             cr.close();
         }
     }

@@ -242,6 +242,7 @@ public class ConfigurationRepository {
                         try {
                             Thread.sleep(3000);
                         } catch (InterruptedException e1) {
+                            System.out.println("Thread was interrupted so we cancel initialization");
                             Thread.currentThread().interrupt();
                             LOGGER.debug("Thread was interrupted so we cancel initialization");
                             break;
