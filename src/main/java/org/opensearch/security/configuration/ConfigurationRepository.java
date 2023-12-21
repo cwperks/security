@@ -94,7 +94,7 @@ public class ConfigurationRepository {
     private final ThreadPool threadPool;
     private DynamicConfigFactory dynamicConfigFactory;
     private static final int DEFAULT_CONFIG_VERSION = 2;
-    private CompletableFuture<Void> bgThreadRunner = new CompletableFuture<>();
+    private CompletableFuture<Void> bgThreadRunner;
     private final Thread bgThread;
     private final AtomicBoolean installDefaultConfig = new AtomicBoolean();
     private final boolean acceptInvalid;
@@ -122,6 +122,8 @@ public class ConfigurationRepository {
 
         configCache = CacheBuilder.newBuilder().build();
         System.out.println("Creating new ConfigurationRepository");
+
+        bgThreadRunner = new CompletableFuture<>();
 
         bgThread = new Thread(() -> {
             System.out.println("Starting background thread");
