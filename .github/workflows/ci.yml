@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  GRADLE_OPTS: -Dhttp.keepAlive=false
+  GRADLE_OPTS: -Dhttp.keepAlive=false -Djava.util.concurrent.ForkJoinPool.common.parallelism=20
   CI_ENVIRONMENT: normal
 
 jobs:
@@ -58,7 +58,7 @@ jobs:
       with:
         cache-disabled: true
         arguments: |
-          ${{ matrix.gradle_task }} -Dbuild.snapshot=false -Djava.util.concurrent.ForkJoinPool.common.parallelism=20 -i
+          ${{ matrix.gradle_task }} -Dbuild.snapshot=false -i
 
 #    - uses: alehechka/upload-tartifact@v2
 #      if: always()
