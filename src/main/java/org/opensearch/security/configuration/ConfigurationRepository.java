@@ -124,7 +124,9 @@ public class ConfigurationRepository {
         System.out.println("Creating new ConfigurationRepository");
 
         bgThread = new Thread(() -> {
+            System.out.println("Starting background thread");
             try {
+                System.out.println("installDefaultConfig: " + installDefaultConfig.get());
                 LOGGER.info("Background init thread started. Install default config?: " + installDefaultConfig.get());
                 // wait for the cluster here until it will finish managed node election
                 while (clusterService.state().blocks().hasGlobalBlockWithStatus(RestStatus.SERVICE_UNAVAILABLE)) {
@@ -133,7 +135,6 @@ public class ConfigurationRepository {
                     TimeUnit.SECONDS.sleep(1);
                 }
 
-                System.out.println("installDefaultConfig: " + installDefaultConfig.get());
                 if (installDefaultConfig.get()) {
 
                     try {
@@ -271,6 +272,7 @@ public class ConfigurationRepository {
                 LOGGER.info("Node '{}' initialized", clusterService.localNode().getName());
 
             } catch (Exception e) {
+                System.out.println("Unexpected exception while initializing node " + e.getMessage());
                 LOGGER.error("Unexpected exception while initializing node " + e, e);
             }
         });
