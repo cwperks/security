@@ -230,6 +230,7 @@ public class ConfigurationRepository {
                 }
 
                 while (!dynamicConfigFactory.isInitialized()) {
+                    System.out.println("Current Thread Interrupted: " + Thread.currentThread().isInterrupted());
                     System.out.println("Waiting for dynamic config factory to be initialized ...");
                     try {
                         LOGGER.debug("Try to load config ...");
@@ -240,6 +241,7 @@ public class ConfigurationRepository {
                         }
                         break;
                     } catch (Exception e) {
+                        System.out.println("Unable to load configuration due to: " + String.valueOf(ExceptionUtils.getRootCause(e)));
                         LOGGER.debug("Unable to load configuration due to {}", String.valueOf(ExceptionUtils.getRootCause(e)));
                         try {
                             Thread.sleep(3000);
@@ -331,6 +333,7 @@ public class ConfigurationRepository {
         if (bgThreadRunner != null) {
             System.out.println("Interrupting bgThread");
             bgThreadRunner.cancel(true);
+            bgThread.interrupt();
         }
     }
 
@@ -426,6 +429,7 @@ public class ConfigurationRepository {
                 throw new ConfigUpdateAlreadyInProgressException("A config update is already imn progress");
             }
         } catch (InterruptedException e) {
+            System.out.println("Current thread interrupted");
             Thread.currentThread().interrupt();
             throw new ConfigUpdateAlreadyInProgressException("Interrupted config update");
         }
@@ -493,6 +497,7 @@ public class ConfigurationRepository {
 
             } else {
                 // wait (and use new layout)
+                System.out.println("security index not exists (yet)");
                 LOGGER.debug("security index not exists (yet)");
                 retVal.putAll(
                     validate(cl.load(configTypes.toArray(new CType[0]), 10, TimeUnit.SECONDS, acceptInvalid), configTypes.size())
@@ -500,6 +505,7 @@ public class ConfigurationRepository {
             }
 
         } catch (Exception e) {
+            System.out.println("Got exception while querying index: " + e.getMessage());
             throw new OpenSearchException(e);
         }
 
