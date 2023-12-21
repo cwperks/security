@@ -128,9 +128,11 @@ public class ConfigurationRepository {
                 // wait for the cluster here until it will finish managed node election
                 while (clusterService.state().blocks().hasGlobalBlockWithStatus(RestStatus.SERVICE_UNAVAILABLE)) {
                     LOGGER.info("Wait for cluster to be available ...");
+                    System.out.println("Wait for cluster to be available ...");
                     TimeUnit.SECONDS.sleep(1);
                 }
 
+                System.out.println("installDefaultConfig: " + installDefaultConfig.get());
                 if (installDefaultConfig.get()) {
 
                     try {
@@ -139,6 +141,8 @@ public class ConfigurationRepository {
                             ? (lookupDir + "/")
                             : new Environment(settings, configPath).configDir().toAbsolutePath().toString() + "/opensearch-security/";
                         File confFile = new File(cd + "config.yml");
+                        System.out.println("confFile: " + confFile.getAbsolutePath());
+                        System.out.println("confFile.exists(): " + confFile.exists());
                         if (confFile.exists()) {
                             final ThreadContext threadContext = threadPool.getThreadContext();
                             try (StoredContext ctx = threadContext.stashContext()) {
