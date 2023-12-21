@@ -302,7 +302,6 @@ public class InitializationIntegrationTests extends SingleClusterTest {
             final TemporaryFolder tmpFolder = TemporaryFolder.builder().assureDeletion().build();
             tmpFolder.create();
             System.clearProperty("security.default_init.dir");
-            System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism","20");
 
             final Settings settings = Settings.builder()
                 .put(ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, true)
@@ -333,7 +332,6 @@ public class InitializationIntegrationTests extends SingleClusterTest {
                     equalTo(HttpStatus.SC_OK)
                 );
         } finally {
-            System.clearProperty("java.util.concurrent.ForkJoinPool.common.parallelism");
             ClusterHelper.resetSystemProperties();
         }
     }

@@ -58,7 +58,7 @@ jobs:
       with:
         cache-disabled: true
         arguments: |
-          ${{ matrix.gradle_task }} -Dbuild.snapshot=false -i
+          ${{ matrix.gradle_task }} -Dbuild.snapshot=false -Djava.util.concurrent.ForkJoinPool.common.parallelism=20 -i
 
 #    - uses: alehechka/upload-tartifact@v2
 #      if: always()
