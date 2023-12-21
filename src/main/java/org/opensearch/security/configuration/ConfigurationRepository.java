@@ -324,6 +324,12 @@ public class ConfigurationRepository {
         }
     }
 
+    public void close() {
+        if (bgThread != null) {
+            bgThread.interrupt();
+        }
+    }
+
     public void initOnNodeStart() {
         System.out.println("initOnNodeStart");
         try {

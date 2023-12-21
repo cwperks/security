@@ -268,6 +268,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         if (auditLog != null) {
             auditLog.close();
         }
+        if (cr != null) {
+            cr.close();
+        }
     }
 
     private final SslExceptionHandler evaluateSslExceptionHandler() {
