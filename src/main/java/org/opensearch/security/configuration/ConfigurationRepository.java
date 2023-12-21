@@ -542,6 +542,7 @@ public class ConfigurationRepository {
 
         @Override
         public void run() {
+            System.out.println("AccessControllerWrappedThread.run");
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
 
                 @Override
