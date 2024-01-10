@@ -405,8 +405,6 @@ public class BackendRegistry {
 
             boolean firstChallengingAuthenticatorIsSaml = firstChallengingHttpAuthenticator != null
                 && "saml".equals(firstChallengingHttpAuthenticator.getType());
-            System.out.println("firstChallengingAuthenticatorIsSaml = " + firstChallengingAuthenticatorIsSaml);
-            System.out.println("request.path: " + request.path());
             if (authCredentials == null
                 && anonymousAuthEnabled
                 && !(firstChallengingAuthenticatorIsSaml
