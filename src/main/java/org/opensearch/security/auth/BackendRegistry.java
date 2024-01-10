@@ -387,19 +387,6 @@ public class BackendRegistry {
                 log.debug("User still not authenticated after checking {} auth domains", restAuthDomains.size());
             }
 
-            if (authCredentials == null && anonymousAuthEnabled) {
-                final String tenant = Utils.coalesce(request.header("securitytenant"), request.header("security_tenant"));
-                User anonymousUser = new User(User.ANONYMOUS.getName(), new HashSet<String>(User.ANONYMOUS.getRoles()), null);
-                anonymousUser.setRequestedTenant(tenant);
-
-                threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, anonymousUser);
-                auditLog.logSucceededLogin(anonymousUser.getName(), false, null, request);
-                if (isDebugEnabled) {
-                    log.debug("Anonymous User is authenticated");
-                }
-                return true;
-            }
-
             Optional<SecurityResponse> challengeResponse = Optional.empty();
 
             if (firstChallengingHttpAuthenticator != null) {
@@ -414,6 +401,26 @@ public class BackendRegistry {
                         log.debug("Rerequest {} failed", firstChallengingHttpAuthenticator.getClass());
                     }
                 }
+            }
+
+            boolean firstChallengingAuthenticatorIsSaml = firstChallengingHttpAuthenticator != null
+                && "saml".equals(firstChallengingHttpAuthenticator.getType());
+            System.out.println("firstChallengingAuthenticatorIsSaml = " + firstChallengingAuthenticatorIsSaml);
+            System.out.println("request.path: " + request.path());
+            if (authCredentials == null
+                && anonymousAuthEnabled
+                && !(firstChallengingAuthenticatorIsSaml
+                    && (request.path().endsWith("tenantinfo") || request.path().endsWith("authtoken")))) {
+                final String tenant = Utils.coalesce(request.header("securitytenant"), request.header("security_tenant"));
+                User anonymousUser = new User(User.ANONYMOUS.getName(), new HashSet<String>(User.ANONYMOUS.getRoles()), null);
+                anonymousUser.setRequestedTenant(tenant);
+
+                threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, anonymousUser);
+                auditLog.logSucceededLogin(anonymousUser.getName(), false, null, request);
+                if (isDebugEnabled) {
+                    log.debug("Anonymous User is authenticated");
+                }
+                return true;
             }
 
             log.warn(
