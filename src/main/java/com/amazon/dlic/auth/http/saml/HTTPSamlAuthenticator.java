@@ -173,6 +173,12 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
         return authCredentials;
     }
 
+    public static boolean isAuthTokenEndpoint(final SecurityRequest request) {
+        Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
+        final String suffix = matcher.matches() ? matcher.group(2) : null;
+        return API_AUTHTOKEN_SUFFIX.equals(suffix);
+    }
+
     @Override
     public String getType() {
         return "saml";
@@ -181,10 +187,7 @@ public class HTTPSamlAuthenticator implements HTTPAuthenticator, Destroyable {
     @Override
     public Optional<SecurityResponse> reRequestAuthentication(final SecurityRequest request, final AuthCredentials authCredentials) {
         try {
-            Matcher matcher = PATTERN_PATH_PREFIX.matcher(request.path());
-            final String suffix = matcher.matches() ? matcher.group(2) : null;
-
-            if (API_AUTHTOKEN_SUFFIX.equals(suffix)) {
+            if (isAuthTokenEndpoint(request)) {
                 // Verficiation of SAML ASC endpoint only works with RestRequests
                 if (!(request instanceof OpenSearchRequest)) {
                     throw new SecurityRequestChannelUnsupported(
