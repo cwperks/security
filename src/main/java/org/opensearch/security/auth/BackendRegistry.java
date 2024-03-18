@@ -71,6 +71,8 @@ import org.greenrobot.eventbus.Subscribe;
 import static org.apache.http.HttpStatus.SC_FORBIDDEN;
 import static org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE;
 import static org.apache.http.HttpStatus.SC_UNAUTHORIZED;
+import static org.opensearch.security.rest.FailOnAnonymousAction.isFailOnAnonymousEndpoint;
+import static com.amazon.dlic.auth.http.saml.HTTPSamlAuthenticator.isAuthTokenEndpoint;
 
 public class BackendRegistry {
 
@@ -286,7 +288,7 @@ public class BackendRegistry {
 
             if (ac == null) {
                 // no credentials found in request
-                if (anonymousAuthEnabled) {
+                if (anonymousAuthEnabled && !(isFailOnAnonymousEndpoint(request) || isAuthTokenEndpoint(request))) {
                     continue;
                 }
 
@@ -386,7 +388,7 @@ public class BackendRegistry {
                 log.debug("User still not authenticated after checking {} auth domains", restAuthDomains.size());
             }
 
-            if (authCredentials == null && anonymousAuthEnabled) {
+            if (authCredentials == null && anonymousAuthEnabled && !(isFailOnAnonymousEndpoint(request) || isAuthTokenEndpoint(request))) {
                 final String tenant = resolveTenantFrom(request);
                 User anonymousUser = new User(User.ANONYMOUS.getName(), new HashSet<String>(User.ANONYMOUS.getRoles()), null);
                 anonymousUser.setRequestedTenant(tenant);
