@@ -128,6 +128,7 @@ public class PrivilegesEvaluator {
     private ThreadContext threadContext;
 
     private PrivilegesInterceptor privilegesInterceptor;
+    private Map<String, Set<String>> systemIndices;
 
     private final boolean checkSnapshotRestoreWritePrivileges;
 
@@ -195,6 +196,10 @@ public class PrivilegesEvaluator {
 
     public SecurityRoles getSecurityRoles(Set<String> roles) {
         return configModel.getSecurityRoles().filter(roles);
+    }
+
+    public void setSystemIndices(Map<String, Set<String>> systemIndices) {
+        this.systemIndices = systemIndices;
     }
 
     public boolean hasRestAdminPermissions(final User user, final TransportAddress remoteAddress, final String permissions) {
