@@ -235,6 +235,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     private boolean sslCertReloadEnabled;
     private volatile SecurityInterceptor si;
+    private volatile Map<String, Set<String>> systemIndices;
     private volatile PrivilegesEvaluator evaluator;
     private volatile UserService userService;
     private volatile RestLayerPrivilegesEvaluator restLayerEvaluator;
@@ -1102,7 +1103,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             cih,
             irr,
             dlsFlsEnabled,
-            namedXContentRegistry.get()
+            namedXContentRegistry.get(),
+            systemIndices
         );
 
         sf = new SecurityFilter(settings, evaluator, adminDns, dlsFlsValve, auditLog, threadPool, cs, compatConfig, irr, xffResolver);
@@ -2011,9 +2013,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public Consumer<Map<String, Set<String>>> onSystemIndices() {
-        return (systemIndices) -> {
-            System.out.println("systemIndices: " + systemIndices);
-            evaluator.setSystemIndices(systemIndices); };
+        return (systemIndices) -> { this.systemIndices = systemIndices; };
     }
 
     private static String handleKeyword(final String field) {

@@ -128,7 +128,6 @@ public class PrivilegesEvaluator {
     private ThreadContext threadContext;
 
     private PrivilegesInterceptor privilegesInterceptor;
-    private Map<String, Set<String>> systemIndices;
 
     private final boolean checkSnapshotRestoreWritePrivileges;
 
@@ -136,7 +135,7 @@ public class PrivilegesEvaluator {
     private ConfigModel configModel;
     private final IndexResolverReplacer irr;
     private final SnapshotRestoreEvaluator snapshotRestoreEvaluator;
-    private final SecurityIndexAccessEvaluator securityIndexAccessEvaluator;
+    private final SystemIndexAccessEvaluator systemIndexAccessEvaluator;
     private final ProtectedIndexAccessEvaluator protectedIndexAccessEvaluator;
     private final TermsAggregationEvaluator termsAggregationEvaluator;
     private final PitPrivilegesEvaluator pitPrivilegesEvaluator;
@@ -156,7 +155,8 @@ public class PrivilegesEvaluator {
         final ClusterInfoHolder clusterInfoHolder,
         final IndexResolverReplacer irr,
         boolean dlsFlsEnabled,
-        NamedXContentRegistry namedXContentRegistry
+        NamedXContentRegistry namedXContentRegistry,
+        Map<String, Set<String>> systemIndices
     ) {
 
         super();
@@ -175,7 +175,7 @@ public class PrivilegesEvaluator {
         this.clusterInfoHolder = clusterInfoHolder;
         this.irr = irr;
         snapshotRestoreEvaluator = new SnapshotRestoreEvaluator(settings, auditLog);
-        securityIndexAccessEvaluator = new SecurityIndexAccessEvaluator(settings, auditLog, irr);
+        systemIndexAccessEvaluator = new SystemIndexAccessEvaluator(settings, auditLog, irr, systemIndices);
         protectedIndexAccessEvaluator = new ProtectedIndexAccessEvaluator(settings, auditLog);
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();
@@ -196,10 +196,6 @@ public class PrivilegesEvaluator {
 
     public SecurityRoles getSecurityRoles(Set<String> roles) {
         return configModel.getSecurityRoles().filter(roles);
-    }
-
-    public void setSystemIndices(Map<String, Set<String>> systemIndices) {
-        this.systemIndices = systemIndices;
     }
 
     public boolean hasRestAdminPermissions(final User user, final TransportAddress remoteAddress, final String permissions) {
@@ -322,7 +318,7 @@ public class PrivilegesEvaluator {
         }
 
         // Security index access
-        if (securityIndexAccessEvaluator.evaluate(
+        if (systemIndexAccessEvaluator.evaluate(
             request,
             task,
             action0,
