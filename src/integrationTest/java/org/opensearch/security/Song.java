@@ -57,9 +57,9 @@ public class Song {
         new Song(ARTIST_STRING, TITLE_SONG_1_PLUS_1, LYRICS_2, 2, GENRE_BLUES),
         new Song(ARTIST_TWINS, TITLE_NEXT_SONG, LYRICS_3, 3, GENRE_JAZZ),
         new Song(ARTIST_NO, TITLE_POISON, LYRICS_4, 4, GENRE_ROCK),
+        new Song(ARTIST_FIRST, TITLE_ABC, LYRICS_7, 7, GENRE_ROCK),
         new Song(ARTIST_YES, TITLE_AFFIRMATIVE, LYRICS_5, 5, GENRE_BLUES),
-        new Song(ARTIST_UNKNOWN, TITLE_CONFIDENTIAL, LYRICS_6, 6, GENRE_JAZZ),
-        new Song(ARTIST_FIRST, TITLE_ABC, LYRICS_7, 7, GENRE_ROCK), };
+        new Song(ARTIST_UNKNOWN, TITLE_CONFIDENTIAL, LYRICS_6, 6, GENRE_JAZZ) };
 
     private final String artist;
     private final String title;

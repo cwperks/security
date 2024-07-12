@@ -31,7 +31,6 @@ package org.opensearch.test.framework;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,18 +45,21 @@ import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bouncycastle.crypto.generators.OpenBSDBCrypt;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.client.Client;
+import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.security.hasher.PasswordHasher;
+import org.opensearch.security.hasher.PasswordHasherFactory;
 import org.opensearch.security.securityconf.impl.CType;
+import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.test.framework.cluster.OpenSearchClientProvider.UserCredentialsHolder;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
@@ -76,9 +78,13 @@ import static org.opensearch.action.support.WriteRequest.RefreshPolicy.IMMEDIATE
 */
 public class TestSecurityConfig {
 
+    public static final String REST_ADMIN_REST_API_ACCESS = "rest_admin__rest_api_access";
+
     private static final Logger log = LogManager.getLogger(TestSecurityConfig.class);
 
-    public final static String REST_ADMIN_REST_API_ACCESS = "rest_admin__rest_api_access";
+    private static final PasswordHasher passwordHasher = PasswordHasherFactory.createPasswordHasher(
+        Settings.builder().put(ConfigConstants.SECURITY_PASSWORD_HASHING_ALGORITHM, ConfigConstants.BCRYPT).build()
+    );
 
     private Config config = new Config();
     private Map<String, User> internalUsers = new LinkedHashMap<>();
@@ -145,13 +151,14 @@ public class TestSecurityConfig {
     }
 
     public TestSecurityConfig withRestAdminUser(final String name, final String... permissions) {
-        if (internalUsers.containsKey(name)) throw new RuntimeException("REST Admin " + name + " already exists");
-        user(new User(name, "REST Admin with permissions: " + Arrays.toString(permissions)).reserved(true));
-        final var roleName = name + "__rest_admin_role";
-        roles(new Role(roleName).clusterPermissions(permissions));
+        if (!internalUsers.containsKey(name)) {
+            user(new User(name, "REST Admin with permissions: " + Arrays.toString(permissions)).reserved(true));
+            final var roleName = name + "__rest_admin_role";
+            roles(new Role(roleName).clusterPermissions(permissions));
 
-        rolesMapping.computeIfAbsent(roleName, RoleMapping::new).users(name);
-        rolesMapping.computeIfAbsent(REST_ADMIN_REST_API_ACCESS, RoleMapping::new).users(name);
+            rolesMapping.computeIfAbsent(roleName, RoleMapping::new).users(name);
+            rolesMapping.computeIfAbsent(REST_ADMIN_REST_API_ACCESS, RoleMapping::new).users(name);
+        }
         return this;
     }
 
@@ -313,6 +320,8 @@ public class TestSecurityConfig {
 
         private Boolean reserved = null;
 
+        private Boolean _static = null;
+
         public ActionGroup(String name, Type type, String... allowedActions) {
             this(name, null, type, allowedActions);
         }
@@ -333,9 +342,30 @@ public class TestSecurityConfig {
             return this;
         }
 
+        public boolean hidden() {
+            return hidden != null && hidden;
+        }
+
         public ActionGroup reserved(boolean reserved) {
             this.reserved = reserved;
             return this;
+        }
+
+        public boolean reserved() {
+            return reserved != null && reserved;
+        }
+
+        public ActionGroup _static(boolean _static) {
+            this._static = _static;
+            return this;
+        }
+
+        public boolean _static() {
+            return _static != null && _static;
+        }
+
+        public List<String> allowedActions() {
+            return allowedActions;
         }
 
         @Override
@@ -343,6 +373,7 @@ public class TestSecurityConfig {
             builder.startObject();
             if (hidden != null) builder.field("hidden", hidden);
             if (reserved != null) builder.field("reserved", reserved);
+            if (_static != null) builder.field("static", _static);
             builder.field("type", type.type());
             builder.field("allowed_actions", allowedActions);
             if (description != null) builder.field("description", description);
@@ -366,6 +397,7 @@ public class TestSecurityConfig {
         public int hashCode() {
             return Objects.hash(name, description, type, allowedActions, hidden, reserved);
         }
+
     }
 
     public static final class User implements UserCredentialsHolder, ToXContentObject {
@@ -386,6 +418,8 @@ public class TestSecurityConfig {
         private Boolean reserved = null;
 
         private String description;
+
+        private String hash;
 
         public User(String name) {
             this(name, null);
@@ -431,6 +465,11 @@ public class TestSecurityConfig {
             return this;
         }
 
+        public User hash(String hash) {
+            this.hash = hash;
+            return this;
+        }
+
         public String getName() {
             return name;
         }
@@ -451,8 +490,11 @@ public class TestSecurityConfig {
         public XContentBuilder toXContent(XContentBuilder xContentBuilder, Params params) throws IOException {
             xContentBuilder.startObject();
 
-            xContentBuilder.field("hash", hash(password.toCharArray()));
-
+            if (this.hash == null) {
+                xContentBuilder.field("hash", hashPassword(password));
+            } else {
+                xContentBuilder.field("hash", hash);
+            }
             Set<String> roleNames = getRoleNames();
 
             if (!roleNames.isEmpty()) {
@@ -605,6 +647,8 @@ public class TestSecurityConfig {
 
         private Boolean reserved;
 
+        private Boolean _static;
+
         private final String description;
 
         private List<String> backendRoles = new ArrayList<>();
@@ -632,6 +676,11 @@ public class TestSecurityConfig {
             return this;
         }
 
+        public RoleMapping _static(boolean _static) {
+            this._static = _static;
+            return this;
+        }
+
         public RoleMapping users(String... users) {
             this.users.addAll(Arrays.asList(users));
             return this;
@@ -652,6 +701,7 @@ public class TestSecurityConfig {
             builder.startObject();
             if (hidden != null) builder.field("hidden", hidden);
             if (reserved != null) builder.field("reserved", reserved);
+            if (_static != null) builder.field("static", _static);
             if (users != null && !users.isEmpty()) builder.field("users", users);
             if (hosts != null && !hosts.isEmpty()) builder.field("hosts", hosts);
             if (description != null) builder.field("description", description);
@@ -933,13 +983,8 @@ public class TestSecurityConfig {
         updateConfigInIndex(client, CType.INTERNALUSERS, userMap);
     }
 
-    static String hash(final char[] clearTextPassword) {
-        final byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
-        final String hash = OpenBSDBCrypt.generate((Objects.requireNonNull(clearTextPassword)), salt, 12);
-        Arrays.fill(salt, (byte) 0);
-        Arrays.fill(clearTextPassword, '\0');
-        return hash;
+    static String hashPassword(final String clearTextPassword) {
+        return passwordHasher.hash(clearTextPassword.toCharArray());
     }
 
     private void writeEmptyConfigToIndex(Client client, CType configType) {

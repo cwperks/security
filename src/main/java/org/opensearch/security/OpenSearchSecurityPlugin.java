@@ -155,9 +155,13 @@ import org.opensearch.security.configuration.Salt;
 import org.opensearch.security.configuration.SecurityFlsDlsIndexSearcherWrapper;
 import org.opensearch.security.dlic.rest.api.Endpoint;
 import org.opensearch.security.dlic.rest.api.SecurityRestApiActions;
+import org.opensearch.security.dlic.rest.api.ssl.CertificatesActionType;
+import org.opensearch.security.dlic.rest.api.ssl.TransportCertificatesInfoNodesAction;
 import org.opensearch.security.dlic.rest.validation.PasswordValidator;
 import org.opensearch.security.filter.SecurityFilter;
 import org.opensearch.security.filter.SecurityRestFilter;
+import org.opensearch.security.hasher.PasswordHasher;
+import org.opensearch.security.hasher.PasswordHasherFactory;
 import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.identity.SecurityTokenManager;
@@ -174,6 +178,7 @@ import org.opensearch.security.rest.TenantInfoAction;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
+import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
 import org.opensearch.security.ssl.SslExceptionHandler;
@@ -259,6 +264,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile DlsFlsRequestValve dlsFlsValve = null;
     private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
+    private volatile PasswordHasher passwordHasher;
 
     public static boolean isActionTraceEnabled() {
 
@@ -645,7 +651,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         Objects.requireNonNull(auditLog),
                         sks,
                         Objects.requireNonNull(userService),
-                        sslCertReloadEnabled
+                        sslCertReloadEnabled,
+                        passwordHasher
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());
@@ -670,6 +677,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> actions = new ArrayList<>(1);
         if (!disabled && !SSLConfig.isSslOnlyMode()) {
             actions.add(new ActionHandler<>(ConfigUpdateAction.INSTANCE, TransportConfigUpdateAction.class));
+            // external storage does not support reload and does not provide SSL certs info
+            if (!ExternalSecurityKeyStore.hasExternalSslContext(settings)) {
+                actions.add(new ActionHandler<>(CertificatesActionType.INSTANCE, TransportCertificatesInfoNodesAction.class));
+            }
             actions.add(new ActionHandler<>(WhoAmIAction.INSTANCE, TransportWhoAmIAction.class));
         }
         return actions;
@@ -1097,7 +1108,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog);
 
-        userService = new UserService(cs, cr, settings, localClient);
+        this.passwordHasher = PasswordHasherFactory.createPasswordHasher(settings);
+
+        userService = new UserService(cs, cr, passwordHasher, settings, localClient);
 
         final XFFResolver xffResolver = new XFFResolver(threadPool);
         backendRegistry = new BackendRegistry(settings, adminDns, xffResolver, auditLog, threadPool);
@@ -1105,8 +1118,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         final CompatConfig compatConfig = new CompatConfig(environment, transportPassiveAuthSetting);
 
-        // DLS-FLS is enabled if not client and not disabled and not SSL only.
-        final boolean dlsFlsEnabled = !SSLConfig.isSslOnlyMode();
         evaluator = new PrivilegesEvaluator(
             clusterService,
             threadPool,
@@ -1117,7 +1128,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             privilegesInterceptor,
             cih,
             irr,
-            dlsFlsEnabled,
             namedXContentRegistry.get()
         );
 
@@ -1143,7 +1153,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             configPath,
             compatConfig
         );
-        dcf = new DynamicConfigFactory(cr, settings, configPath, localClient, threadPool, cih);
+        dcf = new DynamicConfigFactory(cr, settings, configPath, localClient, threadPool, cih, passwordHasher);
         dcf.registerDCFListener(backendRegistry);
         dcf.registerDCFListener(compatConfig);
         dcf.registerDCFListener(irr);
@@ -1155,6 +1165,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         if (!(auditLog instanceof NullAuditLog)) {
             // Don't register if advanced modules is disabled in which case auditlog is instance of NullAuditLog
             dcf.registerDCFListener(auditLog);
+        }
+        if (dlsFlsValve instanceof DlsFlsValveImpl) {
+            dcf.registerDCFListener(dlsFlsValve);
         }
 
         cr.setDynamicConfigFactory(dcf);
@@ -1193,13 +1206,17 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         components.add(si);
         components.add(dcf);
         components.add(userService);
+        components.add(passwordHasher);
+
+        if (!ExternalSecurityKeyStore.hasExternalSslContext(settings)) {
+            components.add(sks);
+        }
         final var allowDefaultInit = settings.getAsBoolean(SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, false);
         final var useClusterState = useClusterStateToInitSecurityConfig(settings);
         if (!SSLConfig.isSslOnlyMode() && !isDisabled(settings) && allowDefaultInit && useClusterState) {
             clusterService.addListener(cr);
         }
         return components;
-
     }
 
     @Override
@@ -1287,6 +1304,60 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 Function.identity(),
                 Property.NodeScope,
                 Property.Filtered,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.simpleString(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_ALGORITHM,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_ALGORITHM_DEFAULT,
+                Property.NodeScope,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.intSetting(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_BCRYPT_ROUNDS,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_BCRYPT_ROUNDS_DEFAULT,
+                Property.NodeScope,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.simpleString(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_BCRYPT_MINOR,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_BCRYPT_MINOR_DEFAULT,
+                Property.NodeScope,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.intSetting(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_ITERATIONS,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_ITERATIONS_DEFAULT,
+                Property.NodeScope,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.intSetting(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_LENGTH,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_LENGTH_DEFAULT,
+                Property.NodeScope,
+                Property.Final
+            )
+        );
+
+        settings.add(
+            Setting.simpleString(
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_FUNCTION,
+                ConfigConstants.SECURITY_PASSWORD_HASHING_PBKDF2_FUNCTION_DEFAULT,
+                Property.NodeScope,
                 Property.Final
             )
         );
