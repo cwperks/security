@@ -8,7 +8,7 @@
  *
  */
 
-package org.opensearch.security;
+package org.opensearch.security.stress;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
