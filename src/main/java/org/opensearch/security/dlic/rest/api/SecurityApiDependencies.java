@@ -12,6 +12,7 @@
 package org.opensearch.security.dlic.rest.api;
 
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
@@ -25,6 +26,7 @@ public class SecurityApiDependencies {
     private final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator;
     private final AuditLog auditLog;
     private final Settings settings;
+    private final ContextSwitcher contextSwitcher;
 
     private final PrivilegesEvaluator privilegesEvaluator;
 
@@ -35,7 +37,8 @@ public class SecurityApiDependencies {
         final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator,
         final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator,
         final AuditLog auditLog,
-        final Settings settings
+        final Settings settings,
+        final ContextSwitcher contextSwitcher
     ) {
         this.adminDNs = adminDNs;
         this.configurationRepository = configurationRepository;
@@ -44,6 +47,7 @@ public class SecurityApiDependencies {
         this.restApiAdminPrivilegesEvaluator = restApiAdminPrivilegesEvaluator;
         this.auditLog = auditLog;
         this.settings = settings;
+        this.contextSwitcher = contextSwitcher;
     }
 
     public AdminDNs adminDNs() {
@@ -72,6 +76,10 @@ public class SecurityApiDependencies {
 
     public Settings settings() {
         return settings;
+    }
+
+    public ContextSwitcher contextSwitcher() {
+        return contextSwitcher;
     }
 
     public String securityIndexName() {

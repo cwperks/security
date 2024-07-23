@@ -4,10 +4,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.function.Supplier;
 
-import org.opensearch.client.node.PluginAwareNodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
@@ -23,11 +24,9 @@ import org.opensearch.watcher.ResourceWatcherService;
 public class SystemIndexPlugin2 extends Plugin implements SystemIndexPlugin {
     public static final String SYSTEM_INDEX_2 = ".system-index2";
 
-    private PluginAwareNodeClient client;
-
     @Override
     public Collection<Object> createComponents(
-        PluginAwareNodeClient client,
+        Client client,
         ClusterService clusterService,
         ThreadPool threadPool,
         ResourceWatcherService resourceWatcherService,
@@ -37,9 +36,9 @@ public class SystemIndexPlugin2 extends Plugin implements SystemIndexPlugin {
         NodeEnvironment nodeEnvironment,
         NamedWriteableRegistry namedWriteableRegistry,
         IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        ContextSwitcher contextSwitcher
     ) {
-        this.client = client;
         return Collections.emptyList();
     }
 

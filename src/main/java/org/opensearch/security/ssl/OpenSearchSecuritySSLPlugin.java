@@ -38,7 +38,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.OpenSearchException;
 import org.opensearch.SpecialPermission;
 import org.opensearch.Version;
-import org.opensearch.client.node.PluginAwareNodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
@@ -53,6 +53,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.common.util.BigArrays;
 import org.opensearch.common.util.PageCacheRecycler;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.indices.breaker.CircuitBreakerService;
@@ -133,6 +134,7 @@ public class OpenSearchSecuritySSLPlugin extends Plugin implements SystemIndexPl
     };
     protected final SSLConfig SSLConfig;
     protected volatile ThreadPool threadPool;
+    protected volatile ContextSwitcher contextSwitcher;
 
     @SuppressWarnings("removal")
     protected OpenSearchSecuritySSLPlugin(final Settings settings, final Path configPath, boolean disabled) {
@@ -365,7 +367,7 @@ public class OpenSearchSecuritySSLPlugin extends Plugin implements SystemIndexPl
 
     @Override
     public Collection<Object> createComponents(
-        PluginAwareNodeClient localClient,
+        Client localClient,
         ClusterService clusterService,
         ThreadPool threadPool,
         ResourceWatcherService resourceWatcherService,
@@ -375,10 +377,12 @@ public class OpenSearchSecuritySSLPlugin extends Plugin implements SystemIndexPl
         NodeEnvironment nodeEnvironment,
         NamedWriteableRegistry namedWriteableRegistry,
         IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        ContextSwitcher contextSwitcher
     ) {
 
         this.threadPool = threadPool;
+        this.contextSwitcher = contextSwitcher;
         final List<Object> components = new ArrayList<>(1);
 
         if (client) {
@@ -674,7 +678,9 @@ public class OpenSearchSecuritySSLPlugin extends Plugin implements SystemIndexPl
 
     @Override
     public Optional<SecureSettingsFactory> getSecureSettingFactory(Settings settings) {
-        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, NOOP_SSL_EXCEPTION_HANDLER, securityRestHandler));
+        return Optional.of(
+            new OpenSearchSecureSettingsFactory(threadPool, sks, NOOP_SSL_EXCEPTION_HANDLER, securityRestHandler, contextSwitcher)
+        );
     }
 
     protected Settings migrateSettings(Settings settings) {

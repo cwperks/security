@@ -42,6 +42,7 @@ import org.opensearch.client.Client;
 import org.opensearch.client.IndicesAdminClient;
 import org.opensearch.common.CheckedSupplier;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.TestContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.bytes.BytesArray;
@@ -154,7 +155,7 @@ public class SecurityIndexHandlerTest {
         when(client.threadPool()).thenReturn(threadPool);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         configFolder = temporaryFolder.newFolder("config").toPath();
-        securityIndexHandler = new SecurityIndexHandler(INDEX_NAME, Settings.EMPTY, client);
+        securityIndexHandler = new SecurityIndexHandler(INDEX_NAME, Settings.EMPTY, client, new TestContextSwitcher(threadPool));
     }
 
     @Test

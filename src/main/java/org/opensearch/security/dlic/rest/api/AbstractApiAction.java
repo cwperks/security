@@ -606,7 +606,7 @@ public abstract class AbstractApiAction extends BaseRestHandler {
         final Object originalOrigin = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN);
 
         return channel -> threadPool.generic().submit(() -> {
-            try (StoredContext ignore = threadPool.getThreadContext().stashContext()) {
+            try (StoredContext ignore = securityApiDependencies.contextSwitcher().switchContext()) {
                 threadPool.getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
                 threadPool.getThreadContext()
                     .putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, originalUserAndRemoteAddress.getLeft());

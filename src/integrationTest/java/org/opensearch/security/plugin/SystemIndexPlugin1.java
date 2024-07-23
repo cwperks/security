@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import org.opensearch.action.ActionRequest;
-import org.opensearch.client.node.PluginAwareNodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
@@ -15,6 +15,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -33,11 +34,11 @@ import org.opensearch.watcher.ResourceWatcherService;
 public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin {
     public static final String SYSTEM_INDEX_1 = ".system-index1";
 
-    private PluginAwareNodeClient client;
+    private ContextSwitcher contextSwitcher;
 
     @Override
     public Collection<Object> createComponents(
-        PluginAwareNodeClient client,
+        Client client,
         ClusterService clusterService,
         ThreadPool threadPool,
         ResourceWatcherService resourceWatcherService,
@@ -47,10 +48,11 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin {
         NodeEnvironment nodeEnvironment,
         NamedWriteableRegistry namedWriteableRegistry,
         IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        ContextSwitcher contextSwitcher
     ) {
-        this.client = client;
-        return List.of(client);
+        this.contextSwitcher = contextSwitcher;
+        return List.of(contextSwitcher);
     }
 
     @Override
@@ -69,7 +71,7 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin {
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return List.of(new RestIndexDocumentIntoSystemIndexAction(client));
+        return List.of(new RestIndexDocumentIntoSystemIndexAction(contextSwitcher));
     }
 
     @Override

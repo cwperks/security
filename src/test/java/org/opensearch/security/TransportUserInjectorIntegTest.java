@@ -24,11 +24,12 @@ import org.junit.Test;
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.client.node.PluginAwareNodeClient;
+import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -61,7 +62,7 @@ public class TransportUserInjectorIntegTest extends SingleClusterTest {
 
         @Override
         public Collection<Object> createComponents(
-            PluginAwareNodeClient client,
+            Client client,
             ClusterService clusterService,
             ThreadPool threadPool,
             ResourceWatcherService resourceWatcherService,
@@ -71,7 +72,8 @@ public class TransportUserInjectorIntegTest extends SingleClusterTest {
             NodeEnvironment nodeEnvironment,
             NamedWriteableRegistry namedWriteableRegistry,
             IndexNameExpressionResolver indexNameExpressionResolver,
-            Supplier<RepositoriesService> repositoriesServiceSupplier
+            Supplier<RepositoriesService> repositoriesServiceSupplier,
+            ContextSwitcher contextSwitcher
         ) {
             if (!Strings.isNullOrEmpty(settings.get(TEST_INJECTED_USER))) threadPool.getThreadContext()
                 .putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, settings.get(TEST_INJECTED_USER));

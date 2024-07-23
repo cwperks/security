@@ -22,6 +22,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.env.Environment;
 import org.opensearch.index.engine.Engine.Delete;
@@ -52,9 +53,10 @@ public final class AuditLogImpl extends AbstractAuditLog {
         final Client clientProvider,
         final ThreadPool threadPool,
         final IndexNameExpressionResolver resolver,
-        final ClusterService clusterService
+        final ClusterService clusterService,
+        final ContextSwitcher contextSwitcher
     ) {
-        this(settings, configPath, clientProvider, threadPool, resolver, clusterService, null);
+        this(settings, configPath, clientProvider, threadPool, resolver, clusterService, null, contextSwitcher);
     }
 
     @SuppressWarnings("removal")
@@ -65,11 +67,12 @@ public final class AuditLogImpl extends AbstractAuditLog {
         final ThreadPool threadPool,
         final IndexNameExpressionResolver resolver,
         final ClusterService clusterService,
-        final Environment environment
+        final Environment environment,
+        final ContextSwitcher contextSwitcher
     ) {
         super(settings, threadPool, resolver, clusterService, environment);
         this.settings = settings;
-        this.messageRouter = new AuditMessageRouter(settings, clientProvider, threadPool, configPath);
+        this.messageRouter = new AuditMessageRouter(settings, clientProvider, threadPool, configPath, contextSwitcher);
         this.messageRouterEnabled = this.messageRouter.isEnabled();
 
         log.info("Message routing enabled: {}", this.messageRouterEnabled);

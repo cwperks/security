@@ -21,6 +21,7 @@ import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.auditlog.impl.AbstractAuditLog;
 import org.opensearch.security.auditlog.impl.AuditLogImpl;
@@ -63,9 +64,18 @@ public class AuditTestUtils {
         final Client clientProvider,
         final ThreadPool threadPool,
         final IndexNameExpressionResolver resolver,
-        final ClusterService clusterService
+        final ClusterService clusterService,
+        final ContextSwitcher contextSwitcher
     ) {
-        AuditLogImpl auditLog = new AuditLogImpl(settings, configPath, clientProvider, threadPool, resolver, clusterService);
+        AuditLogImpl auditLog = new AuditLogImpl(
+            settings,
+            configPath,
+            clientProvider,
+            threadPool,
+            resolver,
+            clusterService,
+            contextSwitcher
+        );
         AuditConfig auditConfig = AuditConfig.from(settings);
         auditLog.setConfig(auditConfig);
         return auditLog;

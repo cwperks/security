@@ -17,6 +17,8 @@ import org.opensearch.action.ActionType;
 import org.opensearch.action.support.ContextPreservingActionListener;
 import org.opensearch.client.Client;
 import org.opensearch.client.FilterClient;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
+import org.opensearch.common.util.concurrent.TestContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.core.action.ActionListener;
@@ -46,8 +48,9 @@ public class ContextHeaderDecoratorClient extends FilterClient {
             threadContext.newRestorableContext(true),
             listener
         );
+        ContextSwitcher contextSwitcher = new TestContextSwitcher(threadPool());
 
-        try (StoredContext ctx = threadContext.stashContext()) {
+        try (StoredContext ctx = contextSwitcher.switchContext()) {
             threadContext.putHeader(this.headers);
             super.doExecute(action, request, wrappedListener);
         }

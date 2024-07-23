@@ -46,13 +46,9 @@ public class TransportIndexDocumentIntoSystemIndexAction extends HandledTranspor
                             .getThreadContext()
                             .getHeader(ThreadContext.PLUGIN_EXECUTION_CONTEXT);
                         actionListener.onResponse(new IndexDocumentIntoSystemIndexResponse(true, stashedContext));
-                    }, e -> {
-                        actionListener.onFailure(e);
-                    })
+                    }, e -> { actionListener.onFailure(e); })
                 );
-            }, e -> {
-                actionListener.onFailure(e);
-            }));
+            }, e -> { actionListener.onFailure(e); }));
         }
     }
 }

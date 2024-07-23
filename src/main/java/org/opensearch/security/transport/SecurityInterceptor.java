@@ -47,6 +47,7 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.transport.TransportAddress;
@@ -79,6 +80,7 @@ public class SecurityInterceptor {
     private BackendRegistry backendRegistry;
     private AuditLog auditLog;
     private final ThreadPool threadPool;
+    private final ContextSwitcher contextSwitcher;
     private final PrincipalExtractor principalExtractor;
     private final InterClusterRequestEvaluator requestEvalProvider;
     private final ClusterService cs;
@@ -99,7 +101,8 @@ public class SecurityInterceptor {
         final SslExceptionHandler sslExceptionHandler,
         final ClusterInfoHolder clusterInfoHolder,
         final SSLConfig SSLConfig,
-        final Supplier<Boolean> actionTraceSupplier
+        final Supplier<Boolean> actionTraceSupplier,
+        final ContextSwitcher contextSwitcher
     ) {
         this.backendRegistry = backendRegistry;
         this.auditLog = auditLog;
@@ -112,6 +115,7 @@ public class SecurityInterceptor {
         this.clusterInfoHolder = clusterInfoHolder;
         this.SSLConfig = SSLConfig;
         this.actionTraceEnabled = actionTraceSupplier;
+        this.contextSwitcher = contextSwitcher;
     }
 
     public <T extends TransportRequest> SecurityRequestHandler<T> getHandler(String action, TransportRequestHandler<T> actualHandler) {
@@ -155,7 +159,7 @@ public class SecurityInterceptor {
         final var serializationFormat = SerializationFormat.determineFormat(connection.getVersion());
         final boolean isSameNodeRequest = localNode != null && localNode.equals(connection.getNode());
 
-        try (ThreadContext.StoredContext stashedContext = getThreadContext().stashContext()) {
+        try (ThreadContext.StoredContext stashedContext = contextSwitcher.switchContext()) {
             final TransportResponseHandler<T> restoringHandler = new RestoringTransportResponseHandler<T>(handler, stashedContext);
             getThreadContext().putHeader("_opendistro_security_remotecn", cs.getClusterName().value());
 

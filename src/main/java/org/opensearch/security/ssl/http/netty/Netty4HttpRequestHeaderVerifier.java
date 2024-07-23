@@ -13,6 +13,7 @@ import java.util.Set;
 import org.opensearch.ExceptionsHelper;
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.http.netty4.Netty4HttpChannel;
 import org.opensearch.http.netty4.Netty4HttpServerTransport;
@@ -48,12 +49,19 @@ public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler
     private final SecurityRestFilter restFilter;
     private final ThreadPool threadPool;
     private final SSLConfig sslConfig;
+    private final ContextSwitcher contextSwitcher;
     private final boolean injectUserEnabled;
     private final boolean passthrough;
 
-    public Netty4HttpRequestHeaderVerifier(SecurityRestFilter restFilter, ThreadPool threadPool, Settings settings) {
+    public Netty4HttpRequestHeaderVerifier(
+        SecurityRestFilter restFilter,
+        ThreadPool threadPool,
+        Settings settings,
+        ContextSwitcher contextSwitcher
+    ) {
         this.restFilter = restFilter;
         this.threadPool = threadPool;
+        this.contextSwitcher = contextSwitcher;
 
         this.injectUserEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_UNSUPPORTED_INJECT_USER_ENABLED, false);
         boolean disabled = settings.getAsBoolean(ConfigConstants.SECURITY_DISABLED, false);
@@ -84,7 +92,7 @@ public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler
 
         final SecurityRequestChannel requestChannel = SecurityRequestFactory.from(msg, httpChannel);
         ThreadContext threadContext = threadPool.getThreadContext();
-        try (ThreadContext.StoredContext ignore = threadPool.getThreadContext().stashContext()) {
+        try (ThreadContext.StoredContext ignore = contextSwitcher.switchContext()) {
             injectUser(msg, threadContext);
 
             // If request channel is completed and a response is sent, then there was a failure during authentication

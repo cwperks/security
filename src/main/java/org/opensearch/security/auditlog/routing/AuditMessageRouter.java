@@ -24,6 +24,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.security.auditlog.config.ThreadPoolConfig;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;
@@ -43,9 +44,15 @@ public class AuditMessageRouter {
     final SinkProvider sinkProvider;
     final AsyncStoragePool storagePool;
 
-    public AuditMessageRouter(final Settings settings, final Client clientProvider, ThreadPool threadPool, final Path configPath) {
+    public AuditMessageRouter(
+        final Settings settings,
+        final Client clientProvider,
+        ThreadPool threadPool,
+        final Path configPath,
+        final ContextSwitcher contextSwitcher
+    ) {
         this(
-            new SinkProvider(settings, clientProvider, threadPool, configPath),
+            new SinkProvider(settings, clientProvider, threadPool, configPath, contextSwitcher),
             new AsyncStoragePool(ThreadPoolConfig.getConfig(settings))
         );
     }

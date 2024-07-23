@@ -78,6 +78,8 @@ import org.opensearch.client.RestClientBuilder;
 import org.opensearch.client.RestHighLevelClient;
 import org.opensearch.cluster.node.DiscoveryNodeRole;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
+import org.opensearch.common.util.concurrent.TestContextSwitcher;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
 import org.opensearch.security.action.configupdate.ConfigUpdateRequest;
 import org.opensearch.security.action.configupdate.ConfigUpdateResponse;
@@ -132,6 +134,7 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
 
     protected final Logger log = LogManager.getLogger(this.getClass());
     public static final ThreadPool MOCK_POOL = new ThreadPool(Settings.builder().put("node.name", "mock").build());
+    public static final ContextSwitcher MOCK_CONTEXT_SWITCHER = new TestContextSwitcher(MOCK_POOL);
 
     // TODO Test Matrix
     protected boolean allowOpenSSL = false; // disabled, we test this already in SSL Plugin

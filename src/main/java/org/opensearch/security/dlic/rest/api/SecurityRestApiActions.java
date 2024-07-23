@@ -18,6 +18,7 @@ import java.util.List;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.security.auditlog.AuditLog;
@@ -49,7 +50,8 @@ public class SecurityRestApiActions {
         final SecurityKeyStore securityKeyStore,
         final UserService userService,
         final boolean certificatesReloadEnabled,
-        final PasswordHasher passwordHasher
+        final PasswordHasher passwordHasher,
+        final ContextSwitcher contextSwitcher
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,
@@ -63,7 +65,8 @@ public class SecurityRestApiActions {
                 settings.getAsBoolean(SECURITY_RESTAPI_ADMIN_ENABLED, false)
             ),
             auditLog,
-            settings
+            settings,
+            contextSwitcher
         );
         return List.of(
             new InternalUsersApiAction(clusterService, threadPool, userService, securityApiDependencies, passwordHasher),

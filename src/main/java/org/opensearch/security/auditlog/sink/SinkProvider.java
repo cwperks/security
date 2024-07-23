@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.security.dlic.rest.support.Utils;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.threadpool.ThreadPool;
@@ -31,6 +32,7 @@ public class SinkProvider {
     private static final String FALLBACKSINK_NAME = "fallback";
     private static final String DEFAULTSINK_NAME = "default";
     private final Client clientProvider;
+    private final ContextSwitcher contextSwitcher;
     private final ThreadPool threadPool;
     private final Path configPath;
     private final Settings settings;
@@ -38,17 +40,30 @@ public class SinkProvider {
     AuditLogSink defaultSink;
     AuditLogSink fallbackSink;
 
-    public SinkProvider(final Settings settings, final Client clientProvider, ThreadPool threadPool, final Path configPath) {
+    public SinkProvider(
+        final Settings settings,
+        final Client clientProvider,
+        ThreadPool threadPool,
+        final Path configPath,
+        final ContextSwitcher contextSwitcher
+    ) {
         this.settings = settings;
         this.clientProvider = clientProvider;
         this.threadPool = threadPool;
+        this.contextSwitcher = contextSwitcher;
         this.configPath = configPath;
 
         // fall back sink, make sure we don't lose messages
         String fallbackConfigPrefix = ConfigConstants.SECURITY_AUDIT_CONFIG_ENDPOINTS + "." + FALLBACKSINK_NAME;
         Settings fallbackSinkSettings = settings.getAsSettings(fallbackConfigPrefix);
         if (!fallbackSinkSettings.isEmpty()) {
-            this.fallbackSink = createSink(FALLBACKSINK_NAME, fallbackSinkSettings.get("type"), settings, fallbackConfigPrefix + ".config");
+            this.fallbackSink = createSink(
+                FALLBACKSINK_NAME,
+                fallbackSinkSettings.get("type"),
+                settings,
+                fallbackConfigPrefix + ".config",
+                contextSwitcher
+            );
         }
 
         // make sure we always have a fallback to write to
@@ -63,7 +78,8 @@ public class SinkProvider {
             DEFAULTSINK_NAME,
             settings.get(ConfigConstants.SECURITY_AUDIT_TYPE_DEFAULT),
             settings,
-            ConfigConstants.SECURITY_AUDIT_CONFIG_DEFAULT
+            ConfigConstants.SECURITY_AUDIT_CONFIG_DEFAULT,
+            contextSwitcher
         );
         if (defaultSink == null) {
             log.error("Default endpoint could not be created, auditlog will not work properly.");
@@ -92,7 +108,8 @@ public class SinkProvider {
                 sinkName,
                 type,
                 this.settings,
-                ConfigConstants.SECURITY_AUDIT_CONFIG_ENDPOINTS + "." + sinkName + ".config"
+                ConfigConstants.SECURITY_AUDIT_CONFIG_ENDPOINTS + "." + sinkName + ".config",
+                contextSwitcher
             );
             if (sink == null) {
                 log.error("Endpoint '{}' could not be created, check log file for further information.", sinkName);
@@ -128,12 +145,27 @@ public class SinkProvider {
         }
     }
 
-    private final AuditLogSink createSink(final String name, final String type, final Settings settings, final String settingsPrefix) {
+    private final AuditLogSink createSink(
+        final String name,
+        final String type,
+        final Settings settings,
+        final String settingsPrefix,
+        final ContextSwitcher contextSwitcher
+    ) {
         AuditLogSink sink = null;
         if (type != null) {
             switch (type.toLowerCase()) {
                 case "internal_opensearch":
-                    sink = new InternalOpenSearchSink(name, settings, settingsPrefix, configPath, clientProvider, threadPool, fallbackSink);
+                    sink = new InternalOpenSearchSink(
+                        name,
+                        settings,
+                        settingsPrefix,
+                        configPath,
+                        clientProvider,
+                        threadPool,
+                        fallbackSink,
+                        contextSwitcher
+                    );
                     break;
                 case "external_opensearch":
                     try {

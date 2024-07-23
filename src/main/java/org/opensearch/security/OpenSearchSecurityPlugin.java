@@ -74,7 +74,6 @@ import org.opensearch.action.search.PitService;
 import org.opensearch.action.search.SearchScrollAction;
 import org.opensearch.action.support.ActionFilter;
 import org.opensearch.client.Client;
-import org.opensearch.client.node.PluginAwareNodeClient;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.NamedDiff;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
@@ -96,6 +95,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.common.util.BigArrays;
 import org.opensearch.common.util.PageCacheRecycler;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
@@ -255,6 +255,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile BackendRegistry backendRegistry;
     private volatile SslExceptionHandler sslExceptionHandler;
     private volatile Client localClient;
+    private volatile ContextSwitcher contextSwitcher;
     private final boolean disabled;
     private volatile SecurityTokenManager tokenManager;
     private volatile DynamicConfigFactory dcf;
@@ -653,7 +654,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         sks,
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
-                        passwordHasher
+                        passwordHasher,
+                        contextSwitcher
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());
@@ -1021,7 +1023,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public Collection<Object> createComponents(
-        PluginAwareNodeClient localClient,
+        Client localClient,
         ClusterService clusterService,
         ThreadPool threadPool,
         ResourceWatcherService resourceWatcherService,
@@ -1031,7 +1033,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         NodeEnvironment nodeEnvironment,
         NamedWriteableRegistry namedWriteableRegistry,
         IndexNameExpressionResolver indexNameExpressionResolver,
-        Supplier<RepositoriesService> repositoriesServiceSupplier
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        ContextSwitcher contextSwitcher
     ) {
 
         SSLConfig.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
@@ -1047,13 +1050,15 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 nodeEnvironment,
                 namedWriteableRegistry,
                 indexNameExpressionResolver,
-                repositoriesServiceSupplier
+                repositoriesServiceSupplier,
+                contextSwitcher
             );
         }
 
         this.threadPool = threadPool;
         this.cs = clusterService;
         this.localClient = localClient;
+        this.contextSwitcher = contextSwitcher;
 
         final List<Object> components = new ArrayList<Object>();
 
@@ -1099,7 +1104,16 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 xContentRegistry,
                 threadPool.getThreadContext()
             );
-            auditLog = new AuditLogImpl(settings, configPath, localClient, threadPool, resolver, clusterService, environment);
+            auditLog = new AuditLogImpl(
+                settings,
+                configPath,
+                localClient,
+                threadPool,
+                resolver,
+                clusterService,
+                environment,
+                contextSwitcher
+            );
             privilegesInterceptor = new PrivilegesInterceptorImpl(resolver, clusterService, localClient, threadPool);
         }
 
@@ -1107,7 +1121,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         adminDns = new AdminDNs(settings);
 
-        cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog);
+        cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog, contextSwitcher);
 
         this.passwordHasher = PasswordHasherFactory.createPasswordHasher(settings);
 
@@ -1184,7 +1198,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             Objects.requireNonNull(sslExceptionHandler),
             Objects.requireNonNull(cih),
             SSLConfig,
-            OpenSearchSecurityPlugin::isActionTraceEnabled
+            OpenSearchSecurityPlugin::isActionTraceEnabled,
+            contextSwitcher
         );
         components.add(principalExtractor);
 
@@ -2119,7 +2134,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public Optional<SecureSettingsFactory> getSecureSettingFactory(Settings settings) {
-        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, sslExceptionHandler, securityRestHandler));
+        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, sslExceptionHandler, securityRestHandler, contextSwitcher));
     }
 
     public static class GuiceHolder implements LifecycleComponent {

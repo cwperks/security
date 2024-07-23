@@ -37,6 +37,7 @@ import org.opensearch.security.test.AbstractSecurityUnitTest;
 import org.opensearch.transport.TransportRequest;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.opensearch.security.test.AbstractSecurityUnitTest.MOCK_CONTEXT_SWITCHER;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -66,7 +67,15 @@ public class DisabledCategoriesTest {
         settingsBuilder.put("plugins.security.audit.type", TestAuditlogImpl.class.getName());
         settingsBuilder.put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_REST_CATEGORIES, "nonexistent");
 
-        AuditTestUtils.createAuditLog(settingsBuilder.build(), null, null, AbstractSecurityUnitTest.MOCK_POOL, null, cs);
+        AuditTestUtils.createAuditLog(
+            settingsBuilder.build(),
+            null,
+            null,
+            AbstractSecurityUnitTest.MOCK_POOL,
+            null,
+            cs,
+            MOCK_CONTEXT_SWITCHER
+        );
     }
 
     @Test
@@ -76,7 +85,15 @@ public class DisabledCategoriesTest {
         Builder settingsBuilder = Settings.builder();
         settingsBuilder.put("plugins.security.audit.type", TestAuditlogImpl.class.getName());
         settingsBuilder.put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_TRANSPORT_CATEGORIES, "nonexistent");
-        AuditTestUtils.createAuditLog(settingsBuilder.build(), null, null, AbstractSecurityUnitTest.MOCK_POOL, null, cs);
+        AuditTestUtils.createAuditLog(
+            settingsBuilder.build(),
+            null,
+            null,
+            AbstractSecurityUnitTest.MOCK_POOL,
+            null,
+            cs,
+            MOCK_CONTEXT_SWITCHER
+        );
     }
 
     @Test
@@ -90,7 +107,8 @@ public class DisabledCategoriesTest {
             null,
             AbstractSecurityUnitTest.MOCK_POOL,
             null,
-            cs
+            cs,
+            MOCK_CONTEXT_SWITCHER
         );
         logAll(auditLog);
         String result = TestAuditlogImpl.sb.toString();
@@ -113,7 +131,8 @@ public class DisabledCategoriesTest {
             null,
             AbstractSecurityUnitTest.MOCK_POOL,
             null,
-            cs
+            cs,
+            MOCK_CONTEXT_SWITCHER
         );
         logAll(auditLog);
 
@@ -181,7 +200,8 @@ public class DisabledCategoriesTest {
             null,
             AbstractSecurityUnitTest.MOCK_POOL,
             null,
-            cs
+            cs,
+            MOCK_CONTEXT_SWITCHER
         );
         logAll(auditLog);
 

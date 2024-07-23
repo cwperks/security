@@ -18,6 +18,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.netty4.ssl.SecureNetty4HttpServerTransport;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
@@ -38,17 +39,20 @@ public class OpenSearchSecureSettingsFactory implements SecureSettingsFactory {
     private final SecurityKeyStore sks;
     private final SslExceptionHandler sslExceptionHandler;
     private final SecurityRestFilter restFilter;
+    private final ContextSwitcher contextSwitcher;
 
     public OpenSearchSecureSettingsFactory(
         ThreadPool threadPool,
         SecurityKeyStore sks,
         SslExceptionHandler sslExceptionHandler,
-        SecurityRestFilter restFilter
+        SecurityRestFilter restFilter,
+        ContextSwitcher contextSwitcher
     ) {
         this.threadPool = threadPool;
         this.sks = sks;
         this.sslExceptionHandler = sslExceptionHandler;
         this.restFilter = restFilter;
+        this.contextSwitcher = contextSwitcher;
     }
 
     @Override
@@ -108,7 +112,7 @@ public class OpenSearchSecureSettingsFactory implements SecureSettingsFactory {
                     public <C> Optional<C> create(Settings settings, HttpServerTransport transport, Class<C> adapterClass) {
                         if (transport instanceof SecureNetty4HttpServerTransport
                             && ChannelInboundHandlerAdapter.class.isAssignableFrom(adapterClass)) {
-                            return Optional.of((C) new Netty4HttpRequestHeaderVerifier(restFilter, threadPool, settings));
+                            return Optional.of((C) new Netty4HttpRequestHeaderVerifier(restFilter, threadPool, settings, contextSwitcher));
                         } else {
                             return Optional.empty();
                         }

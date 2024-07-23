@@ -73,6 +73,7 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Priority;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.core.action.ActionListener;
@@ -108,6 +109,7 @@ public class ConfigurationRepository implements ClusterStateListener {
     private final ClusterService clusterService;
     private final AuditLog auditLog;
     private final ThreadPool threadPool;
+    private final ContextSwitcher contextSwitcher;
     private DynamicConfigFactory dynamicConfigFactory;
     public static final int DEFAULT_CONFIG_VERSION = 2;
     private final CompletableFuture<Void> initalizeConfigTask = new CompletableFuture<>();
@@ -129,13 +131,15 @@ public class ConfigurationRepository implements ClusterStateListener {
         final Client client,
         final ClusterService clusterService,
         final AuditLog auditLog,
-        final SecurityIndexHandler securityIndexHandler
+        final SecurityIndexHandler securityIndexHandler,
+        final ContextSwitcher contextSwitcher
     ) {
         this.securityIndex = securityIndex;
         this.settings = settings;
         this.configPath = configPath;
         this.client = client;
         this.threadPool = threadPool;
+        this.contextSwitcher = contextSwitcher;
         this.clusterService = clusterService;
         this.auditLog = auditLog;
         this.configurationChangedListener = new ArrayList<>();
@@ -199,7 +203,7 @@ public class ConfigurationRepository implements ClusterStateListener {
                     File confFile = new File(cd + "config.yml");
                     if (confFile.exists()) {
                         final ThreadContext threadContext = threadPool.getThreadContext();
-                        try (StoredContext ctx = threadContext.stashContext()) {
+                        try (StoredContext ctx = contextSwitcher.switchContext()) {
                             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
 
                             createSecurityIndexIfAbsent();
@@ -483,7 +487,8 @@ public class ConfigurationRepository implements ClusterStateListener {
         final ThreadPool threadPool,
         Client client,
         ClusterService clusterService,
-        AuditLog auditLog
+        AuditLog auditLog,
+        ContextSwitcher contextSwitcher
     ) {
         final var securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
@@ -497,7 +502,8 @@ public class ConfigurationRepository implements ClusterStateListener {
             client,
             clusterService,
             auditLog,
-            new SecurityIndexHandler(securityIndex, settings, client)
+            new SecurityIndexHandler(securityIndex, settings, client, contextSwitcher),
+            contextSwitcher
         );
     }
 
@@ -599,7 +605,7 @@ public class ConfigurationRepository implements ClusterStateListener {
         final ThreadContext threadContext = threadPool.getThreadContext();
         final Map<CType, SecurityDynamicConfiguration<?>> retVal = new HashMap<>();
 
-        try (StoredContext ctx = threadContext.stashContext()) {
+        try (StoredContext ctx = contextSwitcher.switchContext()) {
             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
 
             IndexMetadata securityMetadata = clusterService.state().metadata().index(this.securityIndex);

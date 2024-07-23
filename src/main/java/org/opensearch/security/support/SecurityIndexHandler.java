@@ -37,6 +37,7 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
@@ -64,16 +65,24 @@ public class SecurityIndexHandler {
 
     private final String indexName;
 
-    public SecurityIndexHandler(final String indexName, final Settings settings, final Client client) {
+    private final ContextSwitcher contextSwitcher;
+
+    public SecurityIndexHandler(
+        final String indexName,
+        final Settings settings,
+        final Client client,
+        final ContextSwitcher contextSwitcher
+    ) {
         this.indexName = indexName;
         this.settings = settings;
         this.client = client;
+        this.contextSwitcher = contextSwitcher;
     }
 
     public final static Map<String, Object> INDEX_SETTINGS = Map.of("index.number_of_shards", 1, "index.auto_expand_replicas", "0-all");
 
     public void createIndex(ActionListener<Boolean> listener) {
-        try (final ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
+        try (final ThreadContext.StoredContext threadContext = contextSwitcher.switchContext()) {
             client.admin()
                 .indices()
                 .create(
@@ -89,7 +98,7 @@ public class SecurityIndexHandler {
 
     @SuppressWarnings("removal")
     public void uploadDefaultConfiguration(final Path configDir, final ActionListener<Set<SecurityConfig>> listener) {
-        try (final ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
+        try (final ThreadContext.StoredContext threadContext = contextSwitcher.switchContext()) {
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                 try {
                     LOGGER.info("Uploading default security configuration from {}", configDir.toAbsolutePath());
@@ -132,7 +141,7 @@ public class SecurityIndexHandler {
         final Set<SecurityConfig> configuration,
         final ActionListener<Map<CType, SecurityDynamicConfiguration<?>>> listener
     ) {
-        try (final ThreadContext.StoredContext threadContext = client.threadPool().getThreadContext().stashContext()) {
+        try (final ThreadContext.StoredContext threadContext = contextSwitcher.switchContext()) {
             client.threadPool().getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
             final var configurationTypes = configuration.stream().map(SecurityConfig::type).collect(Collectors.toUnmodifiableList());
             client.multiGet(newMultiGetRequest(configurationTypes), ActionListener.runBefore(ActionListener.wrap(r -> {

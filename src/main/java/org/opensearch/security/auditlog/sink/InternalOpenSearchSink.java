@@ -19,6 +19,7 @@ import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.client.Client;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.support.ConfigConstants;
@@ -35,6 +36,7 @@ public final class InternalOpenSearchSink extends AuditLogSink {
     final String type;
     private DateTimeFormatter indexPattern;
     private final ThreadPool threadPool;
+    private final ContextSwitcher contextSwitcher;
 
     public InternalOpenSearchSink(
         final String name,
@@ -43,7 +45,8 @@ public final class InternalOpenSearchSink extends AuditLogSink {
         final Path configPath,
         final Client clientProvider,
         ThreadPool threadPool,
-        AuditLogSink fallbackSink
+        AuditLogSink fallbackSink,
+        ContextSwitcher contextSwitcher
     ) {
         super(name, settings, settingsPrefix, fallbackSink);
         this.clientProvider = clientProvider;
@@ -53,6 +56,7 @@ public final class InternalOpenSearchSink extends AuditLogSink {
         this.type = sinkSettings.get(ConfigConstants.SECURITY_AUDIT_OPENSEARCH_TYPE, null);
 
         this.threadPool = threadPool;
+        this.contextSwitcher = contextSwitcher;
         try {
             this.indexPattern = DateTimeFormat.forPattern(index);
         } catch (IllegalArgumentException e) {
@@ -79,7 +83,7 @@ public final class InternalOpenSearchSink extends AuditLogSink {
             return true;
         }
 
-        try (StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+        try (StoredContext ctx = contextSwitcher.switchContext()) {
             try {
                 final IndexRequestBuilder irb = clientProvider.prepareIndex(getExpandedIndexName(indexPattern, index))
                     .setRefreshPolicy(RefreshPolicy.IMMEDIATE)

@@ -3,7 +3,7 @@ package org.opensearch.security.plugin;
 import java.util.List;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.client.node.PluginAwareNodeClient;
+import org.opensearch.common.util.concurrent.ContextSwitcher;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
@@ -13,10 +13,10 @@ import static org.opensearch.rest.RestRequest.Method.PUT;
 
 public class RestIndexDocumentIntoSystemIndexAction extends BaseRestHandler {
 
-    private final PluginAwareNodeClient pluginAwareClient;
+    private final ContextSwitcher contextSwitcher;
 
-    public RestIndexDocumentIntoSystemIndexAction(PluginAwareNodeClient pluginAwareClient) {
-        this.pluginAwareClient = pluginAwareClient;
+    public RestIndexDocumentIntoSystemIndexAction(ContextSwitcher contextSwitcher) {
+        this.contextSwitcher = contextSwitcher;
     }
 
     @Override
