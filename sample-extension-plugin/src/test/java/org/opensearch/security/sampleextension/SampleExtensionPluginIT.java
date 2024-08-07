@@ -34,5 +34,10 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         Assert.assertTrue(
             pluginsList.stream().map(o -> (Map<String, Object>) o).anyMatch(plugin -> plugin.get("component").equals("opensearch-security"))
         );
+        Assert.assertTrue(
+            pluginsList.stream()
+                .map(o -> (Map<String, Object>) o)
+                .anyMatch(plugin -> plugin.get("component").equals("opensearch-security-sample-extension"))
+        );
     }
 }
