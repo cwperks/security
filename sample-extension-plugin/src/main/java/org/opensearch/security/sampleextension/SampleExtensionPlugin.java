@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.action.ActionRequest;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.node.DiscoveryNodes;
@@ -24,6 +25,7 @@ import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
+import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
@@ -34,6 +36,9 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceTransportAction;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -50,6 +55,8 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Resou
 
     static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
 
+    private Client client;
+
     @Override
     public Collection<Object> createComponents(
         Client client,
@@ -64,6 +71,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Resou
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
+        this.client = client;
         return Collections.emptyList();
     }
 
@@ -87,6 +95,11 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Resou
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return Collections.singletonList(new SampleExtensionRestHandler());
+        return List.of(new SampleExtensionRestHandler(), new CreateSampleResourceRestAction());
+    }
+
+    @Override
+    public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
+        return List.of(new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class));
     }
 }

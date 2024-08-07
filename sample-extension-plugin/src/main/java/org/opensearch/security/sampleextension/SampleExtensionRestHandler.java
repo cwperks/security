@@ -35,7 +35,7 @@ import org.opensearch.rest.RestRequest;
  * {@code DELETE /_plugins/scheduler_sample/watch?id=dashboards-job-id}
  */
 public class SampleExtensionRestHandler extends BaseRestHandler {
-    public static final String LIST_RESOURCE_URI = "/_plugins/resource_sample/resource";
+    public static final String RESOURCE_URI = "/_plugins/resource_sample/resource";
 
     @Override
     public String getName() {
@@ -44,7 +44,7 @@ public class SampleExtensionRestHandler extends BaseRestHandler {
 
     @Override
     public List<Route> routes() {
-        return Collections.unmodifiableList(Arrays.asList(new Route(RestRequest.Method.GET, LIST_RESOURCE_URI)));
+        return Collections.unmodifiableList(Arrays.asList(new Route(RestRequest.Method.GET, RESOURCE_URI)));
     }
 
     @Override
