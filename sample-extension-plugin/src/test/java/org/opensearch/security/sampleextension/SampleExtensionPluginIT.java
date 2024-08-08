@@ -16,6 +16,7 @@ import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 
 import org.opensearch.client.Request;
+import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
@@ -45,6 +46,9 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
     public void testCreateSampleResource() throws IOException {
         Request request = new Request("POST", "/_plugins/resource_sharing_example/resource");
         request.setEntity(new StringEntity("{\"name\":\"Craig\"}"));
+        RequestOptions.Builder requestOptions = RequestOptions.DEFAULT.toBuilder();
+        requestOptions.setWarningsHandler((warnings) -> false);
+        request.setOptions(requestOptions);
         Response response = client().performRequest(request);
         Map<String, String> createResourceResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
