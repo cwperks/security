@@ -10,13 +10,18 @@ package org.opensearch.security.sampleextension.actions;
 
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
+import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+
+import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
  * Transport action for GetExecutionContext.
@@ -36,16 +41,25 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
 
     @Override
     protected void doExecute(Task task, CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
-        CreateIndexRequest cir = new CreateIndexRequest(".resource-sharing");
-        ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {
-            if (response.isAcknowledged()) {
-                System.out.println("Created .resource-sharing");
-            } else {
-                System.out.println("Created .resource-sharing call not acknowledged.");
-            }
-            listener.onResponse(new CreateSampleResourceResponse("Created .resource-sharing"));
-        }, listener::onFailure);
-        System.out.println("Calling create index for .resource-sharing");
-        nodeClient.admin().indices().create(cir, cirListener);
+        try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
+            CreateIndexRequest cir = new CreateIndexRequest(RESOURCE_INDEX_NAME);
+            ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {
+                if (response.isAcknowledged()) {
+                    System.out.println("Created " + RESOURCE_INDEX_NAME);
+                } else {
+                    System.out.println("Created " + RESOURCE_INDEX_NAME + " call not acknowledged.");
+                }
+                DeleteIndexRequest dir = new DeleteIndexRequest(RESOURCE_INDEX_NAME);
+                ActionListener<AcknowledgedResponse> dirListener = ActionListener.wrap(deletedResponse -> {
+                    listener.onResponse(new CreateSampleResourceResponse("Created and Deleted " + RESOURCE_INDEX_NAME));
+                }, listener::onFailure);
+
+                System.out.println("Calling delete index for " + RESOURCE_INDEX_NAME);
+                nodeClient.admin().indices().delete(dir, dirListener);
+                // listener.onResponse(new CreateSampleResourceResponse("Created " + RESOURCE_INDEX_NAME));
+            }, listener::onFailure);
+            System.out.println("Calling create index for " + RESOURCE_INDEX_NAME);
+            nodeClient.admin().indices().create(cir, cirListener);
+        }
     }
 }

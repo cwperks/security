@@ -30,8 +30,10 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
+import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.SystemIndexPlugin;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -50,10 +52,10 @@ import org.opensearch.watcher.ResourceWatcherService;
  * endpoint using {@link SampleExtensionRestHandler}.
  *
  */
-public class SampleExtensionPlugin extends Plugin implements ActionPlugin, ResourceSharingExtension {
+public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, ResourceSharingExtension {
     private static final Logger log = LogManager.getLogger(SampleExtensionPlugin.class);
 
-    static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
+    public static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
 
     private Client client;
 
@@ -101,5 +103,11 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Resou
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class));
+    }
+
+    @Override
+    public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
+        final SystemIndexDescriptor systemIndexDescriptor = new SystemIndexDescriptor(RESOURCE_INDEX_NAME, "Example index with resources");
+        return Collections.singletonList(systemIndexDescriptor);
     }
 }
