@@ -31,7 +31,6 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
 
     @Override
     protected void doExecute(Task task, CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
-        System.out.println("HERE");
         listener.onResponse(new CreateSampleResourceResponse("Hello, world!"));
     }
 }

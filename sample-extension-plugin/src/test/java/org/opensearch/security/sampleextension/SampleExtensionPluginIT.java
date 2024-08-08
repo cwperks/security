@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 
 import org.opensearch.client.Request;
@@ -39,5 +40,17 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
                 .map(o -> (Map<String, Object>) o)
                 .anyMatch(plugin -> plugin.get("component").equals("opensearch-security-sample-extension"))
         );
+    }
+
+    public void testCreateSampleResource() throws IOException {
+        Request request = new Request("POST", "/_plugins/resource_sharing_example/resource");
+        request.setEntity(new StringEntity("{\"name\":\"Craig\"}"));
+        Response response = client().performRequest(request);
+        Map<String, String> createResourceResponse = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            response.getEntity().getContent()
+        ).mapStrings();
+        System.out.println("createResourceResponse: " + createResourceResponse);
     }
 }

@@ -152,6 +152,7 @@ public abstract class ODFERestTestCase extends OpenSearchRestTestCase {
             "Authorization",
             "Basic " + Base64.getEncoder().encodeToString((userName + ":" + password).getBytes(StandardCharsets.UTF_8))
         );
+        headers.put("Content-Type", "application/json");
         Header[] defaultHeaders = new Header[headers.size()];
         int i = 0;
         for (Map.Entry<String, String> entry : headers.entrySet()) {
