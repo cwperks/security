@@ -8,12 +8,14 @@
 
 package org.opensearch.security.sampleextension.actions;
 
+import java.io.IOException;
+
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.opensearch.action.index.IndexRequest;
+import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.action.support.master.AcknowledgedResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -21,6 +23,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
+import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
@@ -43,23 +46,28 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
     protected void doExecute(Task task, CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
         try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
             CreateIndexRequest cir = new CreateIndexRequest(RESOURCE_INDEX_NAME);
-            ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {
-                if (response.isAcknowledged()) {
-                    System.out.println("Created " + RESOURCE_INDEX_NAME);
-                } else {
-                    System.out.println("Created " + RESOURCE_INDEX_NAME + " call not acknowledged.");
+            ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(
+                response -> { createResource(request, listener); },
+                (failResponse) -> {
+                    /* Index already exists, ignore and continue */
+                    createResource(request, listener);
                 }
-                DeleteIndexRequest dir = new DeleteIndexRequest(RESOURCE_INDEX_NAME);
-                ActionListener<AcknowledgedResponse> dirListener = ActionListener.wrap(deletedResponse -> {
-                    listener.onResponse(new CreateSampleResourceResponse("Created and Deleted " + RESOURCE_INDEX_NAME));
-                }, listener::onFailure);
-
-                System.out.println("Calling delete index for " + RESOURCE_INDEX_NAME);
-                nodeClient.admin().indices().delete(dir, dirListener);
-                // listener.onResponse(new CreateSampleResourceResponse("Created " + RESOURCE_INDEX_NAME));
-            }, listener::onFailure);
-            System.out.println("Calling create index for " + RESOURCE_INDEX_NAME);
+            );
             nodeClient.admin().indices().create(cir, cirListener);
+        }
+    }
+
+    private void createResource(CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
+        try {
+            IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
+                .setSource(jsonBuilder().startObject().field("name", request.getName()).endObject())
+                .request();
+            ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
+                listener.onResponse(new CreateSampleResourceResponse("Created resource: " + idxResponse.toString()));
+            }, listener::onFailure);
+            nodeClient.index(ir, irListener);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

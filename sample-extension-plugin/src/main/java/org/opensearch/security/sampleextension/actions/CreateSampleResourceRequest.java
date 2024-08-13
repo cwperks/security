@@ -47,4 +47,8 @@ public class CreateSampleResourceRequest extends ActionRequest {
     public ActionRequestValidationException validate() {
         return null;
     }
+
+    public String getName() {
+        return this.name;
+    }
 }
