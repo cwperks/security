@@ -41,7 +41,6 @@ import org.opensearch.script.ScriptService;
 import org.opensearch.security.sampleextension.actions.CreateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.CreateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.CreateSampleResourceTransportAction;
-import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -52,7 +51,7 @@ import org.opensearch.watcher.ResourceWatcherService;
  * endpoint using {@link SampleExtensionRestHandler}.
  *
  */
-public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, ResourceSharingExtension {
+public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
     private static final Logger log = LogManager.getLogger(SampleExtensionPlugin.class);
 
     public static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
@@ -75,16 +74,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     ) {
         this.client = client;
         return Collections.emptyList();
-    }
-
-    @Override
-    public String getResourceType() {
-        return "sample_resource";
-    }
-
-    @Override
-    public String getResourceIndex() {
-        return RESOURCE_INDEX_NAME;
     }
 
     @Override

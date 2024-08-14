@@ -20,6 +20,8 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -58,10 +60,12 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
     }
 
     private void createResource(CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
+        SampleResource sample = new SampleResource(request.getName());
         try {
             IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
-                .setSource(jsonBuilder().startObject().field("name", request.getName()).endObject())
+                .setSource(sample.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
                 .request();
+
             ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
                 listener.onResponse(new CreateSampleResourceResponse("Created resource: " + idxResponse.toString()));
             }, listener::onFailure);
