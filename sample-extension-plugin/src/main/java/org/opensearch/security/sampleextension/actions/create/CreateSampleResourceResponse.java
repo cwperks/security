@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.create;
 
 import java.io.IOException;
 

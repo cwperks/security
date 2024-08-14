@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.list;
 
 import java.util.List;
 
@@ -16,29 +16,28 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 
 import static java.util.Collections.singletonList;
-import static org.opensearch.rest.RestRequest.Method.POST;
+import static org.opensearch.rest.RestRequest.Method.GET;
 
-public class CreateSampleResourceRestAction extends BaseRestHandler {
+public class ListSampleResourceRestAction extends BaseRestHandler {
 
-    public CreateSampleResourceRestAction() {}
+    public ListSampleResourceRestAction() {}
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(POST, "/_plugins/resource_sharing_example/resource"));
+        return singletonList(new Route(GET, "/_plugins/resource_sharing_example/resource"));
     }
 
     @Override
     public String getName() {
-        return "create_sample_resource";
+        return "list_sample_resources";
     }
 
     @Override
     public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) {
-        String name = request.param("name");
-        final CreateSampleResourceRequest createSampleResourceRequest = new CreateSampleResourceRequest(name);
+        final ListSampleResourceRequest listSampleResourceRequest = new ListSampleResourceRequest();
         return channel -> client.executeLocally(
-            CreateSampleResourceAction.INSTANCE,
-            createSampleResourceRequest,
+            ListSampleResourceAction.INSTANCE,
+            listSampleResourceRequest,
             new RestToXContentListener<>(channel)
         );
     }

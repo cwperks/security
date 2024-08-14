@@ -38,9 +38,12 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.security.sampleextension.actions.CreateSampleResourceAction;
-import org.opensearch.security.sampleextension.actions.CreateSampleResourceRestAction;
-import org.opensearch.security.sampleextension.actions.CreateSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.list.ListSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.list.ListSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTransportAction;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -86,12 +89,15 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return List.of(new SampleExtensionRestHandler(), new CreateSampleResourceRestAction());
+        return List.of(new CreateSampleResourceRestAction(), new ListSampleResourceRestAction());
     }
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
-        return List.of(new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class));
+        return List.of(
+            new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class),
+            new ActionHandler<>(ListSampleResourceAction.INSTANCE, ListSampleResourceTransportAction.class)
+        );
     }
 
     @Override

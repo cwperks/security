@@ -44,17 +44,29 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
     }
 
     public void testCreateSampleResource() throws IOException {
-        Request request = new Request("POST", "/_plugins/resource_sharing_example/resource");
-        request.setEntity(new StringEntity("{\"name\":\"Craig\"}"));
+        Request createRequest = new Request("POST", "/_plugins/resource_sharing_example/resource");
+        createRequest.setEntity(new StringEntity("{\"name\":\"Craig\"}"));
         RequestOptions.Builder requestOptions = RequestOptions.DEFAULT.toBuilder();
         requestOptions.setWarningsHandler((warnings) -> false);
-        request.setOptions(requestOptions);
-        Response response = client().performRequest(request);
+        createRequest.setOptions(requestOptions);
+        Response response = client().performRequest(createRequest);
         Map<String, String> createResourceResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
             response.getEntity().getContent()
         ).mapStrings();
         System.out.println("createResourceResponse: " + createResourceResponse);
+
+        Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
+        RequestOptions.Builder listRequestOptions = RequestOptions.DEFAULT.toBuilder();
+        requestOptions.setWarningsHandler((warnings) -> false);
+        listRequest.setOptions(listRequestOptions);
+        Response listResponse = client().performRequest(listRequest);
+        Map<String, String> listResourceResponse = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            listResponse.getEntity().getContent()
+        ).mapStrings();
+        System.out.println("listResourceResponse: " + listResourceResponse);
     }
 }

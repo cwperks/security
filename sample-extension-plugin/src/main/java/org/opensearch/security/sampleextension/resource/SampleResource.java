@@ -12,7 +12,7 @@ import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESO
 
 public class SampleResource implements ResourceSharingExtension, Writeable, ToXContentFragment {
 
-    private String name;
+    private final String name;
 
     public SampleResource(String name) {
         this.name = name;
