@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.sampleextension.resource.SampleResource;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.POST;
@@ -43,7 +44,8 @@ public class CreateSampleResourceRestAction extends BaseRestHandler {
         }
 
         String name = (String) source.get("name");
-        final CreateSampleResourceRequest createSampleResourceRequest = new CreateSampleResourceRequest(name);
+        SampleResource resource = new SampleResource(name);
+        final CreateSampleResourceRequest createSampleResourceRequest = new CreateSampleResourceRequest(resource);
         return channel -> client.executeLocally(
             CreateSampleResourceAction.INSTANCE,
             createSampleResourceRequest,

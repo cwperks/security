@@ -64,8 +64,8 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
     }
 
     private void createResource(CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
-        log.warn("Sample name: " + request.getName());
-        SampleResource sample = new SampleResource(request.getName());
+        log.warn("Sample name: " + request.getResource());
+        SampleResource sample = (SampleResource) request.getResource();
         try {
             IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)

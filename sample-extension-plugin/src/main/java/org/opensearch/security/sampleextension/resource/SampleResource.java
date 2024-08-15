@@ -2,20 +2,23 @@ package org.opensearch.security.sampleextension.resource;
 
 import java.io.IOException;
 
+import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.security.spi.ResourceSharingExtension;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
-public class SampleResource implements ResourceSharingExtension, Writeable, ToXContentFragment {
+public class SampleResource extends Resource implements ResourceSharingExtension {
 
     private final String name;
 
     public SampleResource(String name) {
         this.name = name;
+    }
+
+    public SampleResource(StreamInput in) throws IOException {
+        this.name = in.readString();
     }
 
     @Override

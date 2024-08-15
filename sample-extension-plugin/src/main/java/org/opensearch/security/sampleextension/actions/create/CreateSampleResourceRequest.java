@@ -14,19 +14,21 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.security.sampleextension.resource.Resource;
+import org.opensearch.security.sampleextension.resource.SampleResource;
 
 /**
  * Request object for CreateSampleResource transport action
  */
 public class CreateSampleResourceRequest extends ActionRequest {
 
-    private final String name;
+    private final Resource resource;
 
     /**
      * Default constructor
      */
-    public CreateSampleResourceRequest(String name) {
-        this.name = name;
+    public CreateSampleResourceRequest(Resource resource) {
+        this.resource = resource;
     }
 
     /**
@@ -35,12 +37,12 @@ public class CreateSampleResourceRequest extends ActionRequest {
      * @throws IOException IOException
      */
     public CreateSampleResourceRequest(final StreamInput in) throws IOException {
-        this.name = in.readString();
+        this.resource = new SampleResource(in);
     }
 
     @Override
     public void writeTo(final StreamOutput out) throws IOException {
-        out.writeString(name);
+        resource.writeTo(out);
     }
 
     @Override
@@ -48,7 +50,7 @@ public class CreateSampleResourceRequest extends ActionRequest {
         return null;
     }
 
-    public String getName() {
-        return this.name;
+    public Resource getResource() {
+        return this.resource;
     }
 }
