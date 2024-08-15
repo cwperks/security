@@ -51,7 +51,6 @@ import org.opensearch.watcher.ResourceWatcherService;
  * Sample Security Resource Sharing extension plugin.
  *
  * It use ".sample_extension_resources" index to manage its resources, and exposes a REST API
- * endpoint using {@link SampleExtensionRestHandler}.
  *
  */
 public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {

@@ -8,78 +8,26 @@
 
 package org.opensearch.security.sampleextension.actions.create;
 
-import java.io.IOException;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import org.opensearch.action.admin.indices.create.CreateIndexRequest;
-import org.opensearch.action.admin.indices.create.CreateIndexResponse;
-import org.opensearch.action.index.IndexRequest;
-import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.core.action.ActionListener;
-import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.security.sampleextension.resource.Resource;
-import org.opensearch.tasks.Task;
+import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.spi.actions.CreateResourceTransportAction;
 import org.opensearch.transport.TransportService;
 
-import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
  * Transport action for CreateSampleResource.
  */
-public class CreateSampleResourceTransportAction extends HandledTransportAction<CreateSampleResourceRequest, CreateSampleResourceResponse> {
+public class CreateSampleResourceTransportAction extends CreateResourceTransportAction<SampleResource> {
     private static final Logger log = LogManager.getLogger(CreateSampleResourceTransportAction.class);
-
-    private final TransportService transportService;
-    private final Client nodeClient;
 
     @Inject
     public CreateSampleResourceTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
-        super(CreateSampleResourceAction.NAME, transportService, actionFilters, CreateSampleResourceRequest::new);
-        this.transportService = transportService;
-        this.nodeClient = nodeClient;
-    }
-
-    @Override
-    protected void doExecute(Task task, CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
-        try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
-            CreateIndexRequest cir = new CreateIndexRequest(RESOURCE_INDEX_NAME);
-            ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(
-                response -> { createResource(request, listener); },
-                (failResponse) -> {
-                    /* Index already exists, ignore and continue */
-                    createResource(request, listener);
-                }
-            );
-            nodeClient.admin().indices().create(cir, cirListener);
-        }
-    }
-
-    private void createResource(CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
-        log.warn("Sample name: " + request.getResource());
-        Resource sample = request.getResource();
-        try {
-            IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                .setSource(sample.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                .request();
-
-            log.warn("Index Request: " + ir.toString());
-
-            ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
-                listener.onResponse(new CreateSampleResourceResponse("Created resource: " + idxResponse.toString()));
-            }, listener::onFailure);
-            nodeClient.index(ir, irListener);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        super(transportService, actionFilters, nodeClient, CreateSampleResourceAction.NAME, RESOURCE_INDEX_NAME, SampleResource::new);
     }
 }

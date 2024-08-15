@@ -9,11 +9,12 @@
 package org.opensearch.security.sampleextension.actions.create;
 
 import org.opensearch.action.ActionType;
+import org.opensearch.security.spi.actions.CreateResourceResponse;
 
 /**
  * Action to create a sample resource
  */
-public class CreateSampleResourceAction extends ActionType<CreateSampleResourceResponse> {
+public class CreateSampleResourceAction extends ActionType<CreateResourceResponse> {
     /**
      * Create sample resource action instance
      */
@@ -24,6 +25,6 @@ public class CreateSampleResourceAction extends ActionType<CreateSampleResourceR
     public static final String NAME = "cluster:admin/sampleresource/create";
 
     private CreateSampleResourceAction() {
-        super(NAME, CreateSampleResourceResponse::new);
+        super(NAME, CreateResourceResponse::new);
     }
 }

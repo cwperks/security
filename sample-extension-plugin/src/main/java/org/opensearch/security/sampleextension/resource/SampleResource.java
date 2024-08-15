@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceSharingExtension;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
@@ -39,5 +40,10 @@ public class SampleResource extends Resource implements ResourceSharingExtension
     @Override
     public void writeTo(StreamOutput streamOutput) throws IOException {
         streamOutput.writeString(name);
+    }
+
+    @Override
+    public String getWriteableName() {
+        return "sampled_resource";
     }
 }
