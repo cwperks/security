@@ -25,7 +25,7 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.sampleextension.resource.Resource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -65,7 +65,7 @@ public class CreateSampleResourceTransportAction extends HandledTransportAction<
 
     private void createResource(CreateSampleResourceRequest request, ActionListener<CreateSampleResourceResponse> listener) {
         log.warn("Sample name: " + request.getResource());
-        SampleResource sample = (SampleResource) request.getResource();
+        Resource sample = request.getResource();
         try {
             IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
