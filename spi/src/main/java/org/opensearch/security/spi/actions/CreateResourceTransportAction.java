@@ -26,6 +26,7 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ResourceSharingUtils;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -75,6 +76,7 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
     private void createResource(CreateResourceRequest<T> request, ActionListener<CreateResourceResponse> listener) {
         log.warn("Sample name: " + request.getResource());
         Resource sample = request.getResource();
+        ResourceSharingUtils.getInstance().indexResourceSharing(sample);
         try {
             IndexRequest ir = nodeClient.prepareIndex(resourceIndex)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)

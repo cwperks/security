@@ -1,9 +1,8 @@
-package org.opensearch.security.sampleextension.resource;
+package org.opensearch.security.spi;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexResponse;
 import org.opensearch.client.Client;
@@ -18,22 +17,31 @@ public class ResourceSharingUtils {
 
     public static final String RESOURCE_SHARING_INDEX = ".resource-sharing";
 
+    private boolean initialized;
     private ThreadPool threadPool;
+    private Client client;
 
     private ResourceSharingUtils() {}
 
-    // Public method to provide access to the singleton instance
     public static ResourceSharingUtils getInstance() {
         return ResourceSharingUtils.INSTANCE;
     }
 
     public void initialize(ThreadPool threadPool, Client client) {
-        if (this.threadPool != null) {
-            throw new OpenSearchSecurityException("ResourceSharingUtils can only be initialized once.");
+        if (initialized) {
+            return;
         }
+        initialized = true;
         this.threadPool = threadPool;
+        this.client = client;
+    }
 
-        try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    private void createResourceSharingIndexIfNotExists() {
+        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
             CreateIndexRequest cir = new CreateIndexRequest(RESOURCE_SHARING_INDEX);
             ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(
                 response -> { log.info(RESOURCE_SHARING_INDEX + " created."); },
@@ -42,7 +50,12 @@ public class ResourceSharingUtils {
                     log.info(RESOURCE_SHARING_INDEX + " exists.");
                 }
             );
-            client.admin().indices().create(cir, cirListener);
+            this.client.admin().indices().create(cir, cirListener);
         }
+    }
+
+    public boolean indexResourceSharing(Resource resource) {
+        createResourceSharingIndexIfNotExists();
+        return true;
     }
 }
