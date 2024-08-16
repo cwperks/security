@@ -1,4 +1,4 @@
-package org.opensearch.security.sampleextension.resource;
+package org.opensearch.security.sampleextension.actions.create;
 
 import java.io.IOException;
 
@@ -12,13 +12,11 @@ import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESO
 
 public class SampleResource extends Resource implements ResourceSharingExtension {
 
-    private final String name;
+    private String name;
 
-    public SampleResource(String name) {
-        this.name = name;
-    }
+    public SampleResource() {}
 
-    public SampleResource(StreamInput in) throws IOException {
+    SampleResource(StreamInput in) throws IOException {
         this.name = in.readString();
     }
 
@@ -45,5 +43,9 @@ public class SampleResource extends Resource implements ResourceSharingExtension
     @Override
     public String getWriteableName() {
         return "sampled_resource";
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }

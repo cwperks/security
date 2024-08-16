@@ -14,7 +14,6 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.actions.CreateResourceTransportAction;
 import org.opensearch.transport.TransportService;
 

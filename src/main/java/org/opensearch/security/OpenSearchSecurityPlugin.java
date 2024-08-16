@@ -116,6 +116,7 @@ import org.opensearch.index.cache.query.QueryCache;
 import org.opensearch.indices.IndicesService;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.plugins.ClusterPlugin;
+import org.opensearch.plugins.ExtensiblePlugin;
 import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
@@ -178,6 +179,7 @@ import org.opensearch.security.rest.TenantInfoAction;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
+import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingUtils;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
@@ -229,6 +231,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         ClusterPlugin,
         MapperPlugin,
         // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
+        ExtensiblePlugin,
         ExtensionAwarePlugin,
         IdentityPlugin
 // CS-ENFORCE-SINGLE
@@ -266,6 +269,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
+    private final Set<String> indicesToListen = new HashSet<>();
 
     public static boolean isActionTraceEnabled() {
 
@@ -705,6 +709,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     salt
                 )
             );
+            if (this.indicesToListen.contains(indexModule.getIndex().getName())) {
+                indexModule.addIndexOperationListener(ResourceSharingUtils.getInstance());
+                log.warn("Security started listening to operations on index {}", indexModule.getIndex().getName());
+            }
             indexModule.forceQueryCacheProvider((indexSettings, nodeCache) -> new QueryCache() {
 
                 @Override
@@ -1029,7 +1037,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-
         SSLConfig.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
         if (SSLConfig.isSslOnlyMode()) {
             return super.createComponents(
@@ -2119,6 +2126,17 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public Optional<SecureSettingsFactory> getSecureSettingFactory(Settings settings) {
         return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, sslExceptionHandler, securityRestHandler));
     }
+
+    // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
+    @Override
+    public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
+        for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
+            String resourceIndexName = extension.getResourceIndex();
+            this.indicesToListen.add(resourceIndexName);
+            log.warn("Loaded resource, index: {}", resourceIndexName);
+        }
+    }
+    // CS-ENFORCE-SINGLE
 
     @SuppressWarnings("removal")
     private void tryAddSecurityProvider() {

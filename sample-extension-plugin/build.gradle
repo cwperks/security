@@ -18,7 +18,7 @@ opensearchplugin {
     name 'opensearch-security-sample-extension'
     description 'Sample plugin that extends OpenSearch Security Resource Sharing plugin'
     classname 'org.opensearch.security.sampleextension.SampleExtensionPlugin'
-    // extendedPlugins = ['opensearch-security']
+    extendedPlugins = ['opensearch-security']
 }
 
 ext {
@@ -34,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    implementation project(path: ":${rootProject.name}-spi", configuration: 'shadow')
+    compileOnly project(path: ":${rootProject.name}-spi", configuration: 'shadow')
 }
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile

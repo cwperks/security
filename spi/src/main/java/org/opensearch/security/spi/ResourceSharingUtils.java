@@ -18,12 +18,15 @@ import org.opensearch.action.support.WriteRequest;
 import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.index.engine.Engine;
+import org.opensearch.index.shard.IndexingOperationListener;
 import org.opensearch.threadpool.ThreadPool;
 
 import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 
-public class ResourceSharingUtils {
+public class ResourceSharingUtils implements IndexingOperationListener {
     private final static Logger log = LogManager.getLogger(ResourceSharingUtils.class);
 
     private static final Map<ClassLoader, ResourceSharingUtils> instances = new ConcurrentHashMap<>();
@@ -100,5 +103,16 @@ public class ResourceSharingUtils {
             return null;
         });
         return true;
+    }
+
+    @Override
+    public void postIndex(ShardId shardId, Engine.Index index, Engine.IndexResult result) {
+        log.warn("postIndex called on " + shardId.getIndexName());
+
+    }
+
+    @Override
+    public void postDelete(ShardId shardId, Engine.Delete delete, Engine.DeleteResult result) {
+        log.warn("postDelete called on " + shardId.getIndexName());
     }
 }

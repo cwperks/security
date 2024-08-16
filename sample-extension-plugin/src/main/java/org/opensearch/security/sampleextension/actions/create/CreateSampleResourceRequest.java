@@ -14,7 +14,6 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.Resource;
 
 /**
