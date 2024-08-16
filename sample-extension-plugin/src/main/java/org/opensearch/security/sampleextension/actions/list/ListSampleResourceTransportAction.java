@@ -21,8 +21,6 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
-import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
-
 /**
  * Transport action for ListSampleResource.
  */
@@ -40,7 +38,7 @@ public class ListSampleResourceTransportAction extends HandledTransportAction<Li
     @Override
     protected void doExecute(Task task, ListSampleResourceRequest request, ActionListener<ListSampleResourceResponse> listener) {
         try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
-            SearchRequest sr = new SearchRequest(RESOURCE_INDEX_NAME);
+            SearchRequest sr = new SearchRequest(".resource-sharing");
             SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
             matchAllQuery.query(new MatchAllQueryBuilder());
             sr.source(matchAllQuery);

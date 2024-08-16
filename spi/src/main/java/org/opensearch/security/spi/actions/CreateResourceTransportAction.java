@@ -27,6 +27,7 @@ import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceSharingUtils;
+import org.opensearch.security.spi.ShareWith;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -76,7 +77,6 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
     private void createResource(CreateResourceRequest<T> request, ActionListener<CreateResourceResponse> listener) {
         log.warn("Sample name: " + request.getResource());
         Resource sample = request.getResource();
-        ResourceSharingUtils.getInstance().indexResourceSharing(sample);
         try {
             IndexRequest ir = nodeClient.prepareIndex(resourceIndex)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
@@ -85,8 +85,19 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
 
             log.warn("Index Request: " + ir.toString());
 
+            ActionListener<IndexResponse> resourceSharingListener = ActionListener.wrap(resourceSharingResponse -> {
+                listener.onResponse(new CreateResourceResponse("Created resource: " + resourceSharingResponse.toString()));
+            }, listener::onFailure);
+
             ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
-                listener.onResponse(new CreateResourceResponse("Created resource: " + idxResponse.toString()));
+                // TODO Make sure security is an IndexOperationListener and automatically create entry in .resource-sharing
+                // and set to private
+
+                // Idea, if not entry in .resource-sharing then assume private? Maybe its not necessary to be an IndexOperationListener
+                log.info("Created resource: " + idxResponse.toString());
+                ResourceSharingUtils.getInstance()
+                    .indexResourceSharing(idxResponse.getId(), sample, ShareWith.PUBLIC, resourceSharingListener);
+                // listener.onResponse(new CreateResourceResponse("Created resource: " + idxResponse.toString()));
             }, listener::onFailure);
             nodeClient.index(ir, irListener);
         } catch (IOException e) {
