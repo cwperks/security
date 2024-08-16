@@ -1,7 +1,11 @@
 package org.opensearch.security.spi;
 
 import java.io.IOException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -22,7 +26,7 @@ import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 public class ResourceSharingUtils {
     private final static Logger log = LogManager.getLogger(ResourceSharingUtils.class);
 
-    private static final ResourceSharingUtils INSTANCE = new ResourceSharingUtils();
+    private static final Map<ClassLoader, ResourceSharingUtils> instances = new ConcurrentHashMap<>();
 
     public static final String RESOURCE_SHARING_INDEX = ".resource-sharing";
 
@@ -33,7 +37,11 @@ public class ResourceSharingUtils {
     private ResourceSharingUtils() {}
 
     public static ResourceSharingUtils getInstance() {
-        return ResourceSharingUtils.INSTANCE;
+        ClassLoader classLoader = AccessController.doPrivileged(
+            (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()
+        );
+        instances.computeIfAbsent(classLoader, cl -> new ResourceSharingUtils());
+        return instances.get(classLoader);
     }
 
     public void initialize(ThreadPool threadPool, Client client) {
