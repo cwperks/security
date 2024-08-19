@@ -170,6 +170,7 @@ import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.resolver.IndexResolverReplacer;
+import org.opensearch.security.resource.ResourceSharingListener;
 import org.opensearch.security.rest.DashboardsInfoAction;
 import org.opensearch.security.rest.SecurityConfigUpdateAction;
 import org.opensearch.security.rest.SecurityHealthAction;
@@ -710,7 +711,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 )
             );
             if (this.indicesToListen.contains(indexModule.getIndex().getName())) {
-                indexModule.addIndexOperationListener(ResourceSharingUtils.getInstance());
+                indexModule.addIndexOperationListener(ResourceSharingListener.getInstance());
                 log.warn("Security started listening to operations on index {}", indexModule.getIndex().getName());
             }
             indexModule.forceQueryCacheProvider((indexSettings, nodeCache) -> new QueryCache() {
