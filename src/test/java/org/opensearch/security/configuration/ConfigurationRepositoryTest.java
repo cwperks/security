@@ -32,6 +32,7 @@ import org.opensearch.common.Priority;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.identity.PluginContextSwitcher;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.state.SecurityConfig;
@@ -85,6 +86,9 @@ public class ConfigurationRepositoryTest {
     @Mock
     private ClusterChangedEvent event;
 
+    @Mock
+    private PluginContextSwitcher contextSwitcher;
+
     @Before
     public void setUp() {
         Settings settings = Settings.builder()
@@ -115,7 +119,8 @@ public class ConfigurationRepositoryTest {
             localClient,
             clusterService,
             auditLog,
-            securityIndexHandler
+            securityIndexHandler,
+            contextSwitcher
         );
     }
 

@@ -57,7 +57,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.ExceptionsHelper;
-import org.opensearch.OpenSearchException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.admin.cluster.health.ClusterHealthResponse;
@@ -74,7 +73,6 @@ import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Priority;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
-import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.rest.RestStatus;
@@ -82,6 +80,7 @@ import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.config.AuditConfig;
+import org.opensearch.security.identity.PluginContextSwitcher;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
@@ -120,6 +119,8 @@ public class ConfigurationRepository implements ClusterStateListener {
 
     private final SecurityIndexHandler securityIndexHandler;
 
+    private final PluginContextSwitcher contextSwitcher;
+
     // visible for testing
     protected ConfigurationRepository(
         final String securityIndex,
@@ -129,7 +130,8 @@ public class ConfigurationRepository implements ClusterStateListener {
         final Client client,
         final ClusterService clusterService,
         final AuditLog auditLog,
-        final SecurityIndexHandler securityIndexHandler
+        final SecurityIndexHandler securityIndexHandler,
+        final PluginContextSwitcher contextSwitcher
     ) {
         this.securityIndex = securityIndex;
         this.settings = settings;
@@ -143,6 +145,7 @@ public class ConfigurationRepository implements ClusterStateListener {
         cl = new ConfigurationLoaderSecurity7(client, threadPool, settings, clusterService);
         configCache = CacheBuilder.newBuilder().build();
         this.securityIndexHandler = securityIndexHandler;
+        this.contextSwitcher = contextSwitcher;
     }
 
     private Path resolveConfigDir() {
@@ -199,7 +202,7 @@ public class ConfigurationRepository implements ClusterStateListener {
                     File confFile = new File(cd + "config.yml");
                     if (confFile.exists()) {
                         final ThreadContext threadContext = threadPool.getThreadContext();
-                        try (StoredContext ctx = threadContext.stashContext()) {
+                        contextSwitcher.runAs(() -> {
                             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
 
                             createSecurityIndexIfAbsent();
@@ -271,7 +274,8 @@ public class ConfigurationRepository implements ClusterStateListener {
                             if (new File(auditConfigPath).exists()) {
                                 ConfigHelper.uploadFile(client, auditConfigPath, securityIndex, CType.AUDIT, DEFAULT_CONFIG_VERSION);
                             }
-                        }
+                            return null;
+                        });
                     } else {
                         LOGGER.error("{} does not exist", confFile.getAbsolutePath());
                     }
@@ -483,7 +487,8 @@ public class ConfigurationRepository implements ClusterStateListener {
         final ThreadPool threadPool,
         Client client,
         ClusterService clusterService,
-        AuditLog auditLog
+        AuditLog auditLog,
+        PluginContextSwitcher contextSwitcher
     ) {
         final var securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
@@ -497,7 +502,8 @@ public class ConfigurationRepository implements ClusterStateListener {
             client,
             clusterService,
             auditLog,
-            new SecurityIndexHandler(securityIndex, settings, client)
+            new SecurityIndexHandler(securityIndex, settings, client),
+            contextSwitcher
         );
     }
 
@@ -599,7 +605,7 @@ public class ConfigurationRepository implements ClusterStateListener {
         final ThreadContext threadContext = threadPool.getThreadContext();
         final Map<CType, SecurityDynamicConfiguration<?>> retVal = new HashMap<>();
 
-        try (StoredContext ctx = threadContext.stashContext()) {
+        contextSwitcher.runAs(() -> {
             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
 
             IndexMetadata securityMetadata = clusterService.state().metadata().index(this.securityIndex);
@@ -623,9 +629,8 @@ public class ConfigurationRepository implements ClusterStateListener {
                 );
             }
 
-        } catch (Exception e) {
-            throw new OpenSearchException(e);
-        }
+            return null;
+        });
 
         if (logComplianceEvent && auditLog.getComplianceConfig() != null && auditLog.getComplianceConfig().isEnabled()) {
             CType configurationType = configTypes.iterator().next();

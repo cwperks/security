@@ -168,8 +168,8 @@ import org.opensearch.security.hasher.PasswordHasherFactory;
 import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.identity.ContextProvidingPluginSubject;
+import org.opensearch.security.identity.PluginContextSwitcher;
 import org.opensearch.security.identity.SecurityTokenManager;
-import org.opensearch.security.identity.TransportActionDependencies;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
@@ -271,7 +271,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
-    private static final TransportActionDependencies SECURITY_TRANSPORT_ACTION_DEPENDENCIES = new TransportActionDependencies();
+    private volatile PluginContextSwitcher contextSwitcher;
 
     public static boolean isActionTraceEnabled() {
 
@@ -655,7 +655,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         sks,
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
-                        passwordHasher
+                        passwordHasher,
+                        contextSwitcher
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());
@@ -1109,7 +1110,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         adminDns = new AdminDNs(settings);
 
-        cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog);
+        contextSwitcher = new PluginContextSwitcher();
+
+        cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog, contextSwitcher);
 
         this.passwordHasher = PasswordHasherFactory.createPasswordHasher(settings);
 
@@ -1210,7 +1213,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         components.add(dcf);
         components.add(userService);
         components.add(passwordHasher);
-        components.add(SECURITY_TRANSPORT_ACTION_DEPENDENCIES);
+        components.add(contextSwitcher);
 
         if (!ExternalSecurityKeyStore.hasExternalSslContext(settings)) {
             components.add(sks);
@@ -2127,7 +2130,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public void assignSubject(PluginSubject pluginSystemSubject) {
-        SECURITY_TRANSPORT_ACTION_DEPENDENCIES.setPluginSystemSubject(pluginSystemSubject);
+        if (contextSwitcher != null) {
+            contextSwitcher.initialize(pluginSystemSubject);
+        }
     }
 
     @Override
