@@ -118,6 +118,7 @@ import org.opensearch.indices.IndicesService;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.plugins.ClusterPlugin;
 import org.opensearch.plugins.ExtensionAwarePlugin;
+import org.opensearch.plugins.IdentityAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
@@ -168,6 +169,7 @@ import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.identity.ContextProvidingPluginSubject;
 import org.opensearch.security.identity.SecurityTokenManager;
+import org.opensearch.security.identity.TransportActionDependencies;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
@@ -232,7 +234,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         MapperPlugin,
         // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
         ExtensionAwarePlugin,
-        IdentityPlugin
+        IdentityPlugin,
+        IdentityAwarePlugin
 // CS-ENFORCE-SINGLE
 
 {
@@ -268,6 +271,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
+    private static final TransportActionDependencies SECURITY_TRANSPORT_ACTION_DEPENDENCIES = new TransportActionDependencies();
 
     public static boolean isActionTraceEnabled() {
 
@@ -1206,6 +1210,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         components.add(dcf);
         components.add(userService);
         components.add(passwordHasher);
+        components.add(SECURITY_TRANSPORT_ACTION_DEPENDENCIES);
 
         if (!ExternalSecurityKeyStore.hasExternalSslContext(settings)) {
             components.add(sks);
@@ -2118,6 +2123,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public PluginSubject getPluginSubject(Plugin plugin) {
         return new ContextProvidingPluginSubject(threadPool, plugin);
+    }
+
+    @Override
+    public void assignSubject(PluginSubject pluginSystemSubject) {
+        SECURITY_TRANSPORT_ACTION_DEPENDENCIES.setPluginSystemSubject(pluginSystemSubject);
     }
 
     @Override
