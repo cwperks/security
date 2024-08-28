@@ -152,7 +152,7 @@ jobs:
       with:
         cache-disabled: true
         arguments: |
-            integrationTest -Dbuild.snapshot=false --tests org.opensearch.security.ResourceFocusedTests
+            integrationTest -Dbuild.snapshot=false --tests org.opensearch.security.stress.ResourceFocusedTests
 
   backward-compatibility-build:
     runs-on: ubuntu-latest

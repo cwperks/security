@@ -53,7 +53,9 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.plugin.mapper.MapperSizePlugin;
 import org.opensearch.search.aggregations.Aggregation;
+import org.opensearch.search.aggregations.AggregationBuilders;
 import org.opensearch.search.aggregations.metrics.ParsedAvg;
+import org.opensearch.search.aggregations.metrics.ParsedCardinality;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.sort.SortOrder;
 import org.opensearch.test.framework.TestSecurityConfig;
@@ -65,6 +67,7 @@ import org.opensearch.test.framework.log.LogsRule;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -119,6 +122,7 @@ public class FlsAndFieldMaskingTests {
     static final String FIRST_INDEX_ID_SONG_2 = "INDEX_1_S2";
     static final String FIRST_INDEX_ID_SONG_3 = "INDEX_1_S3";
     static final String FIRST_INDEX_ID_SONG_4 = "INDEX_1_S4";
+    static final String FIRST_INDEX_ID_SONG_5 = "INDEX_1_S5";
     static final String SECOND_INDEX_ID_SONG_1 = "INDEX_2_S1";
     static final String SECOND_INDEX_ID_SONG_2 = "INDEX_2_S2";
     static final String SECOND_INDEX_ID_SONG_3 = "INDEX_2_S3";
@@ -173,6 +177,19 @@ public class FlsAndFieldMaskingTests {
                 .maskedFields(FIELD_LYRICS.concat("::/(?<=.{1})./::").concat(MASK_VALUE))
                 .on(SECOND_INDEX_NAME)
         );
+
+    /**
+     * User who is allowed to see all fields on indices {@link #FIRST_INDEX_NAME} except artist
+     * <ul>
+     *     <li>values of the artist fields should be masked on index {@link #FIRST_INDEX_NAME}</li>
+     * </ul>
+     */
+    static final TestSecurityConfig.User MASKED_ARTIST_READER = new TestSecurityConfig.User("masked_title_lyrics_reader").roles(
+        new TestSecurityConfig.Role("masked_title_lyrics_reader").clusterPermissions("cluster_composite_ops_ro")
+            .indexPermissions("read")
+            .maskedFields(FIELD_ARTIST)
+            .on(FIRST_INDEX_NAME)
+    );
 
     /**
     * Function that converts field value to value masked with {@link #MASK_VALUE}
@@ -304,6 +321,7 @@ public class FlsAndFieldMaskingTests {
             ALL_INDICES_STRING_ARTIST_READER,
             ALL_INDICES_STARS_LESS_THAN_ZERO_READER,
             TWINS_FIRST_ARTIST_READER,
+            MASKED_ARTIST_READER,
             USER_ONLY_FIELD_TITLE_FLS,
             USER_NO_FIELD_TITLE_FLS,
             USER_ONLY_FIELD_TITLE_MASKED,
@@ -346,6 +364,7 @@ public class FlsAndFieldMaskingTests {
             put(FIRST_INDEX_ID_SONG_2, SONGS[1]);
             put(FIRST_INDEX_ID_SONG_3, SONGS[2]);
             put(FIRST_INDEX_ID_SONG_4, SONGS[3]);
+            put(FIRST_INDEX_ID_SONG_5, SONGS[4]);
         }
     };
 
@@ -919,6 +938,22 @@ public class FlsAndFieldMaskingTests {
     }
 
     @Test
+    public void getCardinalityAggregationOnMaskedField() throws IOException {
+        // FIELD MASKING
+        try (RestHighLevelClient restHighLevelClient = cluster.getRestHighLevelClient(MASKED_ARTIST_READER)) {
+            SearchRequest searchRequest = new SearchRequest(FIRST_INDEX_NAME);
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+            sourceBuilder.aggregation(AggregationBuilders.cardinality("unique_artists_agg").field("artist.keyword"));
+            sourceBuilder.size(0);
+            searchRequest.source(sourceBuilder);
+            SearchResponse response = restHighLevelClient.search(searchRequest, DEFAULT);
+            ParsedCardinality parsedCardinality = response.getAggregations().get("unique_artists_agg");
+            long cardinality = parsedCardinality.getValue();
+            assertThat(cardinality, equalTo(4L));
+        }
+    }
+
+    @Test
     public void testGetDocumentWithNoTitleFieldOrOnlyTitleFieldFLSRestrictions() throws IOException, Exception {
         GetRequest getRequest = new GetRequest(FIRST_INDEX_NAME, FIRST_INDEX_ID_SONG_1);
 
@@ -1106,9 +1141,9 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
 
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(
                 searchResponse,
                 shouldShowFieldTitle
@@ -1244,8 +1279,8 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(
                 searchResponse,
                 searchHitContainsFieldWithValue(hitIndex, FIELD_TITLE, VALUE_TO_MASKED_VALUE.apply(SONGS[hitIndex].getTitle()))
@@ -1350,10 +1385,10 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
 
         // since the roles are overlapping, the role with less permissions is the only one that is used- which is no title
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(searchResponse, searchHitDoesNotContainField(hitIndex, FIELD_TITLE));
             assertThat(searchResponse, searchHitDoesContainField(hitIndex, FIELD_ARTIST));
             assertThat(searchResponse, searchHitDoesContainField(hitIndex, FIELD_LYRICS));
@@ -1484,8 +1519,8 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(
                 searchResponse,
                 searchHitContainsFieldWithValue(hitIndex, FIELD_TITLE, VALUE_TO_MASKED_VALUE.apply(SONGS[hitIndex].getTitle()))
@@ -1594,8 +1629,8 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(searchResponse, searchHitDoesNotContainField(hitIndex, FIELD_TITLE));
             assertThat(searchResponse, searchHitContainsFieldWithValue(hitIndex, FIELD_ARTIST, SONGS[hitIndex].getArtist()));
             assertThat(searchResponse, searchHitContainsFieldWithValue(hitIndex, FIELD_LYRICS, SONGS[hitIndex].getLyrics()));
@@ -1719,11 +1754,11 @@ public class FlsAndFieldMaskingTests {
         SearchResponse searchResponse = restHighLevelClient.search(searchRequest, DEFAULT);
 
         assertThat(searchResponse, isSuccessfulSearchResponse());
-        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(4));
+        assertThat(searchResponse, numberOfTotalHitsIsEqualTo(FIRST_INDEX_SONGS_BY_ID.keySet().size()));
 
         // since the roles are overlapping, the role with less permissions is the only one that is used- which is no title, and since there
         // is no title the masking role has no effect
-        IntStream.range(0, 4).forEach(hitIndex -> {
+        IntStream.range(0, FIRST_INDEX_SONGS_BY_ID.keySet().size()).forEach(hitIndex -> {
             assertThat(searchResponse, searchHitDoesNotContainField(hitIndex, FIELD_TITLE));
             assertThat(searchResponse, searchHitDoesContainField(hitIndex, FIELD_ARTIST));
             assertThat(searchResponse, searchHitDoesContainField(hitIndex, FIELD_LYRICS));
