@@ -18,6 +18,7 @@
 package org.opensearch.security.ssl;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -34,11 +35,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -1186,7 +1189,10 @@ public class DefaultSecurityKeyStore implements SecurityKeyStore {
                 ? cert.getSubjectAlternativeNames()
                 : null;
             if (altNames != null) {
-                Collection<List<?>> sans = new ArrayList<>();
+                Comparator<List<?>> comparator = Comparator.comparing((List<?> altName) -> (Integer) altName.get(0))
+                    .thenComparing((List<?> altName) -> (String) altName.get(1));
+
+                Set<List<?>> sans = new TreeSet<>(comparator);
                 for (List<?> altName : altNames) {
                     Integer type = (Integer) altName.get(0);
                     // otherName requires parsing to string
@@ -1218,9 +1224,10 @@ public class DefaultSecurityKeyStore implements SecurityKeyStore {
             final ASN1Sequence sequence = ASN1Sequence.getInstance(asn1Primitive);
             final ASN1ObjectIdentifier asn1ObjectIdentifier = ASN1ObjectIdentifier.getInstance(sequence.getObjectAt(0));
             final ASN1TaggedObject asn1TaggedObject = ASN1TaggedObject.getInstance(sequence.getObjectAt(1));
-            ASN1Object maybeTaggedAsn1Primitive = asn1TaggedObject.getBaseObject();
+            Method getObjectMethod = getObjectMethod();
+            ASN1Object maybeTaggedAsn1Primitive = (ASN1Primitive) getObjectMethod.invoke(asn1TaggedObject);
             if (maybeTaggedAsn1Primitive instanceof ASN1TaggedObject) {
-                maybeTaggedAsn1Primitive = ASN1TaggedObject.getInstance(maybeTaggedAsn1Primitive).getBaseObject();
+                maybeTaggedAsn1Primitive = (ASN1Primitive) getObjectMethod.invoke(maybeTaggedAsn1Primitive);
             }
             if (maybeTaggedAsn1Primitive instanceof ASN1String) {
                 return ImmutableList.of(asn1ObjectIdentifier.getId(), maybeTaggedAsn1Primitive.toString());
@@ -1230,6 +1237,15 @@ public class DefaultSecurityKeyStore implements SecurityKeyStore {
             }
         } catch (final Exception ioe) { // catch all exception here since BC throws diff exceptions
             throw new RuntimeException("Couldn't parse subject alternative names", ioe);
+        }
+    }
+
+    static Method getObjectMethod() throws ClassNotFoundException, NoSuchMethodException {
+        Class<?> asn1TaggedObjectClass = Class.forName("org.bouncycastle.asn1.ASN1TaggedObject");
+        try {
+            return asn1TaggedObjectClass.getMethod("getBaseObject");
+        } catch (NoSuchMethodException ex) {
+            return asn1TaggedObjectClass.getMethod("getObject");
         }
     }
 }

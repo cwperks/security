@@ -109,6 +109,7 @@ import org.opensearch.extensions.ExtensionsManager;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
 import org.opensearch.http.netty4.ssl.SecureNetty4HttpServerTransport;
+import org.opensearch.identity.PluginSubject;
 import org.opensearch.identity.Subject;
 import org.opensearch.identity.noop.NoopSubject;
 import org.opensearch.index.IndexModule;
@@ -120,6 +121,7 @@ import org.opensearch.plugins.ExtensiblePlugin;
 import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
+import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
@@ -165,6 +167,7 @@ import org.opensearch.security.hasher.PasswordHasher;
 import org.opensearch.security.hasher.PasswordHasherFactory;
 import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
+import org.opensearch.security.identity.NoopPluginSubject;
 import org.opensearch.security.identity.SecurityTokenManager;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
@@ -2113,7 +2116,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     }
 
     @Override
-    public Subject getSubject() {
+    public Subject getCurrentSubject() {
         // Not supported
         return new NoopSubject();
     }
@@ -2124,8 +2127,13 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     }
 
     @Override
+    public PluginSubject getPluginSubject(Plugin plugin) {
+        return new NoopPluginSubject(threadPool);
+    }
+
+    @Override
     public Optional<SecureSettingsFactory> getSecureSettingFactory(Settings settings) {
-        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, sslExceptionHandler, securityRestHandler));
+        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, evaluateSslExceptionHandler(), securityRestHandler));
     }
 
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
