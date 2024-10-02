@@ -90,6 +90,17 @@ public class ClusterInfoHolder implements ClusterStateListener {
         return nodes.nodeExists(node) ? Boolean.TRUE : Boolean.FALSE;
     }
 
+    public Version getMinimumNodeVersion() {
+        if (nodes == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cluster Info Holder not initialized yet for 'nodes'");
+            }
+            return null;
+        }
+
+        return nodes.getMinNodeVersion();
+    }
+
     public String getClusterName() {
         return this.clusterName;
     }
