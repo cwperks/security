@@ -44,7 +44,6 @@ import org.opensearch.security.sampleextension.actions.create.CreateSampleResour
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTransportAction;
-import org.opensearch.security.spi.ResourceSharingUtils;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -76,7 +75,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        ResourceSharingUtils.getInstance().initialize(threadPool, client);
         return Collections.emptyList();
     }
 

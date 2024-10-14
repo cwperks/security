@@ -20,8 +20,9 @@ import org.opensearch.client.Client;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
-import org.opensearch.security.spi.ResourceSharingUtils;
 import org.opensearch.security.spi.ShareWith;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
 public class ResourceSharingListener implements IndexingOperationListener {
@@ -60,8 +61,12 @@ public class ResourceSharingListener implements IndexingOperationListener {
         System.out.println("postIndex called on " + shardId.getIndexName());
         System.out.println("resourceId: " + resourceId);
         System.out.println("resourceIndex: " + resourceIndex);
+        User resourceUser = (User) client.threadPool()
+            .getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        System.out.println("resourceUser: " + resourceUser);
         try {
-            ResourceSharingUtils.getInstance().indexResourceSharing(resourceId, resourceIndex, ShareWith.PRIVATE);
+            ResourceSharingUtils.getInstance().indexResourceSharing(resourceId, resourceIndex, resourceUser, ShareWith.PRIVATE);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

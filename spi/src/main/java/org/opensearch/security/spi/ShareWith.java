@@ -35,6 +35,6 @@ public class ShareWith implements ToXContentFragment {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field("users", users).field("roles", roles).field("backendRoles", backendRoles).endObject();
+        return builder.startObject().field("users", users).field("roles", roles).field("backend_roles", backendRoles).endObject();
     }
 }

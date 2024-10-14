@@ -1,4 +1,15 @@
-package org.opensearch.security.spi;
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
+package org.opensearch.security.resource;
 
 import java.io.IOException;
 import java.security.AccessController;
@@ -19,6 +30,9 @@ import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ShareWith;
+import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
 import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -36,6 +50,7 @@ public class ResourceSharingUtils {
 
     private ResourceSharingUtils() {}
 
+    @SuppressWarnings("removal")
     public static ResourceSharingUtils getInstance() {
         ClassLoader classLoader = AccessController.doPrivileged(
             (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()
@@ -76,10 +91,15 @@ public class ResourceSharingUtils {
         }
     }
 
-    public void indexResourceSharing(String resourceId, Resource resource, ShareWith shareWith, ActionListener<IndexResponse> listener)
-        throws IOException {
+    public void indexResourceSharing(
+        String resourceId,
+        Resource resource,
+        User resourceUser,
+        ShareWith shareWith,
+        ActionListener<IndexResponse> listener
+    ) throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
-            ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, shareWith);
+            ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, resourceUser, shareWith);
 
             IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
@@ -101,9 +121,9 @@ public class ResourceSharingUtils {
         });
     }
 
-    public void indexResourceSharing(String resourceId, String resourceIndex, ShareWith shareWith) throws IOException {
+    public void indexResourceSharing(String resourceId, String resourceIndex, User resourceUser, ShareWith shareWith) throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
-            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, shareWith);
+            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, shareWith);
 
             IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)

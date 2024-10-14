@@ -55,7 +55,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
     public void testCreateSampleResource() throws IOException, InterruptedException {
         String strongPassword = "myStrongPassword123!";
         Request createUserRequest = new Request("PUT", "/_opendistro/_security/api/internalusers/craig");
-        createUserRequest.setJsonEntity("{\"password\":\"" + strongPassword + "\",\"opendistro_security_roles\":[\"all_access\"]}");
+        createUserRequest.setJsonEntity("{\"password\":\"" + strongPassword + "\",\"backend_roles\":[\"admin\"]}");
         client().performRequest(createUserRequest);
 
         RequestOptions.Builder requestOptions = RequestOptions.DEFAULT.toBuilder();
@@ -76,13 +76,16 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         createRequest2.setEntity(new StringEntity("{\"name\":\"ExampleResource2\"}"));
         RequestOptions.Builder requestOptions2 = RequestOptions.DEFAULT.toBuilder();
         requestOptions2.setWarningsHandler((warnings) -> false);
-        requestOptions2.addHeader("Authorization", Base64.getEncoder().encodeToString(strongPassword.getBytes(StandardCharsets.UTF_8)));
+        requestOptions2.addHeader(
+            "Authorization",
+            "Basic " + Base64.getEncoder().encodeToString(("craig:" + strongPassword).getBytes(StandardCharsets.UTF_8))
+        );
         createRequest2.setOptions(requestOptions2);
-        Response response2 = client().performRequest(createRequest);
+        Response response2 = client().performRequest(createRequest2);
         Map<String, String> createResourceResponse2 = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
-            response.getEntity().getContent()
+            response2.getEntity().getContent()
         ).mapStrings();
         System.out.println("createResourceResponse2: " + createResourceResponse2);
 

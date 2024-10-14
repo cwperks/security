@@ -174,6 +174,7 @@ import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resource.ResourceSharingListener;
+import org.opensearch.security.resource.ResourceSharingUtils;
 import org.opensearch.security.rest.DashboardsInfoAction;
 import org.opensearch.security.rest.SecurityConfigUpdateAction;
 import org.opensearch.security.rest.SecurityHealthAction;
@@ -184,7 +185,6 @@ import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.ResourceSharingExtension;
-import org.opensearch.security.spi.ResourceSharingUtils;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
@@ -1069,6 +1069,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
 
         ResourceSharingUtils.getInstance().initialize(threadPool, localClient);
+        ResourceSharingListener.getInstance().initialize(threadPool, localClient);
 
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
