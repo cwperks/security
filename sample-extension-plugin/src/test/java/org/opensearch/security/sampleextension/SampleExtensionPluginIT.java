@@ -43,7 +43,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         );
     }
 
-    public void testCreateSampleResource() throws IOException {
+    public void testCreateSampleResource() throws IOException, InterruptedException {
         Request createRequest = new Request("POST", "/_plugins/resource_sharing_example/resource");
         createRequest.setEntity(new StringEntity("{\"name\":\"Craig\"}"));
         RequestOptions.Builder requestOptions = RequestOptions.DEFAULT.toBuilder();
@@ -57,6 +57,9 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         ).mapStrings();
         System.out.println("createResourceResponse: " + createResourceResponse);
 
+        // Sleep to give ResourceSharingListener time to create the .resource-sharing index
+        Thread.sleep(1000);
+
         Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
         RequestOptions.Builder listRequestOptions = RequestOptions.DEFAULT.toBuilder();
         requestOptions.setWarningsHandler((warnings) -> false);
@@ -68,5 +71,17 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
             listResponse.getEntity().getContent()
         ).mapStrings();
         System.out.println("listResourceResponse: " + listResourceResponse);
+
+        Request resourceSharingRequest = new Request("POST", "/.resource-sharing/_search");
+        RequestOptions.Builder resourceSharingRequestOptions = RequestOptions.DEFAULT.toBuilder();
+        requestOptions.setWarningsHandler((warnings) -> false);
+        resourceSharingRequest.setOptions(resourceSharingRequestOptions);
+        Response resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
+        Map<String, Object> resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            resourceSharingResponse.getEntity().getContent()
+        ).map();
+        System.out.println("resourceSharingResponse: " + resourceSharingResponseMap);
     }
 }

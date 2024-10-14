@@ -76,7 +76,7 @@ public class ResourceSharingUtils {
         }
     }
 
-    public boolean indexResourceSharing(String resourceId, Resource resource, ShareWith shareWith, ActionListener<IndexResponse> listener)
+    public void indexResourceSharing(String resourceId, Resource resource, ShareWith shareWith, ActionListener<IndexResponse> listener)
         throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
             ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, shareWith);
@@ -99,6 +99,28 @@ public class ResourceSharingUtils {
             client.index(ir, irListener);
             return null;
         });
-        return true;
+    }
+
+    public void indexResourceSharing(String resourceId, String resourceIndex, ShareWith shareWith) throws IOException {
+        createResourceSharingIndexIfNotExists(() -> {
+            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, shareWith);
+
+            IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
+                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                .setSource(entry.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                .request();
+
+            log.warn("Index Request: " + ir.toString());
+
+            ActionListener<IndexResponse> irListener = ActionListener.wrap(
+                idxResponse -> { log.warn("Created " + RESOURCE_SHARING_INDEX + " entry."); },
+                (failResponse) -> {
+                    log.error(failResponse.getMessage());
+                    log.error("Failed to create " + RESOURCE_SHARING_INDEX + " entry.");
+                }
+            );
+            client.index(ir, irListener);
+            return null;
+        });
     }
 }

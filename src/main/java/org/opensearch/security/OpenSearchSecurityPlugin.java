@@ -2186,6 +2186,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
             this.indicesToListen.add(resourceIndexName);
+            System.out.println("Loaded resource, index: " + resourceIndexName);
             log.warn("Loaded resource, index: {}", resourceIndexName);
         }
     }

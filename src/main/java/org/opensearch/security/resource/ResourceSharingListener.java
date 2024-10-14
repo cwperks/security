@@ -11,6 +11,8 @@
 
 package org.opensearch.security.resource;
 
+import java.io.IOException;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -18,6 +20,8 @@ import org.opensearch.client.Client;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
+import org.opensearch.security.spi.ResourceSharingUtils;
+import org.opensearch.security.spi.ShareWith;
 import org.opensearch.threadpool.ThreadPool;
 
 public class ResourceSharingListener implements IndexingOperationListener {
@@ -53,7 +57,14 @@ public class ResourceSharingListener implements IndexingOperationListener {
         log.warn("postIndex called on " + shardId.getIndexName());
         String resourceId = index.id();
         String resourceIndex = shardId.getIndexName();
-
+        System.out.println("postIndex called on " + shardId.getIndexName());
+        System.out.println("resourceId: " + resourceId);
+        System.out.println("resourceIndex: " + resourceIndex);
+        try {
+            ResourceSharingUtils.getInstance().indexResourceSharing(resourceId, resourceIndex, ShareWith.PRIVATE);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

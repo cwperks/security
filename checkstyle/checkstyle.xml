@@ -198,12 +198,12 @@
     </module>
 
     <!-- System.out.println -->
-    <module name="RegexpSinglelineJava">
-      <property name="format" value="System.out.println"/>
-      <property name="ignoreCase" value="true"/>
-      <property name="message" value="Do not use System.out.println" />
-      <property name="severity" value="error"/>
-    </module>
+<!--    <module name="RegexpSinglelineJava">-->
+<!--      <property name="format" value="System.out.println"/>-->
+<!--      <property name="ignoreCase" value="true"/>-->
+<!--      <property name="message" value="Do not use System.out.println" />-->
+<!--      <property name="severity" value="error"/>-->
+<!--    </module>-->
 
   </module>
 

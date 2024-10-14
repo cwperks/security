@@ -42,7 +42,7 @@ public class SampleResource extends Resource implements ResourceSharingExtension
 
     @Override
     public String getWriteableName() {
-        return "sampled_resource";
+        return "sample_resource";
     }
 
     public void setName(String name) {
