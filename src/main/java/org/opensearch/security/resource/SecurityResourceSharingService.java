@@ -15,6 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensearch.OpenSearchException;
+import org.opensearch.action.get.GetResponse;
+import org.opensearch.action.get.MultiGetItemResponse;
+import org.opensearch.action.get.MultiGetRequest;
+import org.opensearch.action.get.MultiGetResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
@@ -39,8 +43,6 @@ public class SecurityResourceSharingService<T extends AbstractResource> extends 
     @SuppressWarnings("unchecked")
     @Override
     public void listResources(ActionListener<List<T>> listResourceListener) {
-        System.out.println("SecurityResourceSharingService.listResources");
-        // TODO Flip this around. First query .resource-sharing and then use MGet to get all resources
         T resource = newResource();
         User authenticatedUser = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
@@ -73,18 +75,51 @@ public class SecurityResourceSharingService<T extends AbstractResource> extends 
                 @Override
                 public void onResponse(SearchResponse searchResponse) {
                     List<T> resources = new ArrayList<>();
+                    List<String> resourceIds = new ArrayList<>();
                     for (SearchHit hit : searchResponse.getHits().getHits()) {
-                        System.out.println("SearchHit: " + hit);
-                        // resource.fromSource(hit.getId(), hit.getSourceAsMap());
-                        // // TODO check what resources have been shared with the authenticatedUser
-                        // System.out.println("authenticatedUser: " + authenticatedUser);
-                        // System.out.println("resource.getResourceUser(): " + resource.getResourceUser());
-                        // if (resource.getResourceUser() != null
-                        // && authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
-                        // resources.add(resource);
-                        // }
+                        resourceIds.add((String) hit.getSourceAsMap().get("resource_id"));
                     }
-                    listResourceListener.onResponse(resources);
+                    if (resourceIds.isEmpty()) {
+                        listResourceListener.onResponse(resources);
+                    }
+
+                    final MultiGetRequest mget = new MultiGetRequest();
+
+                    for (String resourceId : resourceIds) {
+                        mget.add(resourceIndex, resourceId);
+                    }
+
+                    mget.refresh(true);
+                    mget.realtime(true);
+
+                    client.multiGet(mget, new ActionListener<MultiGetResponse>() {
+                        @Override
+                        public void onResponse(MultiGetResponse response) {
+                            MultiGetItemResponse[] responses = response.getResponses();
+                            for (MultiGetItemResponse singleResponse : responses) {
+                                if (singleResponse != null && !singleResponse.isFailed()) {
+                                    GetResponse singleGetResponse = singleResponse.getResponse();
+                                    if (singleGetResponse.isExists() && !singleGetResponse.isSourceEmpty()) {
+                                        resource.fromSource(singleGetResponse.getId(), singleGetResponse.getSourceAsMap());
+                                        resources.add(resource);
+                                    } else {
+                                        // does not exist or empty source
+                                        continue;
+                                    }
+                                } else {
+                                    // failure
+                                    continue;
+                                }
+                            }
+                            listResourceListener.onResponse(resources);
+                        }
+
+                        @Override
+                        public void onFailure(Exception e) {
+                            listResourceListener.onFailure(e);
+                        }
+                    });
+
                 }
 
                 @Override
