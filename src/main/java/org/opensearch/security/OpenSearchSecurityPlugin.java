@@ -275,6 +275,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
     private final Set<String> indicesToListen = new HashSet<>();
+    // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
+    private final List<ResourceSharingExtension> resourceSharingExtensions = new ArrayList<>();
+    // CS-ENFORCE-SINGLE
 
     public static boolean isActionTraceEnabled() {
 
@@ -1070,6 +1073,16 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
 
         ResourceSharingListener.getInstance().initialize(threadPool, localClient);
+        // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
+        for (ResourceSharingExtension extension : resourceSharingExtensions) {
+            ResourceSharingService<?> resourceSharingService = new SecurityResourceSharingService<>(
+                localClient,
+                extension.getResourceIndex(),
+                extension.getResourceClass()
+            );
+            extension.assignResourceSharingService(resourceSharingService);
+        }
+        // CS-ENFORCE-SINGLE
 
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
@@ -2186,14 +2199,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
         for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
-            ResourceSharingService<?> resourceSharingService = new SecurityResourceSharingService<>(
-                localClient,
-                extension.getResourceIndex(),
-                extension.getResourceClass()
-            );
+            System.out.println("loadExtensions");
+            System.out.println("localClient: " + localClient);
             this.indicesToListen.add(resourceIndexName);
+            resourceSharingExtensions.add(extension);
             log.info("Loaded resource, index: {}", resourceIndexName);
-            extension.assignResourceSharingService(resourceSharingService);
         }
     }
     // CS-ENFORCE-SINGLE

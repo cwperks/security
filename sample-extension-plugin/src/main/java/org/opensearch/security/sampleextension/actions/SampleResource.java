@@ -51,7 +51,10 @@ public class SampleResource extends AbstractResource implements ResourceSharingE
         // Only called if security plugin is installed
         System.out.println("assignResourceSharingService called");
         ResourceSharingService<SampleResource> sharingService = (ResourceSharingService<SampleResource>) service;
-        SampleResourceSharingService.getInstance().setSharingService(sharingService);
+        if (SampleResourceSharingService.getInstance().isInitialized()) {
+            throw new IllegalStateException("Resource sharing service already initialized");
+        }
+        SampleResourceSharingService.getInstance().initialize(sharingService);
     }
 
     @Override

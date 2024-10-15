@@ -35,8 +35,4 @@ public class SampleResourceSharingService {
     public ResourceSharingService<SampleResource> getSharingService() {
         return sharingService;
     }
-
-    public void setSharingService(ResourceSharingService<SampleResource> sharingService) {
-        this.sharingService = sharingService;
-    }
 }

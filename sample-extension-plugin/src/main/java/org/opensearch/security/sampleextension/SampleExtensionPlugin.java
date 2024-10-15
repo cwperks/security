@@ -84,7 +84,9 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
             RESOURCE_INDEX_NAME,
             SampleResource.class
         );
-        SampleResourceSharingService.getInstance().initialize(sharingService);
+        if (!SampleResourceSharingService.getInstance().isInitialized()) {
+            SampleResourceSharingService.getInstance().initialize(sharingService);
+        }
         return Collections.emptyList();
     }
 

@@ -36,6 +36,6 @@ public class ResourceUser implements ToXContentFragment {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, ToXContent.Params params) throws IOException {
-        return builder.startObject().field("username", name).field("backend_roles", backendRoles).endObject();
+        return builder.startObject().field("name", name).field("backend_roles", backendRoles).endObject();
     }
 }
