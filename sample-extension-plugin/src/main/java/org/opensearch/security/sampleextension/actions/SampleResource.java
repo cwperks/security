@@ -6,13 +6,14 @@ import java.util.Map;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
+import org.opensearch.security.spi.AbstractResource;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
-public class SampleResource extends Resource implements ResourceSharingExtension {
+public class SampleResource extends AbstractResource implements ResourceSharingExtension {
 
     private String name;
     private ResourceSharingService<?> resourceSharingService;
@@ -29,10 +30,9 @@ public class SampleResource extends Resource implements ResourceSharingExtension
     }
 
     @Override
-    public SampleResource fromSource(Map<String, Object> sourceAsMap) {
-        SampleResource sample = new SampleResource();
-        sample.setName((String) sourceAsMap.get("name"));
-        return sample;
+    public void fromSource(String resourceId, Map<String, Object> sourceAsMap) {
+        super.fromSource(resourceId, sourceAsMap);
+        this.name = (String) sourceAsMap.get("name");
     }
 
     @Override
@@ -41,9 +41,17 @@ public class SampleResource extends Resource implements ResourceSharingExtension
     }
 
     @Override
-    public void assignResourceSharingService(ResourceSharingService<?> service) {
+    public Class<? extends AbstractResource> getResourceClass() {
+        return SampleResource.class;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void assignResourceSharingService(ResourceSharingService<? extends AbstractResource> service) {
         // Only called if security plugin is installed
         System.out.println("assignResourceSharingService called");
+        ResourceSharingService<SampleResource> sharingService = (ResourceSharingService<SampleResource>) service;
+        SampleResourceSharingService.getInstance().setSharingService(sharingService);
     }
 
     @Override

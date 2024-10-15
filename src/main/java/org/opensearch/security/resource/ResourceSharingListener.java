@@ -29,7 +29,7 @@ import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ResourceUser;
 import org.opensearch.security.spi.ShareWith;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
@@ -75,10 +75,11 @@ public class ResourceSharingListener implements IndexingOperationListener {
         System.out.println("postIndex called on " + shardId.getIndexName());
         System.out.println("resourceId: " + resourceId);
         System.out.println("resourceIndex: " + resourceIndex);
-        User resourceUser = (User) client.threadPool()
+        User authenticatedUser = (User) client.threadPool()
             .getThreadContext()
             .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
-        System.out.println("resourceUser: " + resourceUser);
+        System.out.println("resourceUser: " + authenticatedUser);
+        ResourceUser resourceUser = new ResourceUser(authenticatedUser.getName(), authenticatedUser.getRoles());
         try {
             indexResourceSharing(resourceId, resourceIndex, resourceUser, ShareWith.PRIVATE);
         } catch (IOException e) {
@@ -110,37 +111,38 @@ public class ResourceSharingListener implements IndexingOperationListener {
         }
     }
 
-    public void indexResourceSharing(
-        String resourceId,
-        Resource resource,
-        User resourceUser,
-        ShareWith shareWith,
-        ActionListener<IndexResponse> listener
-    ) throws IOException {
-        createResourceSharingIndexIfNotExists(() -> {
-            ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, resourceUser, shareWith);
+    // public void indexResourceSharing(
+    // String resourceId,
+    // Resource resource,
+    // ResourceUser resourceUser,
+    // ShareWith shareWith,
+    // ActionListener<IndexResponse> listener
+    // ) throws IOException {
+    // createResourceSharingIndexIfNotExists(() -> {
+    // ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, resourceUser, shareWith);
+    //
+    // IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
+    // .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+    // .setSource(entry.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
+    // .request();
+    //
+    // log.warn("Index Request: " + ir.toString());
+    //
+    // ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
+    // log.warn("Created " + RESOURCE_SHARING_INDEX + " entry.");
+    // listener.onResponse(idxResponse);
+    // }, (failResponse) -> {
+    // log.error(failResponse.getMessage());
+    // log.error("Failed to create " + RESOURCE_SHARING_INDEX + " entry.");
+    // listener.onFailure(failResponse);
+    // });
+    // client.index(ir, irListener);
+    // return null;
+    // });
+    // }
 
-            IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                .setSource(entry.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
-                .request();
-
-            log.warn("Index Request: " + ir.toString());
-
-            ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
-                log.warn("Created " + RESOURCE_SHARING_INDEX + " entry.");
-                listener.onResponse(idxResponse);
-            }, (failResponse) -> {
-                log.error(failResponse.getMessage());
-                log.error("Failed to create " + RESOURCE_SHARING_INDEX + " entry.");
-                listener.onFailure(failResponse);
-            });
-            client.index(ir, irListener);
-            return null;
-        });
-    }
-
-    public void indexResourceSharing(String resourceId, String resourceIndex, User resourceUser, ShareWith shareWith) throws IOException {
+    public void indexResourceSharing(String resourceId, String resourceIndex, ResourceUser resourceUser, ShareWith shareWith)
+        throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
             ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, shareWith);
 

@@ -25,7 +25,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.AbstractResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -34,7 +34,7 @@ import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
  * Transport action for CreateSampleResource.
  */
-public class CreateResourceTransportAction<T extends Resource> extends HandledTransportAction<
+public class CreateResourceTransportAction<T extends AbstractResource> extends HandledTransportAction<
     CreateResourceRequest<T>,
     CreateResourceResponse> {
     private static final Logger log = LogManager.getLogger(CreateResourceTransportAction.class);
@@ -74,7 +74,7 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
 
     private void createResource(CreateResourceRequest<T> request, ActionListener<CreateResourceResponse> listener) {
         log.warn("Sample name: " + request.getResource());
-        Resource sample = request.getResource();
+        AbstractResource sample = request.getResource();
         try {
             IndexRequest ir = nodeClient.prepareIndex(resourceIndex)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)

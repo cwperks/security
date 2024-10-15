@@ -15,16 +15,16 @@ import java.io.IOException;
 
 import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.security.spi.ResourceUser;
 import org.opensearch.security.spi.ShareWith;
-import org.opensearch.security.user.User;
 
 public class ResourceSharingEntry implements ToXContentFragment {
     private final String resourceIndex;
     private final String resourceId;
-    private final User resourceUser;
+    private final ResourceUser resourceUser;
     private final ShareWith shareWith;
 
-    public ResourceSharingEntry(String resourceIndex, String resourceId, User resourceUser, ShareWith shareWith) {
+    public ResourceSharingEntry(String resourceIndex, String resourceId, ResourceUser resourceUser, ShareWith shareWith) {
         this.resourceIndex = resourceIndex;
         this.resourceId = resourceId;
         this.resourceUser = resourceUser;

@@ -1,8 +1,16 @@
-package org.opensearch.security.spi;
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
 
-import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+package org.opensearch.security.resource;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,35 +23,21 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.security.spi.AbstractResource;
+import org.opensearch.security.spi.AbstractResourceSharingService;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.user.User;
 
-public abstract class AbstractResourceSharingService<T extends AbstractResource> implements ResourceSharingService<T> {
-    protected final Client client;
-    protected final String resourceIndex;
-    protected final Class<T> resourceClass;
-
-    public AbstractResourceSharingService(Client client, String resourceIndex, Class<T> resourceClass) {
-        this.client = client;
-        this.resourceIndex = resourceIndex;
-        this.resourceClass = resourceClass;
-    }
-
-    protected T newResource() {
-        return AccessController.doPrivileged(new PrivilegedAction<T>() {
-            @Override
-            public T run() {
-                try {
-                    return resourceClass.getDeclaredConstructor().newInstance();
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
+public class SecurityResourceSharingService<T extends AbstractResource> extends AbstractResourceSharingService<T> {
+    public SecurityResourceSharingService(Client client, String resourceIndex, Class<T> resourceClass) {
+        super(client, resourceIndex, resourceClass);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void listResources(ActionListener<List<T>> listResourceListener) {
         T resource = newResource();
+        User authenticatedUser = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest sr = new SearchRequest(resourceIndex);
             SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
@@ -55,9 +49,16 @@ public abstract class AbstractResourceSharingService<T extends AbstractResource>
                 public void onResponse(SearchResponse searchResponse) {
                     List<T> resources = new ArrayList<>();
                     for (SearchHit hit : searchResponse.getHits().getHits()) {
+                        // TODO Combine with an MGET request to get resourceUser and sharedWith data
                         System.out.println("SearchHit: " + hit);
                         resource.fromSource(hit.getId(), hit.getSourceAsMap());
-                        resources.add(resource);
+                        // TODO check what resources have been shared with the authenticatedUser
+                        System.out.println("authenticatedUser: " + authenticatedUser);
+                        System.out.println("resource.getResourceUser(): " + resource.getResourceUser());
+                        if (resource.getResourceUser() != null
+                            && authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
+                            resources.add(resource);
+                        }
                     }
                     listResourceListener.onResponse(resources);
                 }

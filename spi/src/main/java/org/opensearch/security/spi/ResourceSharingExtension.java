@@ -22,5 +22,10 @@ public interface ResourceSharingExtension {
      */
     String getResourceIndex();
 
-    void assignResourceSharingService(ResourceSharingService<?> service);
+    /**
+     * @return The class corresponding to this resource
+     */
+    Class<? extends AbstractResource> getResourceClass();
+
+    void assignResourceSharingService(ResourceSharingService<? extends AbstractResource> service);
 }

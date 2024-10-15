@@ -41,8 +41,6 @@ import com.google.common.collect.Lists;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.core.xcontent.ToXContentFragment;
-import org.opensearch.core.xcontent.XContentBuilder;
 
 /**
  * A authenticated user and attributes associated to them (like roles, tenant, custom attributes)
@@ -50,7 +48,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
  * <b>Do not subclass from this class!</b>
  *
  */
-public class User implements Serializable, Writeable, CustomAttributesAware, ToXContentFragment {
+public class User implements Serializable, Writeable, CustomAttributesAware {
 
     public static final User ANONYMOUS = new User(
         "opendistro_security_anonymous",
@@ -297,10 +295,5 @@ public class User implements Serializable, Writeable, CustomAttributesAware, ToX
     public boolean isServiceAccount() {
         Map<String, String> userAttributesMap = this.getCustomAttributesMap();
         return userAttributesMap != null && "true".equals(userAttributesMap.get("attr.internal.service"));
-    }
-
-    @Override
-    public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field("username", name).field("backend_roles", roles).endObject();
     }
 }
