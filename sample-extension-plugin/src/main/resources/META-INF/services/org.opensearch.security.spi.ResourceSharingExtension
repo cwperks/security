@@ -3,4 +3,4 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-org.opensearch.security.sampleextension.actions.create.SampleResource
+org.opensearch.security.sampleextension.actions.SampleResource

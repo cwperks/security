@@ -6,34 +6,36 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions.create;
+package org.opensearch.security.sampleextension.actions;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.security.spi.Resource;
 
 /**
- * Response to a CreateSampleResourceRequest
+ * Response to a ListSampleResourceRequest
  */
-public class CreateSampleResourceResponse extends ActionResponse implements ToXContentObject {
-    private final String message;
+public class ListSampleResourceResponse extends ActionResponse implements ToXContentObject {
+    private final List<SampleResource> resources;
 
     /**
      * Default constructor
      *
-     * @param message The message
+     * @param resources The resources
      */
-    public CreateSampleResourceResponse(String message) {
-        this.message = message;
+    public ListSampleResourceResponse(List<SampleResource> resources) {
+        this.resources = resources;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(message);
+        out.writeList(resources);
     }
 
     /**
@@ -41,14 +43,14 @@ public class CreateSampleResourceResponse extends ActionResponse implements ToXC
      *
      * @param in the stream input
      */
-    public CreateSampleResourceResponse(final StreamInput in) throws IOException {
-        message = in.readString();
+    public ListSampleResourceResponse(final StreamInput in) throws IOException {
+        resources = in.readList(SampleResource::new);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field("message", message);
+        builder.array("resources", (Object[]) resources.toArray(new Resource[0]));
         builder.endObject();
         return builder;
     }

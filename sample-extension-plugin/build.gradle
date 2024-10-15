@@ -35,6 +35,8 @@ repositories {
 
 dependencies {
     compileOnly project(path: ":${rootProject.name}-spi", configuration: 'shadow')
+    testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
 }
 
 def es_tmp_dir = rootProject.file('build/private/es_tmp').absoluteFile

@@ -14,6 +14,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 
@@ -95,11 +97,14 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
         listRequest.setOptions(requestOptions);
         Response listResponse = client().performRequest(listRequest);
-        Map<String, String> listResourceResponse = JsonXContent.jsonXContent.createParser(
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode resNode = objectMapper.readTree(listResponse.getEntity().getContent());
+        System.out.println("resNode: " + resNode);
+        Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
             listResponse.getEntity().getContent()
-        ).mapStrings();
+        ).map();
         System.out.println("listResourceResponse: " + listResourceResponse);
 
         Request resourceSharingRequest = new Request("POST", "/.resource-sharing/_search");

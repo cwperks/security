@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions.list;
+package org.opensearch.security.sampleextension.actions;
 
 import java.util.List;
 

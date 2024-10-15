@@ -6,10 +6,11 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions.list;
+package org.opensearch.security.sampleextension.actions;
+
+import java.util.List;
 
 import org.opensearch.action.search.SearchRequest;
-import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
@@ -18,6 +19,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -42,11 +44,14 @@ public class ListSampleResourceTransportAction extends HandledTransportAction<Li
             SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
             matchAllQuery.query(new MatchAllQueryBuilder());
             sr.source(matchAllQuery);
-            /* Index already exists, ignore and continue */
-            ActionListener<SearchResponse> searchListener = ActionListener.wrap(response -> {
-                listener.onResponse(new ListSampleResourceResponse(response.toString()));
+            ActionListener<List<SampleResource>> sampleResourceListener = ActionListener.wrap(sampleResourcesList -> {
+                System.out.println("sampleResourcesList: " + sampleResourcesList);
+                listener.onResponse(new ListSampleResourceResponse(sampleResourcesList));
             }, listener::onFailure);
-            nodeClient.search(sr, searchListener);
+            SampleResourceSharingService.getInstance().getSharingService().listResources(sampleResourceListener);
+            // listener.onResponse(new ListSampleResourceResponse(sampleResources));
+            /* Index already exists, ignore and continue */
+            // nodeClient.search(sr, searchListener);
         }
     }
 }

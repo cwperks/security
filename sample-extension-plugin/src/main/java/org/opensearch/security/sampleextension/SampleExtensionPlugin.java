@@ -38,12 +38,16 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceAction;
-import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceRestAction;
-import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceTransportAction;
-import org.opensearch.security.sampleextension.actions.list.ListSampleResourceAction;
-import org.opensearch.security.sampleextension.actions.list.ListSampleResourceRestAction;
-import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.CreateSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.ListSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.ListSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.ListSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
+import org.opensearch.security.spi.DefaultResourceSharingService;
+import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -75,6 +79,12 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
+        ResourceSharingService<SampleResource> sharingService = new DefaultResourceSharingService<>(
+            client,
+            RESOURCE_INDEX_NAME,
+            SampleResource.class
+        );
+        SampleResourceSharingService.getInstance().initialize(sharingService);
         return Collections.emptyList();
     }
 

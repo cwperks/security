@@ -174,7 +174,6 @@ import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resource.ResourceSharingListener;
-import org.opensearch.security.resource.ResourceSharingUtils;
 import org.opensearch.security.rest.DashboardsInfoAction;
 import org.opensearch.security.rest.SecurityConfigUpdateAction;
 import org.opensearch.security.rest.SecurityHealthAction;
@@ -1068,7 +1067,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             return components;
         }
 
-        ResourceSharingUtils.getInstance().initialize(threadPool, localClient);
         ResourceSharingListener.getInstance().initialize(threadPool, localClient);
 
         // Register opensearch dynamic settings
@@ -2186,6 +2184,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
         for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
+            // ResourceSharingService resourceSharingService = new ResourceSharingService();
             this.indicesToListen.add(resourceIndexName);
             System.out.println("Loaded resource, index: " + resourceIndexName);
             log.warn("Loaded resource, index: {}", resourceIndexName);
