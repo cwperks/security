@@ -188,5 +188,23 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
             updateResponse.getEntity().getContent()
         ).mapStrings();
         System.out.println("updateSharingResponse: " + updateSharingResponse);
+
+        Thread.sleep(1000);
+
+        resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
+        resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            resourceSharingResponse.getEntity().getContent()
+        ).map();
+        System.out.println("resourceSharingResponse after update: " + resourceSharingResponseMap);
+
+        listResponse = client().performRequest(listRequest);
+        listResourceResponse = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            listResponse.getEntity().getContent()
+        ).map();
+        System.out.println("listResourceResponse after update: " + listResourceResponse);
     }
 }

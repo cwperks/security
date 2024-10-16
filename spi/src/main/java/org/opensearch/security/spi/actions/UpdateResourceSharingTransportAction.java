@@ -73,16 +73,13 @@ public class UpdateResourceSharingTransportAction<T extends AbstractResource> ex
     @Override
     protected void doExecute(Task task, UpdateResourceSharingRequest<T> request, ActionListener<UpdateResourceSharingResponse> listener) {
         try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
-            // TODO write a request to find the record in .resource-sharing matching this resource_id and resource_index
             SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termQuery("resource_id", request.getResourceId()))
-                .must(QueryBuilders.termQuery("resource_index", resourceIndex));
+                .must(QueryBuilders.matchQuery("resource_id", request.getResourceId()))
+                .must(QueryBuilders.matchQuery("resource_index", resourceIndex));
             searchSourceBuilder.query(boolQuery);
             searchRequest.source(searchSourceBuilder);
-
-            System.out.println("SearchRequest: " + searchRequest.toString());
 
             // Execute the search request
             nodeClient.search(searchRequest, new ActionListener<SearchResponse>() {
