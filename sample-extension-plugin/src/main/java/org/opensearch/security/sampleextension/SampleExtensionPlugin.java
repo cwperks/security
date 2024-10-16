@@ -45,6 +45,9 @@ import org.opensearch.security.sampleextension.actions.ListSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.ListSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.ListSampleResourceTransportAction;
 import org.opensearch.security.sampleextension.actions.SampleResource;
+import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingAction;
+import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingRestAction;
+import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingTransportAction;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
 import org.opensearch.security.spi.DefaultResourceSharingService;
 import org.opensearch.security.spi.ResourceSharingService;
@@ -100,14 +103,19 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
-        return List.of(new CreateSampleResourceRestAction(), new ListSampleResourceRestAction());
+        return List.of(
+            new CreateSampleResourceRestAction(),
+            new ListSampleResourceRestAction(),
+            new UpdateSampleResourceSharingRestAction()
+        );
     }
 
     @Override
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
             new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class),
-            new ActionHandler<>(ListSampleResourceAction.INSTANCE, ListSampleResourceTransportAction.class)
+            new ActionHandler<>(ListSampleResourceAction.INSTANCE, ListSampleResourceTransportAction.class),
+            new ActionHandler<>(UpdateSampleResourceSharingAction.INSTANCE, UpdateSampleResourceSharingTransportAction.class)
         );
     }
 

@@ -225,6 +225,7 @@ import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.ENDPOINTS_WITH_PERMISSIONS;
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.SECURITY_CONFIG_UPDATE;
+import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 import static org.opensearch.security.setting.DeprecatedSettings.checkForDeprecatedSetting;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_USE_CLUSTER_STATE;
@@ -2163,7 +2164,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
         );
         final SystemIndexDescriptor systemIndexDescriptor = new SystemIndexDescriptor(indexPattern, "Security index");
-        return Collections.singletonList(systemIndexDescriptor);
+        final SystemIndexDescriptor resourceSharingIndexDescriptor = new SystemIndexDescriptor(
+            RESOURCE_SHARING_INDEX,
+            "Resource sharing index"
+        );
+        return List.of(systemIndexDescriptor, resourceSharingIndexDescriptor);
     }
 
     private static String handleKeyword(final String field) {
