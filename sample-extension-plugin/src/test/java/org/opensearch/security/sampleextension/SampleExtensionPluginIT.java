@@ -89,7 +89,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode indexResponseNode = objectMapper.readTree(response2.getEntity().getContent());
         // Regular expression to capture the value of "id"
-        Pattern pattern = Pattern.compile("id=([a-zA-Z0-9]+)");
+        Pattern pattern = Pattern.compile("id=([a-zA-Z0-9_-]+)");
         Matcher matcher = pattern.matcher(indexResponseNode.get("message").asText());
 
         String resourceId = "";
