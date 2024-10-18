@@ -35,6 +35,8 @@ repositories {
 
 dependencies {
     compileOnly project(path: ":${rootProject.name}-spi", configuration: 'shadow')
+//    integrationTestImplementation project(path: ":")
+//    integrationTestImplementation sourceSets.integrationTest.output
     testImplementation "com.fasterxml.jackson.core:jackson-annotations:${versions.jackson}"
     testImplementation "com.fasterxml.jackson.core:jackson-databind:${versions.jackson_databind}"
 }
@@ -64,6 +66,33 @@ task integTest(type: RestIntegTestTask) {
     classpath = sourceSets.test.runtimeClasspath
 }
 tasks.named("check").configure { dependsOn(integTest) }
+
+//create source set 'integrationTest'
+//add classes from the main source set to the compilation and runtime classpaths of the integrationTest
+sourceSets {
+    integrationTest {
+        java {
+            srcDir file ('src/integrationTest/java')
+            compileClasspath += sourceSets.main.output
+            runtimeClasspath += sourceSets.main.output
+        }
+        resources {
+            srcDir file('src/integrationTest/resources')
+        }
+        processIntegrationTestResources {
+            duplicatesStrategy(DuplicatesStrategy.INCLUDE)
+        }
+    }
+}
+
+task integrationTest(type: Test) {
+    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+    classpath = sourceSets.integrationTest.runtimeClasspath
+}
+
+configurations {
+    integrationTestImplementation.extendsFrom(rootProject.configurations.integrationTestImplementation)
+}
 
 integTest {
     if (project.hasProperty('excludeTests')) {
