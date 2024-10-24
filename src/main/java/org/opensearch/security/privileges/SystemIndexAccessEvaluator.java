@@ -268,7 +268,6 @@ public class SystemIndexAccessEvaluator {
                     log.debug("Service account cannot access regular indices: {}", regularIndices);
                 }
                 presponse.allowed = false;
-                presponse.addMissingPrivileges(action);
                 presponse.markComplete();
                 return;
             }
@@ -285,7 +284,6 @@ public class SystemIndexAccessEvaluator {
                     );
                 }
                 presponse.allowed = false;
-                presponse.addMissingPrivileges(action);
                 presponse.markComplete();
                 return;
             } else if (containsSystemIndex
@@ -300,7 +298,6 @@ public class SystemIndexAccessEvaluator {
                         );
                     }
                     presponse.allowed = false;
-                    presponse.addMissingPrivileges(action);
                     presponse.markComplete();
                     return;
                 }
@@ -325,7 +322,6 @@ public class SystemIndexAccessEvaluator {
                     );
                 }
                 presponse.allowed = false;
-                presponse.addMissingPrivileges(action);
                 presponse.markComplete();
             }
             return;
@@ -348,7 +344,6 @@ public class SystemIndexAccessEvaluator {
                     auditLog.logSecurityIndexAttempt(request, action, task);
                     log.warn("{} for '_all' indices is not allowed for a regular user", action);
                     presponse.allowed = false;
-                    presponse.addMissingPrivileges(action);
                     presponse.markComplete();
                 }
             }
@@ -363,7 +358,6 @@ public class SystemIndexAccessEvaluator {
                             log.debug("Filtered '{}' but resulting list is empty", securityIndex);
                         }
                         presponse.allowed = false;
-                        presponse.addMissingPrivileges(action);
                         presponse.markComplete();
                         return;
                     }
@@ -376,7 +370,6 @@ public class SystemIndexAccessEvaluator {
                     final String foundSystemIndexes = String.join(", ", getAllSystemIndices(requestedResolved));
                     log.warn("{} for '{}' index is not allowed for a regular user", action, foundSystemIndexes);
                     presponse.allowed = false;
-                    presponse.addMissingPrivileges(action);
                     presponse.markComplete();
                 }
             }

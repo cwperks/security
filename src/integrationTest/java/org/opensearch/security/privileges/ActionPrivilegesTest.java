@@ -447,7 +447,8 @@ public class ActionPrivilegesTest {
                     Settings.EMPTY,
                     WellKnownActions.CLUSTER_ACTIONS,
                     WellKnownActions.INDEX_ACTIONS,
-                    WellKnownActions.INDEX_ACTIONS
+                    WellKnownActions.INDEX_ACTIONS,
+                    Map.of()
                 );
 
                 if (statefulness == Statefulness.STATEFUL) {

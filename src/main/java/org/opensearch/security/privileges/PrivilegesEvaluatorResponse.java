@@ -133,10 +133,6 @@ public class PrivilegesEvaluatorResponse {
         return result;
     }
 
-    public boolean addMissingPrivileges(String action) {
-        return missingPrivileges.add(action);
-    }
-
     public Set<String> getMissingSecurityRoles() {
         return new HashSet<>(missingSecurityRoles);
     }
