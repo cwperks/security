@@ -86,7 +86,9 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
     private final List<Class<? extends Plugin>> plugins;
     private final ClusterManager clusterManager;
     private final TestSecurityConfig testSecurityConfig;
+    private Map<Integer, Settings> nodeSpecificOverride;
     private Settings nodeOverride;
+    private Integer expectedNodeStartupCount;
     private final String clusterName;
     private final MinimumSecuritySettingsSupplierFactory minimumOpenSearchSettingsSupplierFactory;
     private final TestCertificates testCertificates;
@@ -101,6 +103,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         String clusterName,
         TestSecurityConfig testSgConfig,
         boolean sslOnly,
+        Map<Integer, Settings> nodeSpecificOverride,
         Settings nodeOverride,
         ClusterManager clusterManager,
         List<Class<? extends Plugin>> plugins,
@@ -109,13 +112,15 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         Map<String, LocalCluster> remotes,
         List<TestIndex> testIndices,
         boolean loadConfigurationIntoIndex,
-        String defaultConfigurationInitDirectory
+        String defaultConfigurationInitDirectory,
+        Integer expectedNodeStartupCount
     ) {
         this.plugins = plugins;
         this.testCertificates = testCertificates;
         this.clusterManager = clusterManager;
         this.testSecurityConfig = testSgConfig;
         this.sslOnly = sslOnly;
+        this.nodeSpecificOverride = nodeSpecificOverride;
         this.nodeOverride = nodeOverride;
         this.clusterName = clusterName;
         this.minimumOpenSearchSettingsSupplierFactory = new MinimumSecuritySettingsSupplierFactory(testCertificates);
@@ -126,6 +131,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         if (StringUtils.isNoneBlank(defaultConfigurationInitDirectory)) {
             System.setProperty(INIT_CONFIGURATION_DIR, defaultConfigurationInitDirectory);
         }
+        this.expectedNodeStartupCount = expectedNodeStartupCount;
     }
 
     public String getSnapshotDirPath() {
@@ -233,6 +239,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         try {
             NodeSettingsSupplier nodeSettingsSupplier = minimumOpenSearchSettingsSupplierFactory.minimumOpenSearchSettings(
                 sslOnly,
+                nodeSpecificOverride,
                 nodeOverride
             );
             localOpenSearchCluster = new LocalOpenSearchCluster(
@@ -240,7 +247,8 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                 clusterManager,
                 nodeSettingsSupplier,
                 plugins,
-                testCertificates
+                testCertificates,
+                expectedNodeStartupCount
             );
 
             localOpenSearchCluster.start();
@@ -313,8 +321,10 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
     public static class Builder {
 
         private final Settings.Builder nodeOverrideSettingsBuilder = Settings.builder();
+        private final Map<Integer, Settings.Builder> nodeSpecificOverrideSettingsBuilder = new HashMap<>();
 
         private boolean sslOnly = false;
+        private Integer expectedNodeStartupCount;
         private final List<Class<? extends Plugin>> plugins = new ArrayList<>();
         private Map<String, LocalCluster> remoteClusters = new HashMap<>();
         private List<LocalCluster> clusterDependencies = new ArrayList<>();
@@ -366,6 +376,11 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             return this;
         }
 
+        public Builder extectedNodeStartupCount(int expectedNodeStartupCount) {
+            this.expectedNodeStartupCount = expectedNodeStartupCount;
+            return this;
+        }
+
         public Builder nodeSettings(Map<String, Object> settings) {
             settings.forEach((key, value) -> {
                 if (value instanceof List) {
@@ -379,11 +394,31 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             return this;
         }
 
+        public Builder nodeSpecificSettings(int nodeNumber, Map<String, Object> settings) {
+            if (!nodeSpecificOverrideSettingsBuilder.containsKey(nodeNumber)) {
+                Settings.Builder builderCopy = Settings.builder();
+                builderCopy.put(nodeOverrideSettingsBuilder.build());
+                nodeSpecificOverrideSettingsBuilder.put(nodeNumber, builderCopy);
+            }
+            Settings.Builder nodeSettingsBuilder = nodeSpecificOverrideSettingsBuilder.get(nodeNumber);
+            settings.forEach((key, value) -> {
+                if (value instanceof List) {
+                    List<String> values = ((List<?>) value).stream().map(String::valueOf).collect(Collectors.toList());
+                    nodeSettingsBuilder.putList(key, values);
+                } else {
+                    nodeSettingsBuilder.put(key, String.valueOf(value));
+                }
+            });
+
+            return this;
+        }
+
         /**
-        * Adds additional plugins to the cluster
-        */
-        public Builder plugin(Class<? extends Plugin> plugin) {
-            this.plugins.add(plugin);
+         * Adds additional plugins to the cluster
+         */
+        @SafeVarargs
+        public final Builder plugin(Class<? extends Plugin>... plugins) {
+            this.plugins.addAll(List.of(plugins));
 
             return this;
         }
@@ -521,10 +556,15 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                 }
                 clusterName += "_" + num.incrementAndGet();
                 Settings settings = nodeOverrideSettingsBuilder.build();
+                Map<Integer, Settings> nodeSpecificSettings = new HashMap<>();
+                for (Map.Entry<Integer, Settings.Builder> entry : nodeSpecificOverrideSettingsBuilder.entrySet()) {
+                    nodeSpecificSettings.put(entry.getKey(), entry.getValue().build());
+                }
                 return new LocalCluster(
                     clusterName,
                     testSecurityConfig,
                     sslOnly,
+                    nodeSpecificSettings,
                     settings,
                     clusterManager,
                     plugins,
@@ -533,7 +573,8 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                     remoteClusters,
                     testIndices,
                     loadConfigurationIntoIndex,
-                    defaultConfigurationInitDirectory
+                    defaultConfigurationInitDirectory,
+                    expectedNodeStartupCount
                 );
             } catch (Exception e) {
                 log.error("Failed to build LocalCluster", e);

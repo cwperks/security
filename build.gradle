@@ -495,9 +495,9 @@ configurations {
             // For integrationTest
             force "org.apache.httpcomponents:httpclient:4.5.14"
             force "org.apache.httpcomponents:httpcore:4.4.16"
-            force "com.google.errorprone:error_prone_annotations:2.33.0"
+            force "com.google.errorprone:error_prone_annotations:2.34.0"
             force "org.checkerframework:checker-qual:3.48.1"
-            force "ch.qos.logback:logback-classic:1.5.10"
+            force "ch.qos.logback:logback-classic:1.5.11"
             force "commons-io:commons-io:2.17.0"
         }
     }
@@ -598,7 +598,7 @@ dependencies {
     implementation 'org.apache.commons:commons-collections4:4.4'
 
     //Password generation
-    implementation 'org.passay:passay:1.6.5'
+    implementation 'org.passay:passay:1.6.6'
 
     implementation "org.apache.kafka:kafka-clients:${kafka_version}"
 
@@ -608,7 +608,7 @@ dependencies {
     runtimeOnly 'com.eclipsesource.minimal-json:minimal-json:0.9.5'
     runtimeOnly 'commons-codec:commons-codec:1.17.1'
     runtimeOnly 'org.cryptacular:cryptacular:1.2.7'
-    compileOnly 'com.google.errorprone:error_prone_annotations:2.33.0'
+    compileOnly 'com.google.errorprone:error_prone_annotations:2.34.0'
     runtimeOnly 'com.sun.istack:istack-commons-runtime:4.2.0'
     runtimeOnly 'jakarta.xml.bind:jakarta.xml.bind-api:4.0.2'
     runtimeOnly 'org.ow2.asm:asm:9.7.1'
@@ -690,6 +690,9 @@ dependencies {
     testImplementation('org.awaitility:awaitility:4.2.2') {
         exclude(group: 'org.hamcrest', module: 'hamcrest')
     }
+    testImplementation "org.bouncycastle:bcpkix-jdk18on:${versions.bouncycastle}"
+    testImplementation "org.bouncycastle:bcutil-jdk18on:${versions.bouncycastle}"
+
     // Only osx-x86_64, osx-aarch_64, linux-x86_64, linux-aarch_64, windows-x86_64 are available
     if (osdetector.classifier in ["osx-x86_64", "osx-aarch_64", "linux-x86_64", "linux-aarch_64", "windows-x86_64"]) {
         testImplementation "io.netty:netty-tcnative-classes:2.0.61.Final"

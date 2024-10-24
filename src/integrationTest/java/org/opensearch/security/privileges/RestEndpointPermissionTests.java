@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -56,6 +57,7 @@ import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvalua
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.ENDPOINTS_WITH_PERMISSIONS;
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.RELOAD_CERTS_ACTION;
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.SECURITY_CONFIG_UPDATE;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Moved from https://github.com/opensearch-project/security/blob/54361468f5c4b3a57f3ecffaf1bbe8dccee562be/src/test/java/org/opensearch/security/securityconf/SecurityRolesPermissionsTest.java
