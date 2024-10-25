@@ -303,22 +303,6 @@ public class PrivilegesEvaluator {
             throw new OpenSearchSecurityException("OpenSearch Security is not initialized.");
         }
 
-        if (user.isPluginUser()) {
-            String pluginIdentifier = user.getName();
-            Set<String> clusterActions = pluginToClusterActions.get(pluginIdentifier);
-            if (clusterActions == null) {
-                clusterActions = new HashSet<>();
-                clusterActions.add(BulkAction.NAME);
-                pluginToClusterActions.put(pluginIdentifier, clusterActions);
-                SecurityDynamicConfiguration<ActionGroupsV7> actionGroupsConfiguration = configurationRepository.getConfiguration(
-                    CType.ACTIONGROUPS
-                );
-                SecurityDynamicConfiguration<RoleV7> rolesConfiguration = configurationRepository.getConfiguration(CType.ROLES);
-
-                this.updateConfiguration(actionGroupsConfiguration, rolesConfiguration);
-            }
-        }
-
         TransportAddress caller = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
         ImmutableSet<String> mappedRoles = ImmutableSet.copyOf((injectedRoles == null) ? mapRoles(user, caller) : injectedRoles);
 
@@ -412,7 +396,11 @@ public class PrivilegesEvaluator {
 
         // check snapshot/restore requests
         if (snapshotRestoreEvaluator.evaluate(request, task, action0, clusterInfoHolder, presponse).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
         System.out.println("Calling systemIndexAccessEvaluator.evaluate");
@@ -422,18 +410,30 @@ public class PrivilegesEvaluator {
         if (systemIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, context, actionPrivileges, user)
             .isComplete()) {
             System.out.println("Returning presponse: " + presponse);
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
         System.out.println("After systemIndexAccessEvaluator.evaluate");
 
         // Protected index access
         if (protectedIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, mappedRoles).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
         // check access for point in time requests
         if (pitPrivilegesEvaluator.evaluate(request, context, actionPrivileges, action0, presponse, irr).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
         final boolean dnfofEnabled = dcm.isDnfofEnabled();
@@ -867,5 +867,9 @@ public class PrivilegesEvaluator {
         }
 
         return Collections.unmodifiableList(ret);
+    }
+
+    public void updatePluginToClusterActions(String pluginIdentifier, Set<String> clusterActions) {
+        pluginToClusterActions.put(pluginIdentifier, clusterActions);
     }
 }

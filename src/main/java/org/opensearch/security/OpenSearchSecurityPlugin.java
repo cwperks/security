@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -69,6 +70,7 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.SpecialPermission;
 import org.opensearch.Version;
 import org.opensearch.action.ActionRequest;
+import org.opensearch.action.bulk.BulkAction;
 import org.opensearch.action.search.PitService;
 import org.opensearch.action.search.SearchScrollAction;
 import org.opensearch.action.support.ActionFilter;
@@ -2126,7 +2128,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public PluginSubject getPluginSubject(Plugin plugin) {
-        return new ContextProvidingPluginSubject(threadPool, settings, plugin);
+        Set<String> clusterActions = new HashSet<>();
+        clusterActions.add(BulkAction.NAME);
+        PluginSubject subject = new ContextProvidingPluginSubject(threadPool, settings, plugin);
+        sf.updatePluginToClusterAction(subject.getPrincipal().getName(), clusterActions);
+        return subject;
     }
 
     @Override

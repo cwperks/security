@@ -188,6 +188,7 @@ public class PrivilegesEvaluatorResponse {
     }
 
     public static PrivilegesEvaluatorResponse insufficient(String missingPrivilege, PrivilegesEvaluationContext context) {
+        System.out.println("missingPrivilege: " + missingPrivilege);
         PrivilegesEvaluatorResponse response = new PrivilegesEvaluatorResponse();
         response.indexToActionCheckTable = CheckTable.create(ImmutableSet.of("_"), ImmutableSet.of(missingPrivilege));
         return response;
@@ -197,6 +198,7 @@ public class PrivilegesEvaluatorResponse {
         CheckTable<String, String> indexToActionCheckTable,
         PrivilegesEvaluationContext context
     ) {
+        System.out.println("indexToActionCheckTable: " + indexToActionCheckTable);
         PrivilegesEvaluatorResponse response = new PrivilegesEvaluatorResponse();
         response.indexToActionCheckTable = indexToActionCheckTable;
         return response;
