@@ -40,6 +40,7 @@ import org.opensearch.test.framework.TestSecurityConfig.User;
 import org.opensearch.test.framework.cluster.ClusterManager;
 import org.opensearch.test.framework.cluster.LocalCluster;
 import org.opensearch.test.framework.cluster.TestRestClient;
+import org.opensearch.transport.nio.NioTransportPlugin;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -73,6 +74,8 @@ public class ResourceFocusedTests {
     public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS)
         .authc(AUTHC_HTTPBASIC_INTERNAL)
         .users(ADMIN_USER, LIMITED_USER)
+        .nodeSettings(Map.of("http.type", "nio-http-transport-secure"))
+        .plugin(NioTransportPlugin.class)
         .anonymousAuth(false)
         .doNotFailOnForbidden(true)
         .build();
