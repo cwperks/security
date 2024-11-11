@@ -143,6 +143,7 @@ public class PrivilegesEvaluator {
     private final boolean checkSnapshotRestoreWritePrivileges;
 
     private final ClusterInfoHolder clusterInfoHolder;
+    private final ConfigurationRepository configurationRepository;
     private ConfigModel configModel;
     private final IndexResolverReplacer irr;
     private final SnapshotRestoreEvaluator snapshotRestoreEvaluator;
@@ -153,6 +154,7 @@ public class PrivilegesEvaluator {
     private DynamicConfigModel dcm;
     private final NamedXContentRegistry namedXContentRegistry;
     private final Settings settings;
+    private final Map<String, Set<String>> pluginToClusterActions;
     private final AtomicReference<ActionPrivileges> actionPrivileges = new AtomicReference<>();
 
     public PrivilegesEvaluator(
@@ -176,6 +178,7 @@ public class PrivilegesEvaluator {
 
         this.threadContext = threadContext;
         this.privilegesInterceptor = privilegesInterceptor;
+        this.pluginToClusterActions = new HashMap<>();
         this.clusterStateSupplier = clusterStateSupplier;
         this.settings = settings;
 
@@ -192,6 +195,7 @@ public class PrivilegesEvaluator {
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();
         this.namedXContentRegistry = namedXContentRegistry;
+        this.configurationRepository = configurationRepository;
 
         if (configurationRepository != null) {
             configurationRepository.subscribeOnChange(configMap -> {
@@ -228,11 +232,14 @@ public class PrivilegesEvaluator {
                 ? DynamicConfigFactory.addStatics(actionGroupsConfiguration.clone())
                 : DynamicConfigFactory.addStatics(SecurityDynamicConfiguration.empty(CType.ACTIONGROUPS));
             FlattenedActionGroups flattenedActionGroups = new FlattenedActionGroups(actionGroupsWithStatics);
+            System.out.println("updateConfiguration");
+            System.out.println("pluginToClusterActions: " + pluginToClusterActions);
             ActionPrivileges actionPrivileges = new ActionPrivileges(
                 DynamicConfigFactory.addStatics(rolesConfiguration.clone()),
                 flattenedActionGroups,
                 () -> clusterStateSupplier.get().metadata().getIndicesLookup(),
-                settings
+                settings,
+                pluginToClusterActions
             );
             Metadata metadata = clusterStateSupplier.get().metadata();
             actionPrivileges.updateStatefulIndexPrivileges(metadata.getIndicesLookup(), metadata.version());
@@ -389,23 +396,44 @@ public class PrivilegesEvaluator {
 
         // check snapshot/restore requests
         if (snapshotRestoreEvaluator.evaluate(request, task, action0, clusterInfoHolder, presponse).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
+        System.out.println("Calling systemIndexAccessEvaluator.evaluate");
+        System.out.println("user: " + user);
+        System.out.println("action: " + action0);
         // Security index access
         if (systemIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, context, actionPrivileges, user)
             .isComplete()) {
-            return presponse;
+            System.out.println("Returning presponse: " + presponse);
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
+        System.out.println("After systemIndexAccessEvaluator.evaluate");
 
         // Protected index access
         if (protectedIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, mappedRoles).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
         // check access for point in time requests
         if (pitPrivilegesEvaluator.evaluate(request, context, actionPrivileges, action0, presponse, irr).isComplete()) {
-            return presponse;
+            if (!presponse.isAllowed()) {
+                return PrivilegesEvaluatorResponse.insufficient(action0, context);
+            } else {
+                return presponse;
+            }
         }
 
         final boolean dnfofEnabled = dcm.isDnfofEnabled();
@@ -532,6 +560,7 @@ public class PrivilegesEvaluator {
 
         boolean dnfofPossible = dnfofEnabled && DNFOF_MATCHER.test(action0);
 
+        System.out.println("allIndexPermsRequired: " + allIndexPermsRequired);
         presponse = actionPrivileges.hasIndexPrivilege(context, allIndexPermsRequired, requestedResolved);
 
         if (presponse.isPartiallyOk()) {
@@ -838,5 +867,9 @@ public class PrivilegesEvaluator {
         }
 
         return Collections.unmodifiableList(ret);
+    }
+
+    public void updatePluginToClusterActions(String pluginIdentifier, Set<String> clusterActions) {
+        pluginToClusterActions.put(pluginIdentifier, clusterActions);
     }
 }
