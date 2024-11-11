@@ -99,6 +99,8 @@ public class SystemIndexTests {
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
             HttpResponse response = client.put("try-create-and-index/" + SYSTEM_INDEX_1);
 
+            System.out.println("response: " + response.getBody());
+
             assertThat(response.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
             assertThat(response.getBody(), containsString(SystemIndexPlugin1.class.getCanonicalName()));
         }

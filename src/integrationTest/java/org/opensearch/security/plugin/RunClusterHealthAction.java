@@ -14,7 +14,7 @@ import org.opensearch.action.ActionType;
 
 public class RunClusterHealthAction extends ActionType<RunClusterHealthResponse> {
     public static final RunClusterHealthAction INSTANCE = new RunClusterHealthAction();
-    public static final String NAME = "mock:cluster/monitor/health";
+    public static final String NAME = "cluster:mock/monitor/health";
 
     private RunClusterHealthAction() {
         super(NAME, RunClusterHealthResponse::new);

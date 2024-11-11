@@ -453,6 +453,7 @@ public class SecurityFilter implements ActionFilter {
                     });
                 }
             } else {
+                System.out.println("No permissions for " + user);
                 auditLog.logMissingPrivileges(action, request, task);
                 String err;
                 if (!pres.getMissingSecurityRoles().isEmpty()) {
@@ -527,6 +528,10 @@ public class SecurityFilter implements ActionFilter {
         }
 
         return false;
+    }
+
+    public void updatePluginToClusterAction(String pluginIdentifier, Set<String> clusterActions) {
+        evalp.updatePluginToClusterActions(pluginIdentifier, clusterActions);
     }
 
     private boolean isRequestIndexImmutable(Object request) {
