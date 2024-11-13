@@ -145,11 +145,6 @@ public class LocalOpenSearchCluster {
     }
 
     private List<Node> getNodesByType(NodeType nodeType) {
-        System.out.println("getNodesByType: " + nodeType);
-        System.out.println("nodes: " + nodes);
-        System.out.println(
-            "result: : " + nodes.stream().filter(currentNode -> currentNode.hasAssignedType(nodeType)).collect(Collectors.toList())
-        );
         return nodes.stream().filter(currentNode -> currentNode.hasAssignedType(nodeType)).collect(Collectors.toList());
     }
 
@@ -159,25 +154,6 @@ public class LocalOpenSearchCluster {
 
     public void start() throws Exception {
         log.info("Starting {}", clusterName);
-        // System.out.println("Starting with nodes: " + nodes);
-        // if (!nodes.isEmpty()) {
-        // started = true;
-        // List<CompletableFuture<StartStage>> futures = new ArrayList<>();
-        // for (Node node : nodes) {
-        // futures.add(node.start());
-        // }
-        // CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
-        // log.info("Startup finished. Waiting for GREEN");
-        //
-        // int expectedCount = nodes.size();
-        // if (expectedNodeStartupCount != null) {
-        // expectedCount = expectedNodeStartupCount;
-        // }
-        //
-        // waitForCluster(ClusterHealthStatus.GREEN, TimeValue.timeValueSeconds(10), expectedCount);
-        // log.info("Started: {}", this);
-        // return;
-        // }
 
         int clusterManagerNodeCount = clusterManager.getClusterManagerNodes();
         int nonClusterManagerNodeCount = clusterManager.getDataNodes() + clusterManager.getClientNodes();
@@ -253,10 +229,8 @@ public class LocalOpenSearchCluster {
             stopFutures.add(node.stop(2, TimeUnit.SECONDS));
         }
         CompletableFuture.allOf(stopFutures.toArray(CompletableFuture[]::new)).join();
-        // TODO Ensure all stopFutures returned true
         boolean allNodesStopped = stopFutures.stream().map(CompletableFuture::join).allMatch(result -> (Boolean.TRUE == result));
 
-        System.out.println("allNodesStopped: " + allNodesStopped);
         if (!allNodesStopped) {
             throw new RuntimeException("Failed to stop all nodes in the cluster");
         }
@@ -322,10 +296,7 @@ public class LocalOpenSearchCluster {
 
     @SafeVarargs
     private final Node findRunningNode(List<Node> nodes, List<Node>... moreNodes) {
-        System.out.println("findRunningNode");
         for (Node node : nodes) {
-            System.out.println("node: " + node);
-            System.out.println("node.isRunning: " + node.isRunning());
             if (node.isRunning()) {
                 return node;
             }
@@ -334,8 +305,6 @@ public class LocalOpenSearchCluster {
         if (moreNodes != null && moreNodes.length > 0) {
             for (List<Node> nodesList : moreNodes) {
                 for (Node node : nodesList) {
-                    System.out.println("node: " + node);
-                    System.out.println("node.isRunning: " + node.isRunning());
                     if (node.isRunning()) {
                         return node;
                     }
@@ -477,12 +446,10 @@ public class LocalOpenSearchCluster {
                 public void run() {
                     try {
                         node.start();
-                        System.out.println("set running to true");
                         running = true;
                         completableFuture.complete(StartStage.INITIALIZED);
                     } catch (BindTransportException | BindHttpException e) {
                         log.warn("Port collision detected for {}", this, e);
-                        System.out.println("Port collision");
                         portCollision = true;
                         try {
                             node.close();
@@ -496,8 +463,6 @@ public class LocalOpenSearchCluster {
                         completableFuture.complete(StartStage.RETRY);
 
                     } catch (Throwable e) {
-                        System.out.println("Unable to start: " + e.getMessage());
-                        e.printStackTrace();
                         log.error("Unable to start {}", this, e);
                         node = null;
                         completableFuture.completeExceptionally(e);

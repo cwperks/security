@@ -89,9 +89,10 @@ public class SystemIndexUpgradeTests {
             System.out.println("isSystem: " + isSystem);
             System.out.println("version: " + version);
 
-            // assertThat(isSystem, equalTo(true));
+            assertThat(isSystem, equalTo(false));
         }
 
+        // TODO replace with Awaitility
         Thread.sleep(2000);
 
         cluster.stop();
