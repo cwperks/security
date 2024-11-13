@@ -152,7 +152,7 @@ public class LocalOpenSearchCluster {
         return getNodesByType(nodeType).stream().count();
     }
 
-    public void start() throws Exception {
+    public void start(ClusterHealthStatus waitForStatus) throws Exception {
         log.info("Starting {}", clusterName);
 
         int clusterManagerNodeCount = clusterManager.getClusterManagerNodes();
@@ -203,14 +203,14 @@ public class LocalOpenSearchCluster {
             return;
         }
 
-        log.info("Startup finished. Waiting for GREEN");
+        log.info("Startup finished. Waiting for " + waitForStatus);
 
         int expectedCount = nodes.size();
         if (expectedNodeStartupCount != null) {
             expectedCount = expectedNodeStartupCount;
         }
 
-        waitForCluster(ClusterHealthStatus.YELLOW, TimeValue.timeValueSeconds(10), expectedCount);
+        waitForCluster(waitForStatus, TimeValue.timeValueSeconds(10), expectedCount);
         log.info("Started: {}", this);
 
     }
@@ -291,7 +291,7 @@ public class LocalOpenSearchCluster {
         this.seedHosts = null;
         this.initialClusterManagerHosts = null;
         createClusterDirectory("local_cluster_" + clusterName + "_retry_" + retry);
-        start();
+        start(ClusterHealthStatus.GREEN);
     }
 
     @SafeVarargs

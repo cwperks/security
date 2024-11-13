@@ -45,6 +45,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.rules.ExternalResource;
 
 import org.opensearch.client.Client;
+import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.node.PluginAwareNode;
 import org.opensearch.plugins.Plugin;
@@ -258,7 +259,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             );
             if (localOpenSearchCluster != null) {
                 localOpenSearchCluster.plugins(plugins);
-                localOpenSearchCluster.start();
+                localOpenSearchCluster.start(ClusterHealthStatus.YELLOW);
                 return;
             }
             localOpenSearchCluster = new LocalOpenSearchCluster(
@@ -270,7 +271,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                 expectedNodeStartupCount
             );
 
-            localOpenSearchCluster.start();
+            localOpenSearchCluster.start(ClusterHealthStatus.GREEN);
 
             if (loadConfigurationIntoIndex) {
                 initSecurityIndex(testSecurityConfig);
