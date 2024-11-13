@@ -182,6 +182,9 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         if (localOpenSearchCluster != null && localOpenSearchCluster.isStarted()) {
             try {
                 localOpenSearchCluster.restartRandomNode();
+                if (loadConfigurationIntoIndex) {
+                    loadFromSecurityIndex();
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -308,6 +311,18 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             )
         ) {
             testSecurityConfig.initIndex(client);
+            triggerConfigurationReload(client);
+        }
+    }
+
+    private void loadFromSecurityIndex() {
+        log.info("Loading from OpenSearch Security index");
+        try (
+            Client client = new ContextHeaderDecoratorClient(
+                this.getInternalNodeClient(),
+                Map.of(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true")
+            )
+        ) {
             triggerConfigurationReload(client);
         }
     }

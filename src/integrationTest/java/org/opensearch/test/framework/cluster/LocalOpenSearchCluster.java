@@ -225,7 +225,8 @@ public class LocalOpenSearchCluster {
 
     public void restartRandomNode() throws IOException {
         List<CompletableFuture<Boolean>> stopFutures = new ArrayList<>();
-        Node node = nodes.get(random.nextInt(nodes.size()));
+        List<Node> dataNodes = nodes.stream().filter(n -> DATA.equals(n.nodeType)).toList();
+        Node node = dataNodes.get(random.nextInt(dataNodes.size()));
         stopFutures.add(node.stop(2, TimeUnit.SECONDS));
         CompletableFuture.allOf(stopFutures.toArray(CompletableFuture[]::new)).join();
         boolean allNodesStopped = stopFutures.stream().map(CompletableFuture::join).allMatch(result -> (Boolean.TRUE == result));
@@ -236,16 +237,23 @@ public class LocalOpenSearchCluster {
 
         nodes.remove(node);
 
-        final var nodeSettings = clusterManager.getNodeSettings().get(0);
+        final var nodeSettings = clusterManager.getNonClusterManagerNodeSettings().get(0);
 
         List<CompletableFuture<StartStage>> futures = new ArrayList<>();
 
+        System.out.println("nodes before: " + nodes);
+
         Node replacementNode = new Node(node.nodeNumber, nodeSettings, node.transportPort, node.httpPort);
+
         futures.add(replacementNode.start());
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
 
+        System.out.println("nodes after: " + nodes);
+
         waitForCluster(ClusterHealthStatus.YELLOW, TimeValue.timeValueSeconds(10), nodes.size());
+
+        System.out.println("nodes after cluster health: " + nodes);
         log.info("Started: {}", this);
     }
 
