@@ -29,7 +29,6 @@ import org.opensearch.test.framework.cluster.TestRestClient.HttpResponse;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY;
 import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
@@ -42,17 +41,16 @@ public class SystemIndexUpgradeTests {
     public static final AuthcDomain AUTHC_DOMAIN = new AuthcDomain("basic", 0).httpAuthenticatorWithChallenge("basic").backend("internal");
 
     @ClassRule
-    public static final LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.SINGLENODE)
+    public static final LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.DEFAULT)
         .anonymousAuth(false)
         .authc(AUTHC_DOMAIN)
         .users(USER_ADMIN)
+        .loadConfigurationIntoIndex(true)
         .nodeSettings(
             Map.of(
                 SECURITY_RESTAPI_ROLES_ENABLED,
                 List.of("user_" + USER_ADMIN.getName() + "__" + ALL_ACCESS.getName()),
                 SECURITY_SYSTEM_INDICES_ENABLED_KEY,
-                true,
-                SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX,
                 true
             )
         )
@@ -94,16 +92,11 @@ public class SystemIndexUpgradeTests {
             assertThat(isSystem, equalTo(false));
         }
 
-        // TODO replace with Awaitility
-        Thread.sleep(2000);
-
-        cluster.stop();
-
-        Thread.sleep(2000);
-
         cluster.addPlugin(SystemIndexPlugin1.class);
 
-        cluster.start();
+        cluster.restartRandomNode();
+
+        Thread.sleep(2000);
 
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
             HttpResponse response = client.get("_cluster/state/metadata/" + SystemIndexPlugin1.SYSTEM_INDEX_1);

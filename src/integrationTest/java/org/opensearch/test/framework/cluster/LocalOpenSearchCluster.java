@@ -223,6 +223,32 @@ public class LocalOpenSearchCluster {
         return started;
     }
 
+    public void restartRandomNode() throws IOException {
+        List<CompletableFuture<Boolean>> stopFutures = new ArrayList<>();
+        Node node = nodes.get(random.nextInt(nodes.size()));
+        stopFutures.add(node.stop(2, TimeUnit.SECONDS));
+        CompletableFuture.allOf(stopFutures.toArray(CompletableFuture[]::new)).join();
+        boolean allNodesStopped = stopFutures.stream().map(CompletableFuture::join).allMatch(result -> (Boolean.TRUE == result));
+
+        if (!allNodesStopped) {
+            throw new RuntimeException("Failed to stop single node in the cluster");
+        }
+
+        nodes.remove(node);
+
+        final var nodeSettings = clusterManager.getNodeSettings().get(0);
+
+        List<CompletableFuture<StartStage>> futures = new ArrayList<>();
+
+        Node replacementNode = new Node(node.nodeNumber, nodeSettings, node.transportPort, node.httpPort);
+        futures.add(replacementNode.start());
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        waitForCluster(ClusterHealthStatus.YELLOW, TimeValue.timeValueSeconds(10), nodes.size());
+        log.info("Started: {}", this);
+    }
+
     public void stop() {
         List<CompletableFuture<Boolean>> stopFutures = new ArrayList<>();
         for (Node node : nodes) {
