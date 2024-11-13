@@ -150,6 +150,14 @@ public class LocalOpenSearchCluster {
 
     public void start() throws Exception {
         log.info("Starting {}", clusterName);
+        System.out.println("Starting with nodes: " + nodes);
+        if (!nodes.isEmpty()) {
+            for (Node node : nodes) {
+                node.start();
+            }
+            started = true;
+            return;
+        }
 
         int clusterManagerNodeCount = clusterManager.getClusterManagerNodes();
         int nonClusterManagerNodeCount = clusterManager.getDataNodes() + clusterManager.getClientNodes();
@@ -427,7 +435,9 @@ public class LocalOpenSearchCluster {
         CompletableFuture<StartStage> start() {
             CompletableFuture<StartStage> completableFuture = new CompletableFuture<>();
             final Collection<Class<? extends Plugin>> mergedPlugins = nodeSettings.pluginsWithAddition(additionalPlugins);
-            this.node = new PluginAwareNode(nodeSettings.containRole(NodeRole.CLUSTER_MANAGER), getOpenSearchSettings(), mergedPlugins);
+            if (this.node == null) {
+                this.node = new PluginAwareNode(nodeSettings.containRole(NodeRole.CLUSTER_MANAGER), getOpenSearchSettings(), mergedPlugins);
+            }
 
             new Thread(new Runnable() {
 
@@ -486,10 +496,11 @@ public class LocalOpenSearchCluster {
                     running = false;
 
                     if (node != null) {
-                        node.close();
-                        boolean stopped = node.awaitClose(timeout, timeUnit);
-                        node = null;
-                        return stopped;
+                        // node.close();
+                        // boolean stopped = node.awaitClose(timeout, timeUnit);
+                        // // node = null;
+                        // return stopped;
+                        return true;
                     } else {
                         return false;
                     }

@@ -19,7 +19,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.opensearch.core.rest.RestStatus;
-import org.opensearch.security.http.ExampleSystemIndexPlugin;
+import org.opensearch.security.plugin.SystemIndexPlugin1;
 import org.opensearch.test.framework.TestSecurityConfig.AuthcDomain;
 import org.opensearch.test.framework.cluster.ClusterManager;
 import org.opensearch.test.framework.cluster.LocalCluster;
@@ -44,7 +44,7 @@ public class SystemIndexTests {
         .anonymousAuth(false)
         .authc(AUTHC_DOMAIN)
         .users(USER_ADMIN)
-        .plugin(ExampleSystemIndexPlugin.class)
+        .plugin(SystemIndexPlugin1.class)
         .nodeSettings(
             Map.of(
                 SECURITY_RESTAPI_ROLES_ENABLED,

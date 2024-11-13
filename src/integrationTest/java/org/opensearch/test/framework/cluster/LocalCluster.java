@@ -163,6 +163,16 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         close();
     }
 
+    public void stop() {
+        if (localOpenSearchCluster != null && localOpenSearchCluster.isStarted()) {
+            try {
+                localOpenSearchCluster.stop();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     @Override
     public void close() {
         System.clearProperty(INIT_CONFIGURATION_DIR);
@@ -235,13 +245,17 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         return localOpenSearchCluster.getRandom();
     }
 
-    private void start() {
+    public void start() {
         try {
             NodeSettingsSupplier nodeSettingsSupplier = minimumOpenSearchSettingsSupplierFactory.minimumOpenSearchSettings(
                 sslOnly,
                 nodeSpecificOverride,
                 nodeOverride
             );
+            if (localOpenSearchCluster != null) {
+                localOpenSearchCluster.start();
+                return;
+            }
             localOpenSearchCluster = new LocalOpenSearchCluster(
                 clusterName,
                 clusterManager,
