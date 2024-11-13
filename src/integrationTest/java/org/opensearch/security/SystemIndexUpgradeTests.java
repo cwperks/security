@@ -28,6 +28,7 @@ import org.opensearch.test.framework.cluster.TestRestClient.HttpResponse;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY;
@@ -66,6 +67,7 @@ public class SystemIndexUpgradeTests {
 
     @Test
     public void systemIndexShouldBeMarkedTrueInClusterState() throws InterruptedException {
+        int previousVersion;
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
             client.put(SystemIndexPlugin1.SYSTEM_INDEX_1);
             HttpResponse response = client.get("_cluster/state/metadata/" + SystemIndexPlugin1.SYSTEM_INDEX_1);
@@ -78,7 +80,7 @@ public class SystemIndexUpgradeTests {
                 .get(SystemIndexPlugin1.SYSTEM_INDEX_1)
                 .get("system")
                 .asBoolean();
-            int version = response.bodyAsJsonNode()
+            previousVersion = response.bodyAsJsonNode()
                 .get("metadata")
                 .get("indices")
                 .get(SystemIndexPlugin1.SYSTEM_INDEX_1)
@@ -87,7 +89,7 @@ public class SystemIndexUpgradeTests {
 
             System.out.println("response.body: " + response.getBody());
             System.out.println("isSystem: " + isSystem);
-            System.out.println("version: " + version);
+            System.out.println("previousVersion: " + previousVersion);
 
             assertThat(isSystem, equalTo(false));
         }
@@ -104,10 +106,6 @@ public class SystemIndexUpgradeTests {
         cluster.start();
 
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
-            HttpResponse catResponse = client.get("_cat/indices");
-            System.out.println("catResponse.body: " + catResponse.getBody());
-            HttpResponse putResponse = client.put(SystemIndexPlugin1.SYSTEM_INDEX_1);
-            System.out.println("putResponse.body: " + putResponse.getBody());
             HttpResponse response = client.get("_cluster/state/metadata/" + SystemIndexPlugin1.SYSTEM_INDEX_1);
 
             assertThat(response.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
@@ -130,6 +128,7 @@ public class SystemIndexUpgradeTests {
             System.out.println("version: " + version);
 
             assertThat(isSystem, equalTo(true));
+            assertThat(version, greaterThan(previousVersion));
         }
     }
 }

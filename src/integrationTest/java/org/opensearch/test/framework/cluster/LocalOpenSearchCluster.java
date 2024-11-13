@@ -499,7 +499,7 @@ public class LocalOpenSearchCluster {
                     if (node != null) {
                         node.close();
                         boolean stopped = node.awaitClose(timeout, timeUnit);
-                        // node = null;
+                        node = null;
                         return stopped;
                     } else {
                         return false;
