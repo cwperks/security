@@ -138,6 +138,10 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         return localOpenSearchCluster.getSnapshotDirPath();
     }
 
+    public void addPlugin(Class<? extends Plugin> plugin) {
+        this.plugins.add(plugin);
+    }
+
     @Override
     public void before() {
         if (localOpenSearchCluster == null) {
@@ -175,6 +179,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
 
     @Override
     public void close() {
+        System.out.println("Close called");
         System.clearProperty(INIT_CONFIGURATION_DIR);
         if (localOpenSearchCluster != null && localOpenSearchCluster.isStarted()) {
             try {
@@ -253,6 +258,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                 nodeOverride
             );
             if (localOpenSearchCluster != null) {
+                localOpenSearchCluster.plugins(plugins);
                 localOpenSearchCluster.start();
                 return;
             }
