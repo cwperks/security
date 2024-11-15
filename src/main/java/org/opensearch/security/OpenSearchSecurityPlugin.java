@@ -43,7 +43,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -154,7 +153,6 @@ import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.configuration.DlsFlsRequestValve;
 import org.opensearch.security.configuration.DlsFlsValveImpl;
 import org.opensearch.security.configuration.PrivilegesInterceptorImpl;
-import org.opensearch.security.configuration.Salt;
 import org.opensearch.security.configuration.SecurityFlsDlsIndexSearcherWrapper;
 import org.opensearch.security.dlic.rest.api.Endpoint;
 import org.opensearch.security.dlic.rest.api.SecurityRestApiActions;
@@ -169,9 +167,12 @@ import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.identity.NoopPluginSubject;
 import org.opensearch.security.identity.SecurityTokenManager;
+import org.opensearch.security.privileges.ActionPrivileges;
+import org.opensearch.security.privileges.PrivilegesEvaluationException;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesInterceptor;
 import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
+import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resource.ResourceSharingListener;
 import org.opensearch.security.resource.SecurityResourceSharingService;
@@ -182,6 +183,7 @@ import org.opensearch.security.rest.SecurityInfoAction;
 import org.opensearch.security.rest.SecurityWhoAmIAction;
 import org.opensearch.security.rest.TenantInfoAction;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
+import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.ResourceSharingExtension;
@@ -200,8 +202,6 @@ import org.opensearch.security.support.HeaderHelper;
 import org.opensearch.security.support.ModuleInfo;
 import org.opensearch.security.support.ReflectionHelper;
 import org.opensearch.security.support.SecuritySettings;
-import org.opensearch.security.support.SecurityUtils;
-import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.transport.DefaultInterClusterRequestEvaluator;
 import org.opensearch.security.transport.InterClusterRequestEvaluator;
 import org.opensearch.security.transport.SecurityInterceptor;
@@ -272,9 +272,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile IndexResolverReplacer irr;
     private final AtomicReference<NamedXContentRegistry> namedXContentRegistry = new AtomicReference<>(NamedXContentRegistry.EMPTY);;
     private volatile DlsFlsRequestValve dlsFlsValve = null;
-    private volatile Salt salt;
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
+    private volatile DlsFlsBaseContext dlsFlsBaseContext;
     private final Set<String> indicesToListen = new HashSet<>();
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
     private final List<ResourceSharingExtension> resourceSharingExtensions = new ArrayList<>();
@@ -659,7 +659,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         evaluator,
                         threadPool,
                         Objects.requireNonNull(auditLog),
-                        sks,
+                        sslSettingsManager,
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
                         passwordHasher
@@ -715,7 +715,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     auditLog,
                     ciol,
                     evaluator,
-                    salt
+                    dlsFlsValve::getCurrentConfig,
+                    dlsFlsBaseContext
                 )
             );
             if (this.indicesToListen.contains(indexModule.getIndex().getName())) {
@@ -741,28 +742,18 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
                 @Override
                 public Weight doCache(Weight weight, QueryCachingPolicy policy) {
-                    @SuppressWarnings("unchecked")
-                    final Map<String, Set<String>> allowedFlsFields = (Map<String, Set<String>>) HeaderHelper.deserializeSafeFromHeader(
-                        threadPool.getThreadContext(),
-                        ConfigConstants.OPENDISTRO_SECURITY_FLS_FIELDS_HEADER
-                    );
-
-                    if (SecurityUtils.evalMap(allowedFlsFields, index().getName()) != null) {
-                        return weight;
-                    } else {
-                        @SuppressWarnings("unchecked")
-                        final Map<String, Set<String>> maskedFieldsMap = (Map<String, Set<String>>) HeaderHelper.deserializeSafeFromHeader(
-                            threadPool.getThreadContext(),
-                            ConfigConstants.OPENDISTRO_SECURITY_MASKED_FIELD_HEADER
-                        );
-
-                        if (SecurityUtils.evalMap(maskedFieldsMap, index().getName()) != null) {
+                    try {
+                        if (dlsFlsValve.hasFlsOrFieldMasking(index().getName())) {
+                            // Do not cache
                             return weight;
                         } else {
                             return nodeCache.doCache(weight, policy);
                         }
+                    } catch (PrivilegesEvaluationException e) {
+                        log.error("Error while evaluating FLS configuration", e);
+                        // We fall back to no caching
+                        return weight;
                     }
-
                 }
             });
 
@@ -835,17 +826,16 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         return;
                     }
 
-                    @SuppressWarnings("unchecked")
-                    final Map<String, Set<String>> maskedFieldsMap = (Map<String, Set<String>>) HeaderHelper.deserializeSafeFromHeader(
-                        threadPool.getThreadContext(),
-                        ConfigConstants.OPENDISTRO_SECURITY_MASKED_FIELD_HEADER
-                    );
-                    final String maskedEval = SecurityUtils.evalMap(maskedFieldsMap, indexModule.getIndex().getName());
-                    if (maskedEval != null) {
-                        final Set<String> mf = maskedFieldsMap.get(maskedEval);
-                        if (mf != null && !mf.isEmpty()) {
+                    try {
+                        if (dlsFlsValve.hasFieldMasking(indexModule.getIndex().getName())) {
                             dlsFlsValve.onQueryPhase(queryResult);
                         }
+                    } catch (PrivilegesEvaluationException e) {
+                        log.error("Error while evaluating field masking config", e);
+                        // It is safe to call the code nevertheless, as this code does not enforce any privileges.
+                        // Rather, it performs some fixes to keep aggregations happy after field masking has been
+                        // applied. If no field masking has been applied, this should be a no-op.
+                        dlsFlsValve.onQueryPhase(queryResult);
                     }
                 }
             }.toListener());
@@ -1090,10 +1080,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         final ClusterInfoHolder cih = new ClusterInfoHolder(this.cs.getClusterName().value());
         this.cs.addListener(cih);
-        this.salt = Salt.from(settings);
 
         final IndexNameExpressionResolver resolver = new IndexNameExpressionResolver(threadPool.getThreadContext());
-        irr = new IndexResolverReplacer(resolver, clusterService, cih);
+        irr = new IndexResolverReplacer(resolver, clusterService::state, cih);
 
         final String DEFAULT_INTERCLUSTER_REQUEST_EVALUATOR_CLASS = DefaultInterClusterRequestEvaluator.class.getName();
         InterClusterRequestEvaluator interClusterRequestEvaluator = new DefaultInterClusterRequestEvaluator(settings);
@@ -1111,18 +1100,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         namedXContentRegistry.set(xContentRegistry);
         if (SSLConfig.isSslOnlyMode()) {
-            dlsFlsValve = new DlsFlsRequestValve.NoopDlsFlsRequestValve();
             auditLog = new NullAuditLog();
             privilegesInterceptor = new PrivilegesInterceptor(resolver, clusterService, localClient, threadPool);
         } else {
-            dlsFlsValve = new DlsFlsValveImpl(
-                settings,
-                localClient,
-                clusterService,
-                resolver,
-                xContentRegistry,
-                threadPool.getThreadContext()
-            );
             auditLog = new AuditLogImpl(settings, configPath, localClient, threadPool, resolver, clusterService, environment);
             privilegesInterceptor = new PrivilegesInterceptorImpl(resolver, clusterService, localClient, threadPool);
         }
@@ -1145,7 +1125,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         evaluator = new PrivilegesEvaluator(
             clusterService,
+            clusterService::state,
             threadPool,
+            threadPool.getThreadContext(),
             cr,
             resolver,
             auditLog,
@@ -1155,6 +1137,23 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             irr,
             namedXContentRegistry.get()
         );
+
+        dlsFlsBaseContext = new DlsFlsBaseContext(evaluator, threadPool.getThreadContext(), adminDns);
+
+        if (SSLConfig.isSslOnlyMode()) {
+            dlsFlsValve = new DlsFlsRequestValve.NoopDlsFlsRequestValve();
+        } else {
+            dlsFlsValve = new DlsFlsValveImpl(
+                settings,
+                localClient,
+                clusterService,
+                resolver,
+                xContentRegistry,
+                threadPool,
+                dlsFlsBaseContext
+            );
+            cr.subscribeOnChange(configMap -> { ((DlsFlsValveImpl) dlsFlsValve).updateConfiguration(cr.getConfiguration(CType.ROLES)); });
+        }
 
         sf = new SecurityFilter(settings, evaluator, adminDns, dlsFlsValve, auditLog, threadPool, cs, compatConfig, irr, xffResolver);
 
@@ -1166,7 +1165,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             principalExtractor = ReflectionHelper.instantiatePrincipalExtractor(principalExtractorClass);
         }
 
-        restLayerEvaluator = new RestLayerPrivilegesEvaluator(clusterService, threadPool);
+        restLayerEvaluator = new RestLayerPrivilegesEvaluator(evaluator);
 
         securityRestHandler = new SecurityRestFilter(
             backendRegistry,
@@ -1184,15 +1183,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         dcf.registerDCFListener(irr);
         dcf.registerDCFListener(xffResolver);
         dcf.registerDCFListener(evaluator);
-        dcf.registerDCFListener(restLayerEvaluator);
         dcf.registerDCFListener(securityRestHandler);
         dcf.registerDCFListener(tokenManager);
         if (!(auditLog instanceof NullAuditLog)) {
             // Don't register if advanced modules is disabled in which case auditlog is instance of NullAuditLog
             dcf.registerDCFListener(auditLog);
-        }
-        if (dlsFlsValve instanceof DlsFlsValveImpl) {
-            dcf.registerDCFListener(dlsFlsValve);
         }
 
         cr.setDynamicConfigFactory(dcf);
@@ -1233,9 +1228,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         components.add(userService);
         components.add(passwordHasher);
 
-        if (!ExternalSecurityKeyStore.hasExternalSslContext(settings)) {
-            components.add(sks);
-        }
+        components.add(sslSettingsManager);
+
         final var allowDefaultInit = settings.getAsBoolean(SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, false);
         final var useClusterState = useClusterStateToInitSecurityConfig(settings);
         if (!SSLConfig.isSslOnlyMode() && !isDisabled(settings) && allowDefaultInit && useClusterState) {
@@ -2071,6 +2065,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     Property.Filtered
                 )
             );
+
+            // Privileges evaluation
+            settings.add(ActionPrivileges.PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE);
         }
 
         return settings;
@@ -2117,43 +2114,18 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public Function<String, Predicate<String>> getFieldFilter() {
         return index -> {
-            if (threadPool == null) {
+            if (threadPool == null || dlsFlsValve == null) {
                 return field -> true;
             }
-            @SuppressWarnings("unchecked")
-            final Map<String, Set<String>> allowedFlsFields = (Map<String, Set<String>>) HeaderHelper.deserializeSafeFromHeader(
-                threadPool.getThreadContext(),
-                ConfigConstants.OPENDISTRO_SECURITY_FLS_FIELDS_HEADER
-            );
 
-            final String eval = SecurityUtils.evalMap(allowedFlsFields, index);
-
-            if (eval == null) {
-                return field -> true;
-            } else {
-
-                final Set<String> includesExcludes = allowedFlsFields.get(eval);
-                final Set<String> includesSet = new HashSet<>(includesExcludes.size());
-                final Set<String> excludesSet = new HashSet<>(includesExcludes.size());
-
-                for (final String incExc : includesExcludes) {
-                    final char firstChar = incExc.charAt(0);
-
-                    if (firstChar == '!' || firstChar == '~') {
-                        excludesSet.add(incExc.substring(1));
-                    } else {
-                        includesSet.add(incExc);
-                    }
+            return field -> {
+                try {
+                    return dlsFlsValve.isFieldAllowed(index, field);
+                } catch (PrivilegesEvaluationException e) {
+                    log.error("Error while evaluating FLS for {}.{}", index, field, e);
+                    return false;
                 }
-
-                if (!excludesSet.isEmpty()) {
-                    WildcardMatcher excludeMatcher = WildcardMatcher.from(excludesSet);
-                    return field -> !excludeMatcher.test(handleKeyword(field));
-                } else {
-                    WildcardMatcher includeMatcher = WildcardMatcher.from(includesSet);
-                    return field -> includeMatcher.test(handleKeyword(field));
-                }
-            }
+            };
         };
     }
 
@@ -2169,13 +2141,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             "Resource sharing index"
         );
         return List.of(systemIndexDescriptor, resourceSharingIndexDescriptor);
-    }
-
-    private static String handleKeyword(final String field) {
-        if (field != null && field.endsWith(KEYWORD)) {
-            return field.substring(0, field.length() - KEYWORD.length());
-        }
-        return field;
     }
 
     @Override
@@ -2196,7 +2161,15 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public Optional<SecureSettingsFactory> getSecureSettingFactory(Settings settings) {
-        return Optional.of(new OpenSearchSecureSettingsFactory(threadPool, sks, evaluateSslExceptionHandler(), securityRestHandler));
+        return Optional.of(
+            new OpenSearchSecureSettingsFactory(
+                threadPool,
+                sslSettingsManager,
+                evaluateSslExceptionHandler(),
+                securityRestHandler,
+                SSLConfig
+            )
+        );
     }
 
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
