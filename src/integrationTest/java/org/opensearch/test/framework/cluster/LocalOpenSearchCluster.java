@@ -94,7 +94,7 @@ public class LocalOpenSearchCluster {
     private final String clusterName;
     private final ClusterManager clusterManager;
     private final NodeSettingsSupplier nodeSettingsSupplier;
-    private final List<Class<? extends Plugin>> additionalPlugins;
+    private List<Class<? extends Plugin>> additionalPlugins;
     private final List<Node> nodes = new ArrayList<>();
     private final TestCertificates testCertificates;
     private final Integer expectedNodeStartupCount;
@@ -129,6 +129,10 @@ public class LocalOpenSearchCluster {
         }
     }
 
+    public void plugins(List<Class<? extends Plugin>> plugins) {
+        this.additionalPlugins = plugins;
+    }
+
     public String getSnapshotDirPath() {
         return snapshotDir.getAbsolutePath();
     }
@@ -148,7 +152,7 @@ public class LocalOpenSearchCluster {
         return getNodesByType(nodeType).stream().count();
     }
 
-    public void start() throws Exception {
+    public void start(ClusterHealthStatus waitForStatus) throws Exception {
         log.info("Starting {}", clusterName);
 
         int clusterManagerNodeCount = clusterManager.getClusterManagerNodes();
@@ -199,14 +203,14 @@ public class LocalOpenSearchCluster {
             return;
         }
 
-        log.info("Startup finished. Waiting for GREEN");
+        log.info("Startup finished. Waiting for " + waitForStatus);
 
         int expectedCount = nodes.size();
         if (expectedNodeStartupCount != null) {
             expectedCount = expectedNodeStartupCount;
         }
 
-        waitForCluster(ClusterHealthStatus.GREEN, TimeValue.timeValueSeconds(10), expectedCount);
+        waitForCluster(waitForStatus, TimeValue.timeValueSeconds(10), expectedCount);
         log.info("Started: {}", this);
 
     }
@@ -219,12 +223,53 @@ public class LocalOpenSearchCluster {
         return started;
     }
 
+    public void restartRandomNode() throws IOException {
+        List<CompletableFuture<Boolean>> stopFutures = new ArrayList<>();
+        List<Node> dataNodes = nodes.stream().filter(n -> DATA.equals(n.nodeType)).toList();
+        Node node = dataNodes.get(random.nextInt(dataNodes.size()));
+        stopFutures.add(node.stop(2, TimeUnit.SECONDS));
+        CompletableFuture.allOf(stopFutures.toArray(CompletableFuture[]::new)).join();
+        boolean allNodesStopped = stopFutures.stream().map(CompletableFuture::join).allMatch(result -> (Boolean.TRUE == result));
+
+        if (!allNodesStopped) {
+            throw new RuntimeException("Failed to stop single node in the cluster");
+        }
+
+        nodes.remove(node);
+
+        final var nodeSettings = clusterManager.getNonClusterManagerNodeSettings().get(0);
+
+        List<CompletableFuture<StartStage>> futures = new ArrayList<>();
+
+        System.out.println("nodes before: " + nodes);
+
+        Node replacementNode = new Node(node.nodeNumber, nodeSettings, node.transportPort, node.httpPort);
+
+        futures.add(replacementNode.start());
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+
+        System.out.println("nodes after: " + nodes);
+
+        waitForCluster(ClusterHealthStatus.YELLOW, TimeValue.timeValueSeconds(10), nodes.size());
+
+        System.out.println("nodes after cluster health: " + nodes);
+        log.info("Started: {}", this);
+    }
+
     public void stop() {
         List<CompletableFuture<Boolean>> stopFutures = new ArrayList<>();
         for (Node node : nodes) {
             stopFutures.add(node.stop(2, TimeUnit.SECONDS));
         }
         CompletableFuture.allOf(stopFutures.toArray(CompletableFuture[]::new)).join();
+        boolean allNodesStopped = stopFutures.stream().map(CompletableFuture::join).allMatch(result -> (Boolean.TRUE == result));
+
+        if (!allNodesStopped) {
+            throw new RuntimeException("Failed to stop all nodes in the cluster");
+        }
+
+        nodes.clear();
     }
 
     public void destroy() {
@@ -280,7 +325,7 @@ public class LocalOpenSearchCluster {
         this.seedHosts = null;
         this.initialClusterManagerHosts = null;
         createClusterDirectory("local_cluster_" + clusterName + "_retry_" + retry);
-        start();
+        start(ClusterHealthStatus.GREEN);
     }
 
     @SafeVarargs

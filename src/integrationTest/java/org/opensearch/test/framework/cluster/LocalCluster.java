@@ -45,6 +45,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.rules.ExternalResource;
 
 import org.opensearch.client.Client;
+import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.node.PluginAwareNode;
 import org.opensearch.plugins.Plugin;
@@ -138,6 +139,10 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         return localOpenSearchCluster.getSnapshotDirPath();
     }
 
+    public void addPlugin(Class<? extends Plugin> plugin) {
+        this.plugins.add(plugin);
+    }
+
     @Override
     public void before() {
         if (localOpenSearchCluster == null) {
@@ -161,6 +166,29 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
     @Override
     protected void after() {
         close();
+    }
+
+    public void stop() {
+        if (localOpenSearchCluster != null && localOpenSearchCluster.isStarted()) {
+            try {
+                localOpenSearchCluster.stop();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void restartRandomNode() {
+        if (localOpenSearchCluster != null && localOpenSearchCluster.isStarted()) {
+            try {
+                localOpenSearchCluster.restartRandomNode();
+                if (loadConfigurationIntoIndex) {
+                    loadFromSecurityIndex();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     @Override
@@ -235,13 +263,18 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         return localOpenSearchCluster.getRandom();
     }
 
-    private void start() {
+    public void start() {
         try {
             NodeSettingsSupplier nodeSettingsSupplier = minimumOpenSearchSettingsSupplierFactory.minimumOpenSearchSettings(
                 sslOnly,
                 nodeSpecificOverride,
                 nodeOverride
             );
+            if (localOpenSearchCluster != null) {
+                localOpenSearchCluster.plugins(plugins);
+                localOpenSearchCluster.start(ClusterHealthStatus.YELLOW);
+                return;
+            }
             localOpenSearchCluster = new LocalOpenSearchCluster(
                 clusterName,
                 clusterManager,
@@ -251,7 +284,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
                 expectedNodeStartupCount
             );
 
-            localOpenSearchCluster.start();
+            localOpenSearchCluster.start(ClusterHealthStatus.GREEN);
 
             if (loadConfigurationIntoIndex) {
                 initSecurityIndex(testSecurityConfig);
@@ -278,6 +311,18 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             )
         ) {
             testSecurityConfig.initIndex(client);
+            triggerConfigurationReload(client);
+        }
+    }
+
+    private void loadFromSecurityIndex() {
+        log.info("Loading from OpenSearch Security index");
+        try (
+            Client client = new ContextHeaderDecoratorClient(
+                this.getInternalNodeClient(),
+                Map.of(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true")
+            )
+        ) {
             triggerConfigurationReload(client);
         }
     }
