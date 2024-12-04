@@ -124,6 +124,17 @@ public class ClusterInfoHolder implements ClusterStateListener {
         return nodes.nodeExists(node) ? Boolean.TRUE : Boolean.FALSE;
     }
 
+    public Version getMinimumNodeVersion() {
+        if (nodes == null) {
+            if (log.isDebugEnabled()) {
+                log.debug("Cluster Info Holder not initialized yet for 'nodes'");
+            }
+            return null;
+        }
+
+        return nodes.getMinNodeVersion();
+    }
+
     private static boolean clusterHas6xNodes(ClusterState state) {
         return state.nodes().getMinNodeVersion().before(LegacyESVersion.V_7_0_0);
     }
