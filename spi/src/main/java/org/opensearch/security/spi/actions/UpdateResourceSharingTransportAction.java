@@ -98,6 +98,7 @@ public class UpdateResourceSharingTransportAction<T extends AbstractResource> ex
                                 {
                                     builder.field("users", request.getShareWith().getUsers());
                                     builder.field("backend_roles", request.getShareWith().getBackendRoles());
+                                    builder.field("allowed_actions", request.getShareWith().getAllowedActions());
                                 }
                                 builder.endObject();
                             }

@@ -12,6 +12,7 @@
 package org.opensearch.security.resource;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.logging.log4j.LogManager;
@@ -111,40 +112,10 @@ public class ResourceSharingListener implements IndexingOperationListener {
         }
     }
 
-    // public void indexResourceSharing(
-    // String resourceId,
-    // Resource resource,
-    // ResourceUser resourceUser,
-    // ShareWith shareWith,
-    // ActionListener<IndexResponse> listener
-    // ) throws IOException {
-    // createResourceSharingIndexIfNotExists(() -> {
-    // ResourceSharingEntry entry = new ResourceSharingEntry(resource.getResourceIndex(), resourceId, resourceUser, shareWith);
-    //
-    // IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
-    // .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-    // .setSource(entry.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
-    // .request();
-    //
-    // log.warn("Index Request: " + ir.toString());
-    //
-    // ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
-    // log.warn("Created " + RESOURCE_SHARING_INDEX + " entry.");
-    // listener.onResponse(idxResponse);
-    // }, (failResponse) -> {
-    // log.error(failResponse.getMessage());
-    // log.error("Failed to create " + RESOURCE_SHARING_INDEX + " entry.");
-    // listener.onFailure(failResponse);
-    // });
-    // client.index(ir, irListener);
-    // return null;
-    // });
-    // }
-
     public void indexResourceSharing(String resourceId, String resourceIndex, ResourceUser resourceUser, ShareWith shareWith)
         throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
-            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, shareWith);
+            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, List.of(shareWith));
 
             IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
