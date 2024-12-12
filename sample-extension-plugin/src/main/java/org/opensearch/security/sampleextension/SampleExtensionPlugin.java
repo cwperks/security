@@ -46,6 +46,7 @@ import org.opensearch.security.sampleextension.actions.ListSampleResourceRestAct
 import org.opensearch.security.sampleextension.actions.ListSampleResourceTransportAction;
 import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.sampleextension.actions.UpdateSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingAction;
 import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingRestAction;
 import org.opensearch.security.sampleextension.actions.UpdateSampleResourceSharingTransportAction;
@@ -108,6 +109,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         return List.of(
             new CreateSampleResourceRestAction(),
             new ListSampleResourceRestAction(),
+            new UpdateSampleResourceRestAction(),
             new UpdateSampleResourceSharingRestAction()
         );
     }

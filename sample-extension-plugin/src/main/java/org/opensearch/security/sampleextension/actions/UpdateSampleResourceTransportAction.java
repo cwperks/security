@@ -27,6 +27,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
  * Transport action for UpdateSampleResource.
@@ -35,18 +36,15 @@ public class UpdateSampleResourceTransportAction extends HandledTransportAction<
     private static final Logger log = LogManager.getLogger(UpdateSampleResourceTransportAction.class);
 
     private final Client nodeClient;
-    private final String resourceIndex;
 
     @Inject
     public UpdateSampleResourceTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        Client nodeClient,
-        String resourceIndex
+        Client nodeClient
     ) {
         super(UpdateSampleResourceAction.NAME, transportService, actionFilters, UpdateSampleResourceRequest::new);
         this.nodeClient = nodeClient;
-        this.resourceIndex = resourceIndex;
     }
 
     @Override
@@ -60,7 +58,7 @@ public class UpdateSampleResourceTransportAction extends HandledTransportAction<
         SampleResource updatedResource = new SampleResource();
         updatedResource.setName(name);
         try {
-            IndexRequest ir = nodeClient.prepareIndex(resourceIndex)
+            IndexRequest ir = nodeClient.prepareIndex(RESOURCE_INDEX_NAME)
                 .setId(request.getResourceId())
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .setSource(updatedResource.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
