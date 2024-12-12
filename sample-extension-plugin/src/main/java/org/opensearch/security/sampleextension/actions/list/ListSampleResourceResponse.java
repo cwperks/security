@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.list;
 
 import java.io.IOException;
 import java.util.List;
@@ -16,6 +16,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.spi.AbstractResource;
 
 /**
@@ -44,7 +45,7 @@ public class ListSampleResourceResponse extends ActionResponse implements ToXCon
      * @param in the stream input
      */
     public ListSampleResourceResponse(final StreamInput in) throws IOException {
-        resources = in.readList(SampleResource::new);
+        resources = in.readList(SampleResource::from);
     }
 
     @Override

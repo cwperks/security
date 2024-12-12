@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.list;
 
 import java.util.List;
 
@@ -15,6 +15,7 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;

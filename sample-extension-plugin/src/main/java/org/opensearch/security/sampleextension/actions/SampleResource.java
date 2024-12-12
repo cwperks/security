@@ -24,6 +24,10 @@ public class SampleResource extends AbstractResource implements ResourceSharingE
         this.name = in.readString();
     }
 
+    public static SampleResource from(StreamInput in) throws IOException {
+        return new SampleResource(in);
+    }
+
     @Override
     public String getResourceType() {
         return "sample_resource";

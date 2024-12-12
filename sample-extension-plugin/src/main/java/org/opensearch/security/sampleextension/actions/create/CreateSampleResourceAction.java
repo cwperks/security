@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.create;
 
 import org.opensearch.action.ActionType;
 import org.opensearch.security.spi.actions.CreateResourceResponse;
