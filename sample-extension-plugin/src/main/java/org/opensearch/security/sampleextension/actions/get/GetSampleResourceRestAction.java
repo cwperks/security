@@ -1,0 +1,48 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ */
+
+package org.opensearch.security.sampleextension.actions.get;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.opensearch.client.node.NodeClient;
+import org.opensearch.rest.BaseRestHandler;
+import org.opensearch.rest.RestRequest;
+import org.opensearch.rest.action.RestToXContentListener;
+
+import static java.util.Collections.singletonList;
+import static org.opensearch.rest.RestRequest.Method.GET;
+
+public class GetSampleResourceRestAction extends BaseRestHandler {
+
+    public GetSampleResourceRestAction() {}
+
+    @Override
+    public List<Route> routes() {
+        return singletonList(new Route(GET, "/_plugins/resource_sharing_example/resource/{id}"));
+    }
+
+    @Override
+    public String getName() {
+        return "get_sample_resource";
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
+        String resourceId = request.param("id");
+
+        final GetSampleResourceRequest getSampleResourceRequest = new GetSampleResourceRequest(resourceId);
+        return channel -> client.executeLocally(
+            GetSampleResourceAction.INSTANCE,
+            getSampleResourceRequest,
+            new RestToXContentListener<>(channel)
+        );
+    }
+}

@@ -42,6 +42,9 @@ import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceTransportAction;
+import org.opensearch.security.sampleextension.actions.get.GetSampleResourceAction;
+import org.opensearch.security.sampleextension.actions.get.GetSampleResourceRestAction;
+import org.opensearch.security.sampleextension.actions.get.GetSampleResourceTransportAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTransportAction;
@@ -108,6 +111,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     ) {
         return List.of(
             new CreateSampleResourceRestAction(),
+            new GetSampleResourceRestAction(),
             new ListSampleResourceRestAction(),
             new UpdateSampleResourceRestAction(),
             new UpdateSampleResourceSharingRestAction()
@@ -118,6 +122,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return List.of(
             new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class),
+            new ActionHandler<>(GetSampleResourceAction.INSTANCE, GetSampleResourceTransportAction.class),
             new ActionHandler<>(ListSampleResourceAction.INSTANCE, ListSampleResourceTransportAction.class),
             new ActionHandler<>(UpdateSampleResourceSharingAction.INSTANCE, UpdateSampleResourceSharingTransportAction.class),
             new ActionHandler<>(UpdateSampleResourceAction.INSTANCE, UpdateSampleResourceTransportAction.class)
