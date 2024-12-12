@@ -7,4 +7,6 @@ import org.opensearch.core.action.ActionListener;
 public interface ResourceSharingService<T extends AbstractResource> {
 
     void listResources(ActionListener<List<T>> listResourceListener);
+
+    void getResource(String resourceId, ActionListener<T> getResourceListener);
 }

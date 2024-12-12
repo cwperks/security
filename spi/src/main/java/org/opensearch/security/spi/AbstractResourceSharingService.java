@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensearch.OpenSearchException;
+import org.opensearch.action.get.GetRequest;
+import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
@@ -68,6 +70,30 @@ public abstract class AbstractResourceSharingService<T extends AbstractResource>
                 }
             };
             client.search(sr, searchListener);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void getResource(String resourceId, ActionListener<T> getResourceListener) {
+        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
+            GetRequest gr = new GetRequest(resourceIndex);
+            gr.id(resourceId);
+            /* Index already exists, ignore and continue */
+            ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
+                @Override
+                public void onResponse(GetResponse getResponse) {
+                    T resource = newResource();
+                    resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
+                    getResourceListener.onResponse(resource);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
+                }
+            };
+            client.get(gr, getListener);
         }
     }
 }

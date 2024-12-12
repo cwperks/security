@@ -11,18 +11,15 @@ package org.opensearch.security.sampleextension.actions.get;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import org.opensearch.action.get.GetRequest;
-import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.security.sampleextension.actions.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
-
-import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
  * Transport action for UpdateSampleResource.
@@ -44,18 +41,10 @@ public class GetSampleResourceTransportAction extends HandledTransportAction<Get
     }
 
     private void getResource(GetSampleResourceRequest request, ActionListener<GetSampleResourceResponse> listener) {
-        log.warn("resourceId: " + request.getResourceId());
-        GetRequest gr = nodeClient.prepareGet().setIndex(RESOURCE_INDEX_NAME).setId(request.getResourceId()).request();
-
-        log.warn("GET Request: " + gr.toString());
-
-        ActionListener<GetResponse> grListener = ActionListener.wrap(getResponse -> {
-            log.info("Updated resource: " + getResponse.toString());
-            getResponse.getSource();
-            SampleResource resource = new SampleResource();
-            resource.setName(getResponse.getSource().get("name").toString());
-            listener.onResponse(new GetSampleResourceResponse(resource));
+        ActionListener<SampleResource> getResourceListener = ActionListener.wrap(sampleResource -> {
+            System.out.println("sampleResource: " + sampleResource);
+            listener.onResponse(new GetSampleResourceResponse(sampleResource));
         }, listener::onFailure);
-        nodeClient.get(gr, grListener);
+        SampleResourceSharingService.getInstance().getSharingService().getResource(request.getResourceId(), getResourceListener);
     }
 }
