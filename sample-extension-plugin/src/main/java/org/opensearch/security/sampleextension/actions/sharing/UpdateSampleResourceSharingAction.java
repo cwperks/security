@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.sharing;
 
 import org.opensearch.action.ActionType;
 import org.opensearch.security.spi.actions.UpdateResourceSharingResponse;

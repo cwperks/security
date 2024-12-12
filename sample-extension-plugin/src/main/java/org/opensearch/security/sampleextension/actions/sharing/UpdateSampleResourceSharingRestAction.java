@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.sharing;
 
 import java.io.IOException;
 import java.util.List;
@@ -17,6 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.spi.ShareWith;
 import org.opensearch.security.spi.actions.UpdateResourceSharingRequest;
 
