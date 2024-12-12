@@ -6,10 +6,9 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions;
+package org.opensearch.security.sampleextension.actions.update;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,6 +22,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
+import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -38,11 +38,7 @@ public class UpdateSampleResourceTransportAction extends HandledTransportAction<
     private final Client nodeClient;
 
     @Inject
-    public UpdateSampleResourceTransportAction(
-        TransportService transportService,
-        ActionFilters actionFilters,
-        Client nodeClient
-    ) {
+    public UpdateSampleResourceTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
         super(UpdateSampleResourceAction.NAME, transportService, actionFilters, UpdateSampleResourceRequest::new);
         this.nodeClient = nodeClient;
     }
@@ -68,7 +64,7 @@ public class UpdateSampleResourceTransportAction extends HandledTransportAction<
 
             ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
                 log.info("Updated resource: " + idxResponse.toString());
-                listener.onResponse(new UpdateSampleResourceResponse(List.of(updatedResource)));
+                listener.onResponse(new UpdateSampleResourceResponse(updatedResource.getResourceId()));
             }, listener::onFailure);
             nodeClient.index(ir, irListener);
         } catch (IOException e) {

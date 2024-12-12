@@ -68,7 +68,10 @@ public class SampleExtensionPluginTests {
             System.out.println("resourceId: " + resourceId);
 
             String sampleResourceUpdated = "{\"name\":\"sampleUpdated\"}";
-            HttpResponse updateResponse = client.putJson("_plugins/resource_sharing_example/resource/update/" + resourceId, sampleResourceUpdated);
+            HttpResponse updateResponse = client.putJson(
+                "_plugins/resource_sharing_example/resource/update/" + resourceId,
+                sampleResourceUpdated
+            );
             updateResponse.assertStatusCode(HttpStatus.SC_OK);
             System.out.println("Update Response: " + updateResponse.getBody());
         }
