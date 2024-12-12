@@ -88,12 +88,12 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        ResourceSharingService<SampleResource> sharingService = new DefaultResourceSharingService<>(
-            client,
-            RESOURCE_INDEX_NAME,
-            SampleResource.class
-        );
         if (!SampleResourceSharingService.getInstance().isInitialized()) {
+            ResourceSharingService<SampleResource> sharingService = new DefaultResourceSharingService<>(
+                client,
+                RESOURCE_INDEX_NAME,
+                SampleResource.class
+            );
             SampleResourceSharingService.getInstance().initialize(sharingService);
         }
         return Collections.emptyList();
