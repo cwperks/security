@@ -55,4 +55,14 @@ public class SampleExtensionPluginTests {
         }
     }
 
+    @Test
+    public void testCreateAndUpdateOwnSampleResource() throws Exception {
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            String sampleResource = "{\"name\":\"sample\"}";
+            HttpResponse response = client.postJson("_plugins/resource_sharing_example/resource", sampleResource);
+            response.assertStatusCode(HttpStatus.SC_OK);
+            System.out.println("Response: " + response.getBody());
+        }
+    }
+
 }

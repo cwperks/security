@@ -20,20 +20,20 @@ import org.opensearch.core.xcontent.XContentBuilder;
  * Response to a CreateSampleResourceRequest
  */
 public class CreateResourceResponse extends ActionResponse implements ToXContentObject {
-    private final String message;
+    private final String resourceId;
 
     /**
      * Default constructor
      *
-     * @param message The message
+     * @param resourceId The resourceId
      */
-    public CreateResourceResponse(String message) {
-        this.message = message;
+    public CreateResourceResponse(String resourceId) {
+        this.resourceId = resourceId;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(message);
+        out.writeString(resourceId);
     }
 
     /**
@@ -42,13 +42,13 @@ public class CreateResourceResponse extends ActionResponse implements ToXContent
      * @param in the stream input
      */
     public CreateResourceResponse(final StreamInput in) throws IOException {
-        message = in.readString();
+        resourceId = in.readString();
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field("message", message);
+        builder.field("resourceId", resourceId);
         builder.endObject();
         return builder;
     }

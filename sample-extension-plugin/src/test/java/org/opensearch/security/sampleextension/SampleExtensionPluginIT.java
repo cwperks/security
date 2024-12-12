@@ -13,8 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -88,18 +86,8 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         Response response2 = client().performRequest(createRequest2);
         ObjectMapper objectMapper = new ObjectMapper();
         JsonNode indexResponseNode = objectMapper.readTree(response2.getEntity().getContent());
-        // Regular expression to capture the value of "id"
-        Pattern pattern = Pattern.compile("id=([a-zA-Z0-9_-]+)");
-        Matcher matcher = pattern.matcher(indexResponseNode.get("message").asText());
 
-        String resourceId = "";
-        if (matcher.find()) {
-            resourceId = matcher.group(1); // Extract the ID
-            System.out.println("Extracted ID: " + resourceId);
-        } else {
-            System.out.println("ID not found.");
-        }
-        System.out.println("indexResponseNode: " + indexResponseNode);
+        String resourceId = indexResponseNode.get("resourceId").asText();
         Map<String, String> createResourceResponse2 = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
@@ -109,51 +97,6 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
 
         // Sleep to give ResourceSharingListener time to create the .resource-sharing index
         Thread.sleep(1000);
-
-        // TODO Expose this via API to update sharing
-        // try {
-        // // Create the request
-        // Request request = new Request("POST", "/.resource-sharing/_update_by_query");
-        //
-        // // Build the request body using XContentBuilder
-        // XContentBuilder builder = XContentFactory.jsonBuilder();
-        // builder.startObject();
-        // {
-        // builder.startObject("query");
-        // {
-        // builder.startObject("term");
-        // {
-        // builder.field("resource_user", "craig");
-        // }
-        // builder.endObject();
-        // }
-        // builder.endObject();
-        //
-        // builder.startObject("script");
-        // {
-        // builder.field("source", "ctx._source.share_with.users = ['admin']");
-        // builder.field("lang", "painless");
-        // }
-        // builder.endObject();
-        // }
-        // builder.endObject();
-        //
-        // // Set the request body
-        // request.setJsonEntity(builder.toString());
-        //
-        // System.out.println("updateByQueryRequest: " + request);
-        //
-        // // Execute the request using the admin client
-        // Response updateByQueryResponse = adminClient().performRequest(request);
-        //
-        // // Handle the response
-        // System.out.println("Update request executed successfully. Status: " + response.getStatusLine().getStatusCode());
-        // System.out.println("updateByQueryResponse: " + updateByQueryResponse.toString());
-        //
-        // } catch (IOException e) {
-        // // Handle the exception (e.g., log it or throw a custom exception)
-        // System.err.println("Error executing update request: " + e.getMessage());
-        // }
 
         Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
         listRequest.setOptions(requestOptions);

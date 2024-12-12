@@ -91,7 +91,7 @@ public class CreateResourceTransportAction<T extends AbstractResource> extends H
                 log.info("Created resource: " + idxResponse.toString());
                 // ResourceSharingUtils.getInstance()
                 // .indexResourceSharing(idxResponse.getId(), sample, ShareWith.PUBLIC, resourceSharingListener);
-                listener.onResponse(new CreateResourceResponse("Created resource: " + idxResponse.toString()));
+                listener.onResponse(new CreateResourceResponse(idxResponse.getId()));
             }, listener::onFailure);
             nodeClient.index(ir, irListener);
         } catch (IOException e) {
