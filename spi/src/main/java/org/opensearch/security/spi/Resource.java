@@ -10,8 +10,6 @@ public abstract class Resource implements NamedWriteable, ToXContentFragment {
     protected ResourceUser resourceUser;
     protected String resourceId;
 
-    public Resource() {}
-
     public String getResourceId() {
         return resourceId;
     }
