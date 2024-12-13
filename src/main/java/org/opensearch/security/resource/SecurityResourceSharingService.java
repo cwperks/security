@@ -29,17 +29,23 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.AbstractResourceSharingService;
 import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceFactory;
+import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 
-public class SecurityResourceSharingService<T extends Resource> extends AbstractResourceSharingService<T> {
+public class SecurityResourceSharingService<T extends Resource> implements ResourceSharingService<T> {
+    private final Client client;
+    private final String resourceIndex;
+    private final ResourceFactory<T> resourceFactory;
+
     public SecurityResourceSharingService(Client client, String resourceIndex, ResourceFactory<T> resourceFactory) {
-        super(client, resourceIndex, resourceFactory);
+        this.client = client;
+        this.resourceIndex = resourceIndex;
+        this.resourceFactory = resourceFactory;
     }
 
     @SuppressWarnings("unchecked")
