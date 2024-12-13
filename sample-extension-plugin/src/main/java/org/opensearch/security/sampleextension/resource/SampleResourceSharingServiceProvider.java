@@ -1,5 +1,10 @@
 package org.opensearch.security.sampleextension.resource;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.opensearch.common.inject.Provider;
 import org.opensearch.security.spi.ResourceSharingService;
 
@@ -11,6 +16,19 @@ import org.opensearch.security.spi.ResourceSharingService;
 public final class SampleResourceSharingServiceProvider implements Provider<ResourceSharingService<SampleResource>> {
 
     private volatile ResourceSharingService<SampleResource> resourceSharingService;
+
+    private static final Map<ClassLoader, SampleResourceSharingServiceProvider> instances = new ConcurrentHashMap<>();
+
+    private SampleResourceSharingServiceProvider() {}
+
+    @SuppressWarnings("removal")
+    public static SampleResourceSharingServiceProvider getInstance() {
+        ClassLoader classLoader = AccessController.doPrivileged(
+            (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader()
+        );
+        instances.computeIfAbsent(classLoader, cl -> new SampleResourceSharingServiceProvider());
+        return instances.get(classLoader);
+    }
 
     /**
      * Sets the resource sharing service implementation.

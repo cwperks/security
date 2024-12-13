@@ -35,6 +35,7 @@ import org.opensearch.security.spi.ResourceFactory;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.spi.ShareWith;
 import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
@@ -50,50 +51,24 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
         this.resourceFactory = resourceFactory;
     }
 
-//    private boolean hasPermissionsFor(User authenticatedUser, Resource resource) {
-//        // TODO Complete this function. The user has permissions if either of the conditions are true:
-//
-//        // 1. The resource_user is the currently authenticated user
-//        // 2. The resource has been shared with the authenticated user
-//        // 3. The resource has been shared with a backend role that the authenticated user has
-//        if (authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
-//            return true;
-//        }
-//        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
-//            SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
-//            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-//            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-//                    .must(QueryBuilders.termQuery("resource_index", resourceIndex))
-//                    .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
-//
-//            searchSourceBuilder.query(boolQuery);
-//            searchSourceBuilder.size(1); // Limit to 1 result
-//            searchRequest.source(searchSourceBuilder);
-//
-//            ActionListener<SearchResponse> searchListener = new ActionListener<SearchResponse>() {
-//                @Override
-//                public void onResponse(SearchResponse searchResponse) {
-//                    SearchHit[] hits = searchResponse.getHits().getHits();
-//                    if (hits.length > 0) {
-//                        SearchHit hit = hits[0];
-//                        T resource = resourceFactory.createResource();
-//                        resource.fromSource(hit.getId(), hit.getSourceAsMap());
-//                        getResourceListener.onResponse(resource);
-//                    } else {
-//                        getResourceListener.onFailure(new ResourceNotFoundException("Resource not found"));
-//                    }
-//                }
-//
-//                @Override
-//                public void onFailure(Exception e) {
-//                    throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
-//                }
-//            };
-//
-//            client.search(searchRequest, searchListener);
-//        }
-//        return false;
-//    }
+    private boolean hasPermissionsFor(User authenticatedUser, Resource resource, ShareWith sharedWith) {
+        System.out.println("hasPermissionsFor: " + authenticatedUser + " " + resource + " " + sharedWith);
+        // 1. The resource_user is the currently authenticated user
+        // 2. The resource has been shared with the authenticated user
+        // 3. The resource has been shared with a backend role that the authenticated user has
+        if (authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
+            return true;
+        }
+        WildcardMatcher userMatcher = WildcardMatcher.from(sharedWith.getUsers());
+        if (userMatcher.test(authenticatedUser.getName())) {
+            return true;
+        }
+        WildcardMatcher backendRoleMatcher = WildcardMatcher.from(sharedWith.getBackendRoles());
+        if (authenticatedUser.getRoles().stream().anyMatch(backendRoleMatcher::test)) {
+            return true;
+        }
+        return false;
+    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -200,6 +175,7 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                 public void onResponse(GetResponse getResponse) {
                     T resource = resourceFactory.createResource();
                     resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
+                    System.out.println("finishGetResourceIfUserIsAllowed");
                     finishGetResourceIfUserIsAllowed(resource, authenticatedUser, getResourceListener);
                 }
 
@@ -217,8 +193,8 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
             SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery("resource_index", resourceIndex))
-                    .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
+                .must(QueryBuilders.termQuery("resource_index", resourceIndex))
+                .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
 
             searchSourceBuilder.query(boolQuery);
             searchSourceBuilder.size(1); // Limit to 1 result
@@ -231,7 +207,11 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                     if (hits.length > 0) {
                         SearchHit hit = hits[0];
                         ShareWith sharedWith = ShareWith.fromSource(hit.getSourceAsMap());
-                        getResourceListener.onResponse(resource);
+                        if (hasPermissionsFor(authenticatedUser, resource, sharedWith)) {
+                            getResourceListener.onResponse(resource);
+                        } else {
+                            getResourceListener.onFailure(new OpenSearchException("User is not authorized to access this resource"));
+                        }
                     } else {
                         getResourceListener.onFailure(new ResourceNotFoundException("Resource not found"));
                     }

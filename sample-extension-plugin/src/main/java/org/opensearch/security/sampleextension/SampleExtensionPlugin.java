@@ -77,8 +77,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
 
     private Client client;
 
-    private final SampleResourceSharingServiceProvider provider = new SampleResourceSharingServiceProvider();
-
     @Override
     public Collection<Object> createComponents(
         Client client,
@@ -94,11 +92,15 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        if (provider.get() == null) {
-            provider.set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceFactory()));
+        if (SampleResourceSharingServiceProvider.getInstance().get() == null) {
+            System.out.println("Using DefaultResourceSharingService");
+            SampleResourceSharingServiceProvider.getInstance()
+                .set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceFactory()));
         }
-        System.out.println("provider: " + provider);
-        return List.of(provider);
+        System.out.println(
+            "SampleResourceSharingServiceProvider.getInstance(): " + SampleResourceSharingServiceProvider.getInstance().get()
+        );
+        return List.of(SampleResourceSharingServiceProvider.getInstance());
     }
 
     @Override
@@ -155,6 +157,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     @SuppressWarnings("unchecked")
     @Override
     public void assignResourceSharingService(ResourceSharingService<? extends Resource> service) {
-        provider.set((ResourceSharingService<SampleResource>) service);
+        SampleResourceSharingServiceProvider.getInstance().set((ResourceSharingService<SampleResource>) service);
     }
 }

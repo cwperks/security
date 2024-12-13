@@ -33,7 +33,7 @@ import static org.opensearch.test.framework.TestSecurityConfig.User.USER_ADMIN;
 public class SampleExtensionPluginTests {
 
     @ClassRule
-    public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS)
+    public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.SINGLENODE)
         .plugin(SampleExtensionPlugin.class)
         .anonymousAuth(true)
         .authc(AUTHC_HTTPBASIC_INTERNAL)
@@ -50,6 +50,7 @@ public class SampleExtensionPluginTests {
             assertThat(response.getTextFromJsonBody("/user_name"), equalTo("admin"));
             System.out.println("Response: " + response.getBody());
             HttpResponse pluginsResponse = client.get("_cat/plugins?s=component&h=name,component,version,description");
+            System.out.println("pluginsResponse: " + pluginsResponse.getBody());
             assertThat(pluginsResponse.getBody(), containsString("org.opensearch.security.OpenSearchSecurityPlugin"));
             assertThat(pluginsResponse.getBody(), containsString("org.opensearch.security.sampleextension.SampleExtensionPlugin"));
         }
