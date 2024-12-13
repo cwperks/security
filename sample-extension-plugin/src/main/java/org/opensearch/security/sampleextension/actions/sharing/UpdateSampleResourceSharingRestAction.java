@@ -17,7 +17,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.security.sampleextension.actions.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.ShareWith;
 import org.opensearch.security.spi.actions.UpdateResourceSharingRequest;
 

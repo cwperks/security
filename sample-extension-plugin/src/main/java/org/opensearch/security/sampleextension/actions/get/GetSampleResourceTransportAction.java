@@ -16,8 +16,8 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.security.sampleextension.actions.SampleResource;
-import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
+import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -28,11 +28,18 @@ public class GetSampleResourceTransportAction extends HandledTransportAction<Get
     private static final Logger log = LogManager.getLogger(GetSampleResourceTransportAction.class);
 
     private final Client nodeClient;
+    private final SampleResourceSharingServiceProvider resourceSharingService;
 
     @Inject
-    public GetSampleResourceTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
+    public GetSampleResourceTransportAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        Client nodeClient,
+        SampleResourceSharingServiceProvider resourceSharingService
+    ) {
         super(GetSampleResourceAction.NAME, transportService, actionFilters, GetSampleResourceRequest::new);
         this.nodeClient = nodeClient;
+        this.resourceSharingService = resourceSharingService;
     }
 
     @Override
@@ -45,6 +52,6 @@ public class GetSampleResourceTransportAction extends HandledTransportAction<Get
             System.out.println("sampleResource: " + sampleResource);
             listener.onResponse(new GetSampleResourceResponse(sampleResource));
         }, listener::onFailure);
-        SampleResourceSharingService.getInstance().getSharingService().getResource(request.getResourceId(), getResourceListener);
+        resourceSharingService.get().getResource(request.getResourceId(), getResourceListener);
     }
 }

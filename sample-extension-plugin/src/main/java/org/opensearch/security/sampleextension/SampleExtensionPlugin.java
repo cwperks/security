@@ -38,7 +38,6 @@ import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.script.ScriptService;
-import org.opensearch.security.sampleextension.actions.SampleResource;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.create.CreateSampleResourceTransportAction;
@@ -54,8 +53,11 @@ import org.opensearch.security.sampleextension.actions.sharing.UpdateSampleResou
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
-import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
+import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
+import org.opensearch.security.spi.AbstractResource;
 import org.opensearch.security.spi.DefaultResourceSharingService;
+import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -66,12 +68,14 @@ import org.opensearch.watcher.ResourceWatcherService;
  * It use ".sample_extension_resources" index to manage its resources, and exposes a REST API
  *
  */
-public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
+public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, ResourceSharingExtension {
     private static final Logger log = LogManager.getLogger(SampleExtensionPlugin.class);
 
     public static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
 
     private Client client;
+
+    private final SampleResourceSharingServiceProvider provider = new SampleResourceSharingServiceProvider();
 
     @Override
     public Collection<Object> createComponents(
@@ -88,15 +92,11 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        if (!SampleResourceSharingService.getInstance().isInitialized()) {
-            ResourceSharingService<SampleResource> sharingService = new DefaultResourceSharingService<>(
-                client,
-                RESOURCE_INDEX_NAME,
-                SampleResource.class
-            );
-            SampleResourceSharingService.getInstance().initialize(sharingService);
+        if (provider.get() == null) {
+            provider.set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, SampleResource.class));
         }
-        return Collections.emptyList();
+        System.out.println("provider: " + provider);
+        return List.of(provider);
     }
 
     @Override
@@ -133,5 +133,26 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
         final SystemIndexDescriptor systemIndexDescriptor = new SystemIndexDescriptor(RESOURCE_INDEX_NAME, "Example index with resources");
         return Collections.singletonList(systemIndexDescriptor);
+    }
+
+    @Override
+    public String getResourceType() {
+        return "sample_resource";
+    }
+
+    @Override
+    public String getResourceIndex() {
+        return RESOURCE_INDEX_NAME;
+    }
+
+    @Override
+    public Class<? extends AbstractResource> getResourceClass() {
+        return SampleResource.class;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void assignResourceSharingService(ResourceSharingService<? extends AbstractResource> service) {
+        provider.set((ResourceSharingService<SampleResource>) service);
     }
 }

@@ -15,8 +15,8 @@ import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
-import org.opensearch.security.sampleextension.actions.SampleResource;
-import org.opensearch.security.sampleextension.resource.SampleResourceSharingService;
+import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -26,12 +26,20 @@ import org.opensearch.transport.TransportService;
 public class ListSampleResourceTransportAction extends HandledTransportAction<ListSampleResourceRequest, ListSampleResourceResponse> {
     private final TransportService transportService;
     private final Client nodeClient;
+    private final SampleResourceSharingServiceProvider resourceSharingService;
 
+    // TODO How can this inject work if either a DefaultResourceSharingService or SecurityResourceSharingService is binded?
     @Inject
-    public ListSampleResourceTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
+    public ListSampleResourceTransportAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        Client nodeClient,
+        SampleResourceSharingServiceProvider resourceSharingService
+    ) {
         super(ListSampleResourceAction.NAME, transportService, actionFilters, ListSampleResourceRequest::new);
         this.transportService = transportService;
         this.nodeClient = nodeClient;
+        this.resourceSharingService = resourceSharingService;
     }
 
     @Override
@@ -40,15 +48,6 @@ public class ListSampleResourceTransportAction extends HandledTransportAction<Li
             System.out.println("sampleResourcesList: " + sampleResourcesList);
             listener.onResponse(new ListSampleResourceResponse(sampleResourcesList));
         }, listener::onFailure);
-        SampleResourceSharingService.getInstance().getSharingService().listResources(sampleResourceListener);
-        // try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
-        // SearchRequest sr = new SearchRequest(".resource-sharing");
-        // SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
-        // matchAllQuery.query(new MatchAllQueryBuilder());
-        // sr.source(matchAllQuery);
-        // listener.onResponse(new ListSampleResourceResponse(sampleResources));
-        /* Index already exists, ignore and continue */
-        // nodeClient.search(sr, searchListener);
-        // }
+        resourceSharingService.get().listResources(sampleResourceListener);
     }
 }

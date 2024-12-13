@@ -22,7 +22,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
-import org.opensearch.security.sampleextension.actions.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -64,7 +64,7 @@ public class UpdateSampleResourceTransportAction extends HandledTransportAction<
 
             ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
                 log.info("Updated resource: " + idxResponse.toString());
-                listener.onResponse(new UpdateSampleResourceResponse(updatedResource.getResourceId()));
+                listener.onResponse(new UpdateSampleResourceResponse(idxResponse.getId()));
             }, listener::onFailure);
             nodeClient.index(ir, irListener);
         } catch (IOException e) {
