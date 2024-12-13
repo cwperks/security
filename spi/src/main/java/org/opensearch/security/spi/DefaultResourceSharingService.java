@@ -40,7 +40,6 @@ public class DefaultResourceSharingService<T extends Resource> implements Resour
                 public void onResponse(SearchResponse searchResponse) {
                     List<T> resources = new ArrayList<>();
                     for (SearchHit hit : searchResponse.getHits().getHits()) {
-                        System.out.println("SearchHit: " + hit);
                         T resource = resourceFactory.createResource();
                         resource.fromSource(hit.getId(), hit.getSourceAsMap());
                         resources.add(resource);

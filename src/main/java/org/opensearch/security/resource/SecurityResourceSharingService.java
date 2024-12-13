@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opensearch.OpenSearchException;
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.get.MultiGetItemResponse;
@@ -32,6 +33,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceFactory;
 import org.opensearch.security.spi.ResourceSharingService;
+import org.opensearch.security.spi.ShareWith;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 
@@ -47,6 +49,51 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
         this.resourceIndex = resourceIndex;
         this.resourceFactory = resourceFactory;
     }
+
+//    private boolean hasPermissionsFor(User authenticatedUser, Resource resource) {
+//        // TODO Complete this function. The user has permissions if either of the conditions are true:
+//
+//        // 1. The resource_user is the currently authenticated user
+//        // 2. The resource has been shared with the authenticated user
+//        // 3. The resource has been shared with a backend role that the authenticated user has
+//        if (authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
+//            return true;
+//        }
+//        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
+//            SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
+//            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+//            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
+//                    .must(QueryBuilders.termQuery("resource_index", resourceIndex))
+//                    .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
+//
+//            searchSourceBuilder.query(boolQuery);
+//            searchSourceBuilder.size(1); // Limit to 1 result
+//            searchRequest.source(searchSourceBuilder);
+//
+//            ActionListener<SearchResponse> searchListener = new ActionListener<SearchResponse>() {
+//                @Override
+//                public void onResponse(SearchResponse searchResponse) {
+//                    SearchHit[] hits = searchResponse.getHits().getHits();
+//                    if (hits.length > 0) {
+//                        SearchHit hit = hits[0];
+//                        T resource = resourceFactory.createResource();
+//                        resource.fromSource(hit.getId(), hit.getSourceAsMap());
+//                        getResourceListener.onResponse(resource);
+//                    } else {
+//                        getResourceListener.onFailure(new ResourceNotFoundException("Resource not found"));
+//                    }
+//                }
+//
+//                @Override
+//                public void onFailure(Exception e) {
+//                    throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
+//                }
+//            };
+//
+//            client.search(searchRequest, searchListener);
+//        }
+//        return false;
+//    }
 
     @SuppressWarnings("unchecked")
     @Override
@@ -137,42 +184,13 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                 }
             };
             client.search(rsr, searchListener);
-
-            // SearchRequest sr = new SearchRequest(resourceIndex);
-            // SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
-            // matchAllQuery.query(new MatchAllQueryBuilder());
-            // sr.source(matchAllQuery);
-            // /* Index already exists, ignore and continue */
-            // ActionListener<SearchResponse> searchListener = new ActionListener<SearchResponse>() {
-            // @Override
-            // public void onResponse(SearchResponse searchResponse) {
-            // List<T> resources = new ArrayList<>();
-            // for (SearchHit hit : searchResponse.getHits().getHits()) {
-            // System.out.println("SearchHit: " + hit);
-            // resource.fromSource(hit.getId(), hit.getSourceAsMap());
-            // // TODO check what resources have been shared with the authenticatedUser
-            // System.out.println("authenticatedUser: " + authenticatedUser);
-            // System.out.println("resource.getResourceUser(): " + resource.getResourceUser());
-            // if (resource.getResourceUser() != null
-            // && authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
-            // resources.add(resource);
-            // }
-            // }
-            // listResourceListener.onResponse(resources);
-            // }
-            //
-            // @Override
-            // public void onFailure(Exception e) {
-            // throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
-            // }
-            // };
-            // client.search(sr, searchListener);
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void getResource(String resourceId, ActionListener<T> getResourceListener) {
+        User authenticatedUser = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             GetRequest gr = new GetRequest(resourceIndex);
             gr.id(resourceId);
@@ -182,7 +200,41 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                 public void onResponse(GetResponse getResponse) {
                     T resource = resourceFactory.createResource();
                     resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
-                    getResourceListener.onResponse(resource);
+                    finishGetResourceIfUserIsAllowed(resource, authenticatedUser, getResourceListener);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    getResourceListener.onFailure(new OpenSearchException("Caught exception while loading resources: " + e.getMessage()));
+                }
+            };
+            client.get(gr, getListener);
+        }
+    }
+
+    private void finishGetResourceIfUserIsAllowed(T resource, User authenticatedUser, ActionListener<T> getResourceListener) {
+        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
+            SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
+            SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.termQuery("resource_index", resourceIndex))
+                    .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
+
+            searchSourceBuilder.query(boolQuery);
+            searchSourceBuilder.size(1); // Limit to 1 result
+            searchRequest.source(searchSourceBuilder);
+
+            ActionListener<SearchResponse> searchListener = new ActionListener<SearchResponse>() {
+                @Override
+                public void onResponse(SearchResponse searchResponse) {
+                    SearchHit[] hits = searchResponse.getHits().getHits();
+                    if (hits.length > 0) {
+                        SearchHit hit = hits[0];
+                        ShareWith sharedWith = ShareWith.fromSource(hit.getSourceAsMap());
+                        getResourceListener.onResponse(resource);
+                    } else {
+                        getResourceListener.onFailure(new ResourceNotFoundException("Resource not found"));
+                    }
                 }
 
                 @Override
@@ -190,7 +242,8 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                     throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
                 }
             };
-            client.get(gr, getListener);
+
+            client.search(searchRequest, searchListener);
         }
     }
 }

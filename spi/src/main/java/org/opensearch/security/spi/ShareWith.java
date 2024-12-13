@@ -2,6 +2,7 @@ package org.opensearch.security.spi;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.opensearch.core.common.io.stream.NamedWriteable;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -28,6 +29,14 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
         this.users = in.readStringList();
         this.backendRoles = in.readStringList();
         this.allowedActions = in.readStringList();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ShareWith fromSource(Map<String, Object> sourceAsMap) {
+        List<String> users = (List<String>) sourceAsMap.get("users");
+        List<String> backendRoles = (List<String>) sourceAsMap.get("backend_roles");
+        List<String> allowedActions = (List<String>) sourceAsMap.get("allowed_actions");
+        return new ShareWith(users, backendRoles, allowedActions);
     }
 
     public List<String> getUsers() {
