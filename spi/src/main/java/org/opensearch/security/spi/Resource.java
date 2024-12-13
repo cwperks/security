@@ -6,11 +6,11 @@ import java.util.Set;
 import org.opensearch.core.common.io.stream.NamedWriteable;
 import org.opensearch.core.xcontent.ToXContentFragment;
 
-public abstract class AbstractResource implements NamedWriteable, ToXContentFragment {
+public abstract class Resource implements NamedWriteable, ToXContentFragment {
     protected ResourceUser resourceUser;
     protected String resourceId;
 
-    public AbstractResource() {}
+    public Resource() {}
 
     public String getResourceId() {
         return resourceId;

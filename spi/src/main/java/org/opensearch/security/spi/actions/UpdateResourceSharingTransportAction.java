@@ -31,7 +31,7 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.AbstractResource;
+import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ShareWith;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -39,7 +39,7 @@ import org.opensearch.transport.TransportService;
 /**
  * Transport action for CreateSampleResource.
  */
-public class UpdateResourceSharingTransportAction<T extends AbstractResource> extends HandledTransportAction<
+public class UpdateResourceSharingTransportAction<T extends Resource> extends HandledTransportAction<
     UpdateResourceSharingRequest<T>,
     UpdateResourceSharingResponse> {
     private static final Logger log = LogManager.getLogger(UpdateResourceSharingTransportAction.class);

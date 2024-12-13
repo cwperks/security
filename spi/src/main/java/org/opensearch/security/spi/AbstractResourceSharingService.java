@@ -1,8 +1,5 @@
 package org.opensearch.security.spi;
 
-import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,34 +15,34 @@ import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 
-public abstract class AbstractResourceSharingService<T extends AbstractResource> implements ResourceSharingService<T> {
+public abstract class AbstractResourceSharingService<T extends Resource> implements ResourceSharingService<T> {
     protected final Client client;
     protected final String resourceIndex;
-    protected final Class<T> resourceClass;
+    protected final ResourceFactory<T> resourceFactory;
+    // protected final Class<T> resourceClass;
 
-    public AbstractResourceSharingService(Client client, String resourceIndex, Class<T> resourceClass) {
+    public AbstractResourceSharingService(Client client, String resourceIndex, ResourceFactory<T> resourceFactory) {
         this.client = client;
         this.resourceIndex = resourceIndex;
-        this.resourceClass = resourceClass;
+        this.resourceFactory = resourceFactory;
     }
 
-    protected T newResource() {
-        return AccessController.doPrivileged(new PrivilegedAction<T>() {
-            @Override
-            public T run() {
-                try {
-                    return resourceClass.getDeclaredConstructor().newInstance();
-                } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-    }
+    // protected T newResource() {
+    // return AccessController.doPrivileged(new PrivilegedAction<T>() {
+    // @Override
+    // public T run() {
+    // try {
+    // return resourceClass.getDeclaredConstructor().newInstance();
+    // } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+    // throw new RuntimeException(e);
+    // }
+    // }
+    // });
+    // }
 
     @SuppressWarnings("unchecked")
     @Override
     public void listResources(ActionListener<List<T>> listResourceListener) {
-        T resource = newResource();
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest sr = new SearchRequest(resourceIndex);
             SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
@@ -58,6 +55,7 @@ public abstract class AbstractResourceSharingService<T extends AbstractResource>
                     List<T> resources = new ArrayList<>();
                     for (SearchHit hit : searchResponse.getHits().getHits()) {
                         System.out.println("SearchHit: " + hit);
+                        T resource = resourceFactory.createResource();
                         resource.fromSource(hit.getId(), hit.getSourceAsMap());
                         resources.add(resource);
                     }
@@ -83,7 +81,7 @@ public abstract class AbstractResourceSharingService<T extends AbstractResource>
             ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
                 @Override
                 public void onResponse(GetResponse getResponse) {
-                    T resource = newResource();
+                    T resource = resourceFactory.createResource();
                     resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
                     getResourceListener.onResponse(resource);
                 }

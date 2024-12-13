@@ -29,22 +29,22 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.AbstractResource;
 import org.opensearch.security.spi.AbstractResourceSharingService;
+import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ResourceFactory;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 
-public class SecurityResourceSharingService<T extends AbstractResource> extends AbstractResourceSharingService<T> {
-    public SecurityResourceSharingService(Client client, String resourceIndex, Class<T> resourceClass) {
-        super(client, resourceIndex, resourceClass);
+public class SecurityResourceSharingService<T extends Resource> extends AbstractResourceSharingService<T> {
+    public SecurityResourceSharingService(Client client, String resourceIndex, ResourceFactory<T> resourceFactory) {
+        super(client, resourceIndex, resourceFactory);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void listResources(ActionListener<List<T>> listResourceListener) {
-        T resource = newResource();
         User authenticatedUser = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest rsr = new SearchRequest(RESOURCE_SHARING_INDEX);
@@ -101,6 +101,8 @@ public class SecurityResourceSharingService<T extends AbstractResource> extends 
                                 if (singleResponse != null && !singleResponse.isFailed()) {
                                     GetResponse singleGetResponse = singleResponse.getResponse();
                                     if (singleGetResponse.isExists() && !singleGetResponse.isSourceEmpty()) {
+                                        // TODO Is there a better way to create this instance of a generic w/o using reflection
+                                        T resource = resourceFactory.createResource();
                                         resource.fromSource(singleGetResponse.getId(), singleGetResponse.getSourceAsMap());
                                         resources.add(resource);
                                     } else {
@@ -172,7 +174,7 @@ public class SecurityResourceSharingService<T extends AbstractResource> extends 
             ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
                 @Override
                 public void onResponse(GetResponse getResponse) {
-                    T resource = newResource();
+                    T resource = resourceFactory.createResource();
                     resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
                     getResourceListener.onResponse(resource);
                 }

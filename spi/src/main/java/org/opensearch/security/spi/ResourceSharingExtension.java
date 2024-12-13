@@ -25,7 +25,7 @@ public interface ResourceSharingExtension {
     /**
      * @return The class corresponding to this resource
      */
-    Class<? extends AbstractResource> getResourceClass();
+    ResourceFactory<? extends Resource> getResourceFactory();
 
-    void assignResourceSharingService(ResourceSharingService<? extends AbstractResource> service);
+    void assignResourceSharingService(ResourceSharingService<? extends Resource> service);
 }

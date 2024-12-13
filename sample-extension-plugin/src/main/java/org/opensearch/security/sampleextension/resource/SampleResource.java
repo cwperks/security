@@ -6,9 +6,9 @@ import java.util.Map;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.AbstractResource;
+import org.opensearch.security.spi.Resource;
 
-public class SampleResource extends AbstractResource {
+public class SampleResource extends Resource {
 
     private String name;
 

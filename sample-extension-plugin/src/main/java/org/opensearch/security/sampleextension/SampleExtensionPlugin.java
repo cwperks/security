@@ -54,9 +54,11 @@ import org.opensearch.security.sampleextension.actions.update.UpdateSampleResour
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
 import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.sampleextension.resource.SampleResourceFactory;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
-import org.opensearch.security.spi.AbstractResource;
 import org.opensearch.security.spi.DefaultResourceSharingService;
+import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ResourceFactory;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.threadpool.ThreadPool;
@@ -93,7 +95,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     ) {
         this.client = client;
         if (provider.get() == null) {
-            provider.set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, SampleResource.class));
+            provider.set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceFactory()));
         }
         System.out.println("provider: " + provider);
         return List.of(provider);
@@ -146,13 +148,13 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     }
 
     @Override
-    public Class<? extends AbstractResource> getResourceClass() {
-        return SampleResource.class;
+    public ResourceFactory<? extends Resource> getResourceFactory() {
+        return new SampleResourceFactory();
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void assignResourceSharingService(ResourceSharingService<? extends AbstractResource> service) {
+    public void assignResourceSharingService(ResourceSharingService<? extends Resource> service) {
         provider.set((ResourceSharingService<SampleResource>) service);
     }
 }

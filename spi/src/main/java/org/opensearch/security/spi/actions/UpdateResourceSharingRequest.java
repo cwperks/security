@@ -14,13 +14,13 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.security.spi.AbstractResource;
+import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ShareWith;
 
 /**
  * Request object for CreateSampleResource transport action
  */
-public class UpdateResourceSharingRequest<T extends AbstractResource> extends ActionRequest {
+public class UpdateResourceSharingRequest<T extends Resource> extends ActionRequest {
 
     private final String resourceId;
     private final ShareWith shareWith;

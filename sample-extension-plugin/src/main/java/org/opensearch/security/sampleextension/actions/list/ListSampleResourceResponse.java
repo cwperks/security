@@ -17,7 +17,7 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.spi.AbstractResource;
+import org.opensearch.security.spi.Resource;
 
 /**
  * Response to a ListSampleResourceRequest
@@ -51,7 +51,7 @@ public class ListSampleResourceResponse extends ActionResponse implements ToXCon
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.array("resources", (Object[]) resources.toArray(new AbstractResource[0]));
+        builder.array("resources", (Object[]) resources.toArray(new Resource[0]));
         builder.endObject();
         return builder;
     }
