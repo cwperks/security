@@ -10,6 +10,9 @@
 package org.opensearch.security.spi;
 
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.opensearch.core.xcontent.ToXContent;
@@ -32,6 +35,13 @@ public class ResourceUser implements ToXContentFragment {
 
     public Set<String> getBackendRoles() {
         return backendRoles;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ResourceUser fromSource(Map<String, Object> sourceAsMap) {
+        String name = (String) sourceAsMap.get("name");
+        Set<String> backendRoles = new HashSet<>((List<String>) sourceAsMap.get("backend_roles"));
+        return new ResourceUser(name, backendRoles);
     }
 
     @Override

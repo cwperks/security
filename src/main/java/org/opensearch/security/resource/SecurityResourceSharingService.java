@@ -51,21 +51,23 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
         this.resourceFactory = resourceFactory;
     }
 
-    private boolean hasPermissionsFor(User authenticatedUser, Resource resource, ShareWith sharedWith) {
-        System.out.println("hasPermissionsFor: " + authenticatedUser + " " + resource + " " + sharedWith);
+    private boolean hasPermissionsFor(User authenticatedUser, ResourceSharingEntry sharedWith) {
         // 1. The resource_user is the currently authenticated user
         // 2. The resource has been shared with the authenticated user
         // 3. The resource has been shared with a backend role that the authenticated user has
-        if (authenticatedUser.getName().equals(resource.getResourceUser().getName())) {
+        if (authenticatedUser.getName().equals(sharedWith.getResourceUser().getName())) {
             return true;
         }
-        WildcardMatcher userMatcher = WildcardMatcher.from(sharedWith.getUsers());
-        if (userMatcher.test(authenticatedUser.getName())) {
-            return true;
-        }
-        WildcardMatcher backendRoleMatcher = WildcardMatcher.from(sharedWith.getBackendRoles());
-        if (authenticatedUser.getRoles().stream().anyMatch(backendRoleMatcher::test)) {
-            return true;
+
+        for (ShareWith shareWith : sharedWith.getShareWith()) {
+            WildcardMatcher userMatcher = WildcardMatcher.from(shareWith.getUsers());
+            if (userMatcher.test(authenticatedUser.getName())) {
+                return true;
+            }
+            WildcardMatcher backendRoleMatcher = WildcardMatcher.from(shareWith.getBackendRoles());
+            if (authenticatedUser.getRoles().stream().anyMatch(backendRoleMatcher::test)) {
+                return true;
+            }
         }
         return false;
     }
@@ -192,9 +194,11 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+            System.out.println("resourceIndex: " + resourceIndex);
+            System.out.println("resource.getResourceId(): " + resource.getResourceId());
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termQuery("resource_index", resourceIndex))
-                .must(QueryBuilders.termQuery("resource_id", resource.getResourceId()));
+                .must(QueryBuilders.matchQuery("resource_index", resourceIndex))
+                .must(QueryBuilders.matchQuery("resource_id", resource.getResourceId()));
 
             searchSourceBuilder.query(boolQuery);
             searchSourceBuilder.size(1); // Limit to 1 result
@@ -206,8 +210,8 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                     SearchHit[] hits = searchResponse.getHits().getHits();
                     if (hits.length > 0) {
                         SearchHit hit = hits[0];
-                        ShareWith sharedWith = ShareWith.fromSource(hit.getSourceAsMap());
-                        if (hasPermissionsFor(authenticatedUser, resource, sharedWith)) {
+                        ResourceSharingEntry sharedWith = ResourceSharingEntry.fromSource(hit.getSourceAsMap());
+                        if (hasPermissionsFor(authenticatedUser, sharedWith)) {
                             getResourceListener.onResponse(resource);
                         } else {
                             getResourceListener.onFailure(new OpenSearchException("User is not authorized to access this resource"));

@@ -12,7 +12,9 @@
 package org.opensearch.security.resource;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.core.xcontent.XContentBuilder;
@@ -30,6 +32,27 @@ public class ResourceSharingEntry implements ToXContentFragment {
         this.resourceId = resourceId;
         this.resourceUser = resourceUser;
         this.shareWith = shareWith;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ResourceSharingEntry fromSource(Map<String, Object> sourceAsMap) {
+        String resourceIndex = (String) sourceAsMap.get("resource_index");
+        String resourceId = (String) sourceAsMap.get("resource_id");
+        ResourceUser resourceUser = ResourceUser.fromSource((Map<String, Object>) sourceAsMap.get("resource_user"));
+        List<Map<String, Object>> sharedWithList = (List<Map<String, Object>>) sourceAsMap.get("share_with");
+        List<ShareWith> sharedWith = new ArrayList<>();
+        for (Map<String, Object> sharedWithMap : sharedWithList) {
+            sharedWith.add(ShareWith.fromSource(sharedWithMap));
+        }
+        return new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, sharedWith);
+    }
+
+    public ResourceUser getResourceUser() {
+        return resourceUser;
+    }
+
+    public List<ShareWith> getShareWith() {
+        return shareWith;
     }
 
     @Override

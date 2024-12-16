@@ -58,15 +58,25 @@ public class SampleExtensionPluginTests {
 
     @Test
     public void testCreateAndUpdateOwnSampleResource() throws Exception {
+        String resourceId;
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
             String sampleResource = "{\"name\":\"sample\"}";
             HttpResponse response = client.postJson("_plugins/resource_sharing_example/resource", sampleResource);
             response.assertStatusCode(HttpStatus.SC_OK);
             System.out.println("Response: " + response.getBody());
 
-            String resourceId = response.getTextFromJsonBody("/resourceId");
+            resourceId = response.getTextFromJsonBody("/resourceId");
 
             System.out.println("resourceId: " + resourceId);
+            Thread.sleep(2000);
+        }
+        try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
+            HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
+            System.out.println("Resource sharing entries: " + response.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            Thread.sleep(1000);
 
             HttpResponse getResponse = client.get("_plugins/resource_sharing_example/resource/" + resourceId);
             getResponse.assertStatusCode(HttpStatus.SC_OK);
