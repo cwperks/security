@@ -169,36 +169,11 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
     public void getResource(String resourceId, ActionListener<T> getResourceListener) {
         User authenticatedUser = client.threadPool().getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
-            GetRequest gr = new GetRequest(resourceIndex);
-            gr.id(resourceId);
-            /* Index already exists, ignore and continue */
-            ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
-                @Override
-                public void onResponse(GetResponse getResponse) {
-                    T resource = resourceFactory.createResource();
-                    resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
-                    System.out.println("finishGetResourceIfUserIsAllowed");
-                    finishGetResourceIfUserIsAllowed(resource, authenticatedUser, getResourceListener);
-                }
-
-                @Override
-                public void onFailure(Exception e) {
-                    getResourceListener.onFailure(new OpenSearchException("Caught exception while loading resources: " + e.getMessage()));
-                }
-            };
-            client.get(gr, getListener);
-        }
-    }
-
-    private void finishGetResourceIfUserIsAllowed(T resource, User authenticatedUser, ActionListener<T> getResourceListener) {
-        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-            System.out.println("resourceIndex: " + resourceIndex);
-            System.out.println("resource.getResourceId(): " + resource.getResourceId());
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
                 .must(QueryBuilders.matchQuery("resource_index", resourceIndex))
-                .must(QueryBuilders.matchQuery("resource_id", resource.getResourceId()));
+                .must(QueryBuilders.matchQuery("resource_id", resourceId));
 
             searchSourceBuilder.query(boolQuery);
             searchSourceBuilder.size(1); // Limit to 1 result
@@ -212,7 +187,7 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                         SearchHit hit = hits[0];
                         ResourceSharingEntry sharedWith = ResourceSharingEntry.fromSource(hit.getSourceAsMap());
                         if (hasPermissionsFor(authenticatedUser, sharedWith)) {
-                            getResourceListener.onResponse(resource);
+                            finishGetResourceIfUserIsAllowed(resourceId, getResourceListener);
                         } else {
                             getResourceListener.onFailure(new OpenSearchException("User is not authorized to access this resource"));
                         }
@@ -228,6 +203,28 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
             };
 
             client.search(searchRequest, searchListener);
+        }
+    }
+
+    private void finishGetResourceIfUserIsAllowed(String resourceId, ActionListener<T> getResourceListener) {
+        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
+            GetRequest gr = new GetRequest(resourceIndex);
+            gr.id(resourceId);
+            /* Index already exists, ignore and continue */
+            ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
+                @Override
+                public void onResponse(GetResponse getResponse) {
+                    T resource = resourceFactory.createResource();
+                    resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
+                    getResourceListener.onResponse(resource);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    getResourceListener.onFailure(new OpenSearchException("Caught exception while loading resources: " + e.getMessage()));
+                }
+            };
+            client.get(gr, getListener);
         }
     }
 }
