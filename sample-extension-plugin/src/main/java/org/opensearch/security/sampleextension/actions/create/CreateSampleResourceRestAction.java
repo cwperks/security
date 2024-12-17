@@ -18,7 +18,7 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.spi.actions.CreateResourceRequest;
+import org.opensearch.security.spi.actions.resource.create.CreateResourceRequest;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.POST;

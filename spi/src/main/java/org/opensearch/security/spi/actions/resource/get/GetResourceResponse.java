@@ -6,37 +6,36 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions.list;
+package org.opensearch.security.spi.actions.resource.get;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.Resource;
 
 /**
- * Response to a ListSampleResourceRequest
+ * Response to a GetSampleResourceRequest
  */
-public class ListSampleResourceResponse extends ActionResponse implements ToXContentObject {
-    private final List<SampleResource> resources;
+public class GetResourceResponse<T extends Resource> extends ActionResponse implements ToXContentObject {
+    private final T resource;
 
     /**
      * Default constructor
      *
-     * @param resources The resources
+     * @param resource The resource
      */
-    public ListSampleResourceResponse(List<SampleResource> resources) {
-        this.resources = resources;
+    public GetResourceResponse(T resource) {
+        this.resource = resource;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeList(resources);
+        resource.writeTo(out);
     }
 
     /**
@@ -44,14 +43,14 @@ public class ListSampleResourceResponse extends ActionResponse implements ToXCon
      *
      * @param in the stream input
      */
-    public ListSampleResourceResponse(final StreamInput in) throws IOException {
-        resources = in.readList(SampleResource::from);
+    public GetResourceResponse(final StreamInput in, Writeable.Reader<T> resourceReader) throws IOException {
+        resource = resourceReader.read(in);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.array("resources", (Object[]) resources.toArray(new Resource[0]));
+        builder.field("resource", resource);
         builder.endObject();
         return builder;
     }

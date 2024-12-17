@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions;
+package org.opensearch.security.spi.actions.sharing.update;
 
 import java.io.IOException;
 import java.util.Arrays;

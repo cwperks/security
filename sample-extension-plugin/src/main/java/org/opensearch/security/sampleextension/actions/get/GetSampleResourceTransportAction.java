@@ -15,11 +15,11 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
-import org.opensearch.security.spi.actions.GetResourceTransportAction;
+import org.opensearch.security.spi.actions.resource.get.GetResourceTransportAction;
 import org.opensearch.transport.TransportService;
 
 /**
- * Transport action for UpdateSampleResource.
+ * Transport action for GetSampleResource.
  */
 public class GetSampleResourceTransportAction extends GetResourceTransportAction<SampleResource> {
     private static final Logger log = LogManager.getLogger(GetSampleResourceTransportAction.class);

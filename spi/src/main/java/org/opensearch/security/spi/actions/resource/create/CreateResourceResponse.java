@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions;
+package org.opensearch.security.spi.actions.resource.create;
 
 import java.io.IOException;
 
@@ -19,21 +19,21 @@ import org.opensearch.core.xcontent.XContentBuilder;
 /**
  * Response to a CreateSampleResourceRequest
  */
-public class UpdateResourceSharingResponse extends ActionResponse implements ToXContentObject {
-    private final String message;
+public class CreateResourceResponse extends ActionResponse implements ToXContentObject {
+    private final String resourceId;
 
     /**
      * Default constructor
      *
-     * @param message The message
+     * @param resourceId The resourceId
      */
-    public UpdateResourceSharingResponse(String message) {
-        this.message = message;
+    public CreateResourceResponse(String resourceId) {
+        this.resourceId = resourceId;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeString(message);
+        out.writeString(resourceId);
     }
 
     /**
@@ -41,14 +41,14 @@ public class UpdateResourceSharingResponse extends ActionResponse implements ToX
      *
      * @param in the stream input
      */
-    public UpdateResourceSharingResponse(final StreamInput in) throws IOException {
-        message = in.readString();
+    public CreateResourceResponse(final StreamInput in) throws IOException {
+        resourceId = in.readString();
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field("message", message);
+        builder.field("resourceId", resourceId);
         builder.endObject();
         return builder;
     }

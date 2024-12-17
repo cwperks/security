@@ -9,7 +9,7 @@
 package org.opensearch.security.sampleextension.actions.sharing;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.security.spi.actions.UpdateResourceSharingResponse;
+import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingResponse;
 
 /**
  * Action to create a sample resource

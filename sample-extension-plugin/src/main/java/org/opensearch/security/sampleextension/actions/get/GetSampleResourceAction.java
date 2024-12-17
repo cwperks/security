@@ -10,7 +10,7 @@ package org.opensearch.security.sampleextension.actions.get;
 
 import org.opensearch.action.ActionType;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.spi.actions.GetResourceResponse;
+import org.opensearch.security.spi.actions.resource.get.GetResourceResponse;
 
 /**
  * Action to get a sample resource

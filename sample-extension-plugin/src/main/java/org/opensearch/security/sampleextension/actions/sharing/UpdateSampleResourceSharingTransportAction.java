@@ -16,7 +16,7 @@ import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.ShareWith;
-import org.opensearch.security.spi.actions.UpdateResourceSharingTransportAction;
+import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingTransportAction;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;

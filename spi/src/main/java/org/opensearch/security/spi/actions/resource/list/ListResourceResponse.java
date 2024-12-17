@@ -6,14 +6,14 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions;
+package org.opensearch.security.spi.actions.resource.list;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.security.spi.Resource;
@@ -21,21 +21,21 @@ import org.opensearch.security.spi.Resource;
 /**
  * Response to a GetSampleResourceRequest
  */
-public class GetResourceResponse<T extends Resource> extends ActionResponse implements ToXContentObject {
-    private final T resource;
+public class ListResourceResponse<T extends Resource> extends ActionResponse implements ToXContentObject {
+    private final List<T> resources;
 
     /**
      * Default constructor
      *
-     * @param resource The resource
+     * @param resources The resources
      */
-    public GetResourceResponse(T resource) {
-        this.resource = resource;
+    public ListResourceResponse(List<T> resources) {
+        this.resources = resources;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        resource.writeTo(out);
+        out.writeList(resources);
     }
 
     /**
@@ -43,14 +43,14 @@ public class GetResourceResponse<T extends Resource> extends ActionResponse impl
      *
      * @param in the stream input
      */
-    public GetResourceResponse(final StreamInput in, Writeable.Reader<T> resourceReader) throws IOException {
-        resource = resourceReader.read(in);
+    public ListResourceResponse(final StreamInput in, Reader<T> resourceReader) throws IOException {
+        resources = in.readList(resourceReader);
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field("resource", resource);
+        builder.field("resources", resources);
         builder.endObject();
         return builder;
     }

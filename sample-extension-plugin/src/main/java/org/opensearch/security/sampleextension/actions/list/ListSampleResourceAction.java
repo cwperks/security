@@ -9,11 +9,13 @@
 package org.opensearch.security.sampleextension.actions.list;
 
 import org.opensearch.action.ActionType;
+import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.security.spi.actions.resource.list.ListResourceResponse;
 
 /**
  * Action to list sample resources
  */
-public class ListSampleResourceAction extends ActionType<ListSampleResourceResponse> {
+public class ListSampleResourceAction extends ActionType<ListResourceResponse<SampleResource>> {
     /**
      * List sample resource action instance
      */
@@ -24,6 +26,6 @@ public class ListSampleResourceAction extends ActionType<ListSampleResourceRespo
     public static final String NAME = "cluster:admin/sampleresource/list";
 
     private ListSampleResourceAction() {
-        super(NAME, ListSampleResourceResponse::new);
+        super(NAME, in -> new ListResourceResponse<>(in, SampleResource::from));
     }
 }

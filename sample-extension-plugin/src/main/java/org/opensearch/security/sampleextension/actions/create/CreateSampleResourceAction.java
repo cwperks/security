@@ -9,7 +9,7 @@
 package org.opensearch.security.sampleextension.actions.create;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.security.spi.actions.CreateResourceResponse;
+import org.opensearch.security.spi.actions.resource.create.CreateResourceResponse;
 
 /**
  * Action to create a sample resource

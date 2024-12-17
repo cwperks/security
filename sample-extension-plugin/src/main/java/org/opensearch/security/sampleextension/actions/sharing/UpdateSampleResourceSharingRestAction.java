@@ -19,7 +19,7 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.spi.ShareWith;
-import org.opensearch.security.spi.actions.UpdateResourceSharingRequest;
+import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingRequest;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.PUT;
