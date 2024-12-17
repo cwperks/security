@@ -9,14 +9,13 @@
 package org.opensearch.security.rest.resource;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingResponse;
 
 /**
  * Action to update sharing configuration for a sample resource
  */
-public class ShareWithAction extends ActionType<UpdateResourceSharingResponse> {
+public class ShareWithAction extends ActionType<ShareWithResponse> {
     /**
-     * Update sharing configuratino for sample resource action instance
+     * Update sharing configuration for sample resource action instance
      */
     public static final ShareWithAction INSTANCE = new ShareWithAction();
     /**
@@ -25,6 +24,6 @@ public class ShareWithAction extends ActionType<UpdateResourceSharingResponse> {
     public static final String NAME = "cluster:admin/opendistro_security/resource/share_with";
 
     private ShareWithAction() {
-        super(NAME, UpdateResourceSharingResponse::new);
+        super(NAME, ShareWithResponse::new);
     }
 }
