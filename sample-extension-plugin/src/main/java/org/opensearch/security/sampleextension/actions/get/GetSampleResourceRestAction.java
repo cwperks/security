@@ -15,9 +15,11 @@ import org.opensearch.client.node.NodeClient;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.spi.actions.GetResourceRequest;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.GET;
+import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 public class GetSampleResourceRestAction extends BaseRestHandler {
 
@@ -38,7 +40,7 @@ public class GetSampleResourceRestAction extends BaseRestHandler {
     public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String resourceId = request.param("id");
 
-        final GetSampleResourceRequest getSampleResourceRequest = new GetSampleResourceRequest(resourceId);
+        final GetResourceRequest getSampleResourceRequest = new GetResourceRequest(resourceId, RESOURCE_INDEX_NAME);
         return channel -> client.executeLocally(
             GetSampleResourceAction.INSTANCE,
             getSampleResourceRequest,

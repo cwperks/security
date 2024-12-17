@@ -12,46 +12,24 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.action.support.ActionFilters;
-import org.opensearch.action.support.HandledTransportAction;
-import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
-import org.opensearch.core.action.ActionListener;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
-import org.opensearch.tasks.Task;
+import org.opensearch.security.spi.actions.GetResourceTransportAction;
 import org.opensearch.transport.TransportService;
 
 /**
  * Transport action for UpdateSampleResource.
  */
-public class GetSampleResourceTransportAction extends HandledTransportAction<GetSampleResourceRequest, GetSampleResourceResponse> {
+public class GetSampleResourceTransportAction extends GetResourceTransportAction<SampleResource> {
     private static final Logger log = LogManager.getLogger(GetSampleResourceTransportAction.class);
-
-    private final Client nodeClient;
-    private final SampleResourceSharingServiceProvider resourceSharingService;
 
     @Inject
     public GetSampleResourceTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        Client nodeClient,
         SampleResourceSharingServiceProvider resourceSharingService
     ) {
-        super(GetSampleResourceAction.NAME, transportService, actionFilters, GetSampleResourceRequest::new);
-        this.nodeClient = nodeClient;
-        this.resourceSharingService = resourceSharingService;
-    }
-
-    @Override
-    protected void doExecute(Task task, GetSampleResourceRequest request, ActionListener<GetSampleResourceResponse> actionListener) {
-        getResource(request, actionListener);
-    }
-
-    private void getResource(GetSampleResourceRequest request, ActionListener<GetSampleResourceResponse> listener) {
-        ActionListener<SampleResource> getResourceListener = ActionListener.wrap(sampleResource -> {
-            System.out.println("sampleResource: " + sampleResource);
-            listener.onResponse(new GetSampleResourceResponse(sampleResource));
-        }, listener::onFailure);
-        resourceSharingService.get().getResource(request.getResourceId(), getResourceListener);
+        super(transportService, actionFilters, GetSampleResourceAction.NAME, resourceSharingService.get());
     }
 }

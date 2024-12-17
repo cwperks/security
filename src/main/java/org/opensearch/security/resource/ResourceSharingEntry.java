@@ -24,6 +24,7 @@ public class ResourceSharingEntry implements ToXContentFragment {
     private final String resourceIndex;
     private final String resourceId;
     private final ResourceUser resourceUser;
+    // Key to this map is an action group
     private final Map<String, ShareWith> shareWith;
 
     public ResourceSharingEntry(String resourceIndex, String resourceId, ResourceUser resourceUser, Map<String, ShareWith> shareWith) {
