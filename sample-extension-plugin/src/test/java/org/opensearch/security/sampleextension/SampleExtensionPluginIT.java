@@ -120,7 +120,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         ).map();
         System.out.println("resourceSharingResponse: " + resourceSharingResponseMap);
 
-        Request updateSharingRequest = new Request("PUT", "/_plugins/resource_sharing_example/resource/update_sharing/" + resourceId);
+        Request updateSharingRequest = new Request("PUT", "/_plugins/_security/resource/sample_resource/" + resourceId + "/share_with");
         updateSharingRequest.setEntity(
             new StringEntity("{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}")
         );

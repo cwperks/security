@@ -47,9 +47,6 @@ import org.opensearch.security.sampleextension.actions.get.GetSampleResourceTran
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTransportAction;
-import org.opensearch.security.sampleextension.actions.sharing.UpdateSampleResourceSharingAction;
-import org.opensearch.security.sampleextension.actions.sharing.UpdateSampleResourceSharingRestAction;
-import org.opensearch.security.sampleextension.actions.sharing.UpdateSampleResourceSharingTransportAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
@@ -117,8 +114,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
             new CreateSampleResourceRestAction(),
             new GetSampleResourceRestAction(),
             new ListSampleResourceRestAction(),
-            new UpdateSampleResourceRestAction(),
-            new UpdateSampleResourceSharingRestAction()
+            new UpdateSampleResourceRestAction()
         );
     }
 
@@ -128,7 +124,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
             new ActionHandler<>(CreateSampleResourceAction.INSTANCE, CreateSampleResourceTransportAction.class),
             new ActionHandler<>(GetSampleResourceAction.INSTANCE, GetSampleResourceTransportAction.class),
             new ActionHandler<>(ListSampleResourceAction.INSTANCE, ListSampleResourceTransportAction.class),
-            new ActionHandler<>(UpdateSampleResourceSharingAction.INSTANCE, UpdateSampleResourceSharingTransportAction.class),
             new ActionHandler<>(UpdateSampleResourceAction.INSTANCE, UpdateSampleResourceTransportAction.class)
         );
     }
