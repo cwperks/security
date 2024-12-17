@@ -12,8 +12,7 @@
 package org.opensearch.security.resource;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.opensearch.core.xcontent.ToXContentFragment;
@@ -25,9 +24,9 @@ public class ResourceSharingEntry implements ToXContentFragment {
     private final String resourceIndex;
     private final String resourceId;
     private final ResourceUser resourceUser;
-    private final List<ShareWith> shareWith;
+    private final Map<String, ShareWith> shareWith;
 
-    public ResourceSharingEntry(String resourceIndex, String resourceId, ResourceUser resourceUser, List<ShareWith> shareWith) {
+    public ResourceSharingEntry(String resourceIndex, String resourceId, ResourceUser resourceUser, Map<String, ShareWith> shareWith) {
         this.resourceIndex = resourceIndex;
         this.resourceId = resourceId;
         this.resourceUser = resourceUser;
@@ -39,10 +38,11 @@ public class ResourceSharingEntry implements ToXContentFragment {
         String resourceIndex = (String) sourceAsMap.get("resource_index");
         String resourceId = (String) sourceAsMap.get("resource_id");
         ResourceUser resourceUser = ResourceUser.fromSource((Map<String, Object>) sourceAsMap.get("resource_user"));
-        List<Map<String, Object>> sharedWithList = (List<Map<String, Object>>) sourceAsMap.get("share_with");
-        List<ShareWith> sharedWith = new ArrayList<>();
-        for (Map<String, Object> sharedWithMap : sharedWithList) {
-            sharedWith.add(ShareWith.fromSource(sharedWithMap));
+        Map<String, Object> sharedWithMap = (Map<String, Object>) sourceAsMap.get("share_with");
+        Map<String, ShareWith> sharedWith = new HashMap<>();
+        for (Map.Entry<String, Object> entry : sharedWithMap.entrySet()) {
+            ShareWith shareWith = ShareWith.fromSource((Map<String, Object>) entry.getValue());
+            sharedWith.put(entry.getKey(), shareWith);
         }
         return new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, sharedWith);
     }
@@ -51,7 +51,7 @@ public class ResourceSharingEntry implements ToXContentFragment {
         return resourceUser;
     }
 
-    public List<ShareWith> getShareWith() {
+    public Map<String, ShareWith> getShareWith() {
         return shareWith;
     }
 

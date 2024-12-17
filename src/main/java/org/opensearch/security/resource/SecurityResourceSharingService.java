@@ -59,7 +59,7 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
             return true;
         }
 
-        for (ShareWith shareWith : sharedWith.getShareWith()) {
+        for (ShareWith shareWith : sharedWith.getShareWith().values()) {
             WildcardMatcher userMatcher = WildcardMatcher.from(shareWith.getUsers());
             if (userMatcher.test(authenticatedUser.getName())) {
                 return true;

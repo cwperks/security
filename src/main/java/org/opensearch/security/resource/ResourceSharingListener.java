@@ -12,7 +12,7 @@
 package org.opensearch.security.resource;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.apache.logging.log4j.LogManager;
@@ -44,6 +44,8 @@ public class ResourceSharingListener implements IndexingOperationListener {
     private static final ResourceSharingListener INSTANCE = new ResourceSharingListener();
 
     public static final String RESOURCE_SHARING_INDEX = ".resource-sharing";
+
+    private static final String UNLIMITED = "unlimited";
 
     private boolean initialized;
     private ThreadPool threadPool;
@@ -115,7 +117,7 @@ public class ResourceSharingListener implements IndexingOperationListener {
     public void indexResourceSharing(String resourceId, String resourceIndex, ResourceUser resourceUser, ShareWith shareWith)
         throws IOException {
         createResourceSharingIndexIfNotExists(() -> {
-            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, List.of(shareWith));
+            ResourceSharingEntry entry = new ResourceSharingEntry(resourceIndex, resourceId, resourceUser, Map.of(UNLIMITED, shareWith));
 
             IndexRequest ir = client.prepareIndex(RESOURCE_SHARING_INDEX)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
