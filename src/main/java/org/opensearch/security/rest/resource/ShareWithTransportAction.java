@@ -30,7 +30,6 @@ import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.ShareWith;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
@@ -47,7 +46,7 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
 
     @Inject
     public ShareWithTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
-        super(ShareWithAction.NAME, transportService, actionFilters, (in) -> new ShareWithRequest(in, ShareWith::new));
+        super(ShareWithAction.NAME, transportService, actionFilters, ShareWithRequest::new);
         this.transportService = transportService;
         this.nodeClient = nodeClient;
     }

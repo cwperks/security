@@ -34,10 +34,10 @@ public class ShareWithRequest extends ActionRequest {
         this.shareWith = shareWith;
     }
 
-    public ShareWithRequest(StreamInput in, Reader<ShareWith> shareWithReader) throws IOException {
+    public ShareWithRequest(StreamInput in) throws IOException {
         this.resourceId = in.readString();
         this.resourceIndex = in.readString();
-        this.shareWith = shareWithReader.read(in);
+        this.shareWith = new ShareWith(in);
     }
 
     @Override
