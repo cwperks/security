@@ -19,7 +19,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.security.spi.Resource;
 
 /**
- * Response to a GetSampleResourceRequest
+ * Response to a GetResourceRequest
  */
 public class GetResourceResponse<T extends Resource> extends ActionResponse implements ToXContentObject {
     private final T resource;

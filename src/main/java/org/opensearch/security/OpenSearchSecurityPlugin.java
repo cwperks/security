@@ -670,7 +670,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         sslSettingsManager,
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
-                        passwordHasher
+                        passwordHasher,
+                        resourceSharingExtensions
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());

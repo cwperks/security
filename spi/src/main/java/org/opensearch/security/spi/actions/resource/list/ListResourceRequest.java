@@ -14,7 +14,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.security.spi.actions.ResourceRequest;
 
 /**
- * Request object for ListSampleResource transport action
+ * Request object for ListResource transport action
  */
 public class ListResourceRequest extends ResourceRequest {
 

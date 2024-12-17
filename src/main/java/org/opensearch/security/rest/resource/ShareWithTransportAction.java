@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.sharing.update;
+package org.opensearch.security.rest.resource;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -38,18 +38,15 @@ import org.opensearch.transport.TransportService;
 /**
  * Transport action for UpdateResourceSharing.
  */
-public class UpdateResourceSharingTransportAction<T extends Resource> extends HandledTransportAction<
-    UpdateResourceSharingRequest<T>,
-    UpdateResourceSharingResponse> {
-    private static final Logger log = LogManager.getLogger(UpdateResourceSharingTransportAction.class);
+public class ShareWithTransportAction<T extends Resource> extends HandledTransportAction<ShareWithRequest, ShareWithResponse> {
+    private static final Logger log = LogManager.getLogger(ShareWithTransportAction.class);
 
     public static final String RESOURCE_SHARING_INDEX = ".resource-sharing";
 
     private final TransportService transportService;
     private final Client nodeClient;
-    private final String resourceIndex;
 
-    public UpdateResourceSharingTransportAction(
+    public ShareWithTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
         Client nodeClient,
@@ -57,20 +54,19 @@ public class UpdateResourceSharingTransportAction<T extends Resource> extends Ha
         String resourceIndex,
         Writeable.Reader<ShareWith> shareWithReader
     ) {
-        super(actionName, transportService, actionFilters, (in) -> new UpdateResourceSharingRequest<T>(in, shareWithReader));
+        super(actionName, transportService, actionFilters, (in) -> new ShareWithRequest(in, shareWithReader));
         this.transportService = transportService;
         this.nodeClient = nodeClient;
-        this.resourceIndex = resourceIndex;
     }
 
     @Override
-    protected void doExecute(Task task, UpdateResourceSharingRequest<T> request, ActionListener<UpdateResourceSharingResponse> listener) {
+    protected void doExecute(Task task, ShareWithRequest request, ActionListener<ShareWithResponse> listener) {
         try (ThreadContext.StoredContext ignore = transportService.getThreadPool().getThreadContext().stashContext()) {
             SearchRequest searchRequest = new SearchRequest(RESOURCE_SHARING_INDEX);
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
                 .must(QueryBuilders.matchQuery("resource_id", request.getResourceId()))
-                .must(QueryBuilders.matchQuery("resource_index", resourceIndex));
+                .must(QueryBuilders.matchQuery("resource_index", request.getResourceIndex()));
             searchSourceBuilder.query(boolQuery);
             searchRequest.source(searchSourceBuilder);
 
@@ -100,7 +96,7 @@ public class UpdateResourceSharingTransportAction<T extends Resource> extends Ha
                             nodeClient.update(updateRequest, new ActionListener<UpdateResponse>() {
                                 @Override
                                 public void onResponse(UpdateResponse updateResponse) {
-                                    listener.onResponse(new UpdateResourceSharingResponse("success"));
+                                    listener.onResponse(new ShareWithResponse("success"));
                                 }
 
                                 @Override

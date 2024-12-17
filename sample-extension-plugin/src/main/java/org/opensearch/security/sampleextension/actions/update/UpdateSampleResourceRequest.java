@@ -16,7 +16,7 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 
 /**
- * Request object for ListSampleResource transport action
+ * Request object for UpdateSampleResource transport action
  */
 public class UpdateSampleResourceRequest extends ActionRequest {
 

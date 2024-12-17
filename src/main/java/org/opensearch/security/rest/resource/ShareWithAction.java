@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sampleextension.actions.sharing;
+package org.opensearch.security.rest.resource;
 
 import org.opensearch.action.ActionType;
 import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingResponse;
@@ -14,17 +14,17 @@ import org.opensearch.security.spi.actions.sharing.update.UpdateResourceSharingR
 /**
  * Action to update sharing configuration for a sample resource
  */
-public class UpdateSampleResourceSharingAction extends ActionType<UpdateResourceSharingResponse> {
+public class ShareWithAction extends ActionType<UpdateResourceSharingResponse> {
     /**
      * Update sharing configuratino for sample resource action instance
      */
-    public static final UpdateSampleResourceSharingAction INSTANCE = new UpdateSampleResourceSharingAction();
+    public static final ShareWithAction INSTANCE = new ShareWithAction();
     /**
      * Update sharing configuration for sample resource action name
      */
-    public static final String NAME = "cluster:admin/sampleresource/updatesharing";
+    public static final String NAME = "cluster:admin/opendistro_security/resource/share_with";
 
-    private UpdateSampleResourceSharingAction() {
+    private ShareWithAction() {
         super(NAME, UpdateResourceSharingResponse::new);
     }
 }

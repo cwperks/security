@@ -19,7 +19,7 @@ import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 /**
- * Transport action for GetResource.
+ * Transport action for ListResource.
  */
 public class ListResourceTransportAction<T extends Resource> extends HandledTransportAction<ListResourceRequest, ListResourceResponse<T>> {
     private final ResourceSharingService<T> resourceSharingService;

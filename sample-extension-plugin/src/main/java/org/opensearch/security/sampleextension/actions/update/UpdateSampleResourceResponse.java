@@ -17,7 +17,7 @@ import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
 
 /**
- * Response to a ListSampleResourceRequest
+ * Response to a UpdateSampleResourceRequest
  */
 public class UpdateSampleResourceResponse extends ActionResponse implements ToXContentObject {
     private final String resourceId;

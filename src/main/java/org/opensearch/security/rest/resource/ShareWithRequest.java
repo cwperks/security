@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.sharing.update;
+package org.opensearch.security.rest.resource;
 
 import java.io.IOException;
 
@@ -14,33 +14,36 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
-import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ShareWith;
 
 /**
  * Request object for UpdateResourceSharing transport action
  */
-public class UpdateResourceSharingRequest<T extends Resource> extends ActionRequest {
+public class ShareWithRequest extends ActionRequest {
 
     private final String resourceId;
+    private final String resourceIndex;
     private final ShareWith shareWith;
 
     /**
      * Default constructor
      */
-    public UpdateResourceSharingRequest(String resourceId, ShareWith shareWith) {
+    public ShareWithRequest(String resourceId, String resourceIndex, ShareWith shareWith) {
         this.resourceId = resourceId;
+        this.resourceIndex = resourceIndex;
         this.shareWith = shareWith;
     }
 
-    public UpdateResourceSharingRequest(StreamInput in, Reader<ShareWith> shareWithReader) throws IOException {
+    public ShareWithRequest(StreamInput in, Reader<ShareWith> shareWithReader) throws IOException {
         this.resourceId = in.readString();
+        this.resourceIndex = in.readString();
         this.shareWith = shareWithReader.read(in);
     }
 
     @Override
     public void writeTo(final StreamOutput out) throws IOException {
         out.writeString(resourceId);
+        out.writeString(resourceIndex);
         shareWith.writeTo(out);
     }
 
@@ -51,6 +54,10 @@ public class UpdateResourceSharingRequest<T extends Resource> extends ActionRequ
 
     public String getResourceId() {
         return this.resourceId;
+    }
+
+    public String getResourceIndex() {
+        return this.resourceIndex;
     }
 
     public ShareWith getShareWith() {

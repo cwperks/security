@@ -11,15 +11,15 @@ package org.opensearch.security.sampleextension.actions.update;
 import org.opensearch.action.ActionType;
 
 /**
- * Action to create a sample resource
+ * Action to update a sample resource
  */
 public class UpdateSampleResourceAction extends ActionType<UpdateSampleResourceResponse> {
     /**
-     * Create sample resource action instance
+     * Update sample resource action instance
      */
     public static final UpdateSampleResourceAction INSTANCE = new UpdateSampleResourceAction();
     /**
-     * Create sample resource action name
+     * Update sample resource action name
      */
     public static final String NAME = "cluster:admin/sampleresource/update";
 

@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.sharing.update;
+package org.opensearch.security.rest.resource;
 
 import java.io.IOException;
 
@@ -19,7 +19,7 @@ import org.opensearch.core.xcontent.XContentBuilder;
 /**
  * Response to a UpdateResourceSharingRequest
  */
-public class UpdateResourceSharingResponse extends ActionResponse implements ToXContentObject {
+public class ShareWithResponse extends ActionResponse implements ToXContentObject {
     private final String message;
 
     /**
@@ -27,7 +27,7 @@ public class UpdateResourceSharingResponse extends ActionResponse implements ToX
      *
      * @param message The message
      */
-    public UpdateResourceSharingResponse(String message) {
+    public ShareWithResponse(String message) {
         this.message = message;
     }
 
@@ -41,7 +41,7 @@ public class UpdateResourceSharingResponse extends ActionResponse implements ToX
      *
      * @param in the stream input
      */
-    public UpdateResourceSharingResponse(final StreamInput in) throws IOException {
+    public ShareWithResponse(final StreamInput in) throws IOException {
         message = in.readString();
     }
 
