@@ -12,31 +12,27 @@ import org.opensearch.core.xcontent.XContentBuilder;
 
 public class ShareWith implements NamedWriteable, ToXContentFragment {
 
-    public final static ShareWith PRIVATE = new ShareWith(List.of(), List.of(), List.of("*"));
-    public final static ShareWith PUBLIC = new ShareWith(List.of("*"), List.of("*"), List.of("*"));
+    public final static ShareWith PRIVATE = new ShareWith(List.of(), List.of());
+    public final static ShareWith PUBLIC = new ShareWith(List.of("*"), List.of("*"));
 
-    private final List<String> allowedActions;
     private final List<String> users;
     private final List<String> backendRoles;
 
-    public ShareWith(List<String> users, List<String> backendRoles, List<String> allowedActions) {
+    public ShareWith(List<String> users, List<String> backendRoles) {
         this.users = users;
         this.backendRoles = backendRoles;
-        this.allowedActions = allowedActions;
     }
 
     public ShareWith(StreamInput in) throws IOException {
         this.users = in.readStringList();
         this.backendRoles = in.readStringList();
-        this.allowedActions = in.readStringList();
     }
 
     @SuppressWarnings("unchecked")
     public static ShareWith fromSource(Map<String, Object> sourceAsMap) {
         List<String> users = (List<String>) sourceAsMap.get("users");
         List<String> backendRoles = (List<String>) sourceAsMap.get("backend_roles");
-        List<String> allowedActions = (List<String>) sourceAsMap.get("allowed_actions");
-        return new ShareWith(users, backendRoles, allowedActions);
+        return new ShareWith(users, backendRoles);
     }
 
     public List<String> getUsers() {
@@ -47,17 +43,9 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
         return backendRoles;
     }
 
-    public List<String> getAllowedActions() {
-        return allowedActions;
-    }
-
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject()
-            .field("users", users)
-            .field("backend_roles", backendRoles)
-            .field("allowed_actions", allowedActions)
-            .endObject();
+        return builder.startObject().field("users", users).field("backend_roles", backendRoles).endObject();
     }
 
     @Override
@@ -69,6 +57,5 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
     public void writeTo(StreamOutput out) throws IOException {
         out.writeStringCollection(users);
         out.writeStringCollection(backendRoles);
-        out.writeStringCollection(allowedActions);
     }
 }
