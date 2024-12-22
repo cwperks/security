@@ -62,12 +62,10 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
             searchSourceBuilder.query(boolQuery);
             searchRequest.source(searchSourceBuilder);
 
-            // Execute the search request
-            nodeClient.search(searchRequest, new ActionListener<SearchResponse>() {
+            nodeClient.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse searchResponse) {
                     if (Objects.requireNonNull(searchResponse.getHits().getTotalHits()).value == 1) {
-                        // Record found, update it
                         SearchHit hit = searchResponse.getHits().getAt(0);
                         UpdateRequest updateRequest = new UpdateRequest(RESOURCE_SHARING_INDEX, hit.getId());
                         try {
@@ -78,14 +76,13 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
                                 {
                                     builder.field("users", request.getShareWith().getUsers());
                                     builder.field("backend_roles", request.getShareWith().getBackendRoles());
-                                    builder.field("allowed_actions", request.getShareWith().getAllowedActions());
                                 }
                                 builder.endObject();
                             }
                             builder.endObject();
                             updateRequest.doc(builder);
 
-                            nodeClient.update(updateRequest, new ActionListener<UpdateResponse>() {
+                            nodeClient.update(updateRequest, new ActionListener<>() {
                                 @Override
                                 public void onResponse(UpdateResponse updateResponse) {
                                     listener.onResponse(new ShareWithResponse("success"));
@@ -100,8 +97,6 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
                             listener.onFailure(e);
                         }
                     } else {
-                        // Record not found, create a new one
-                        // createNewRecord(request, listener);
                         listener.onFailure(new IllegalStateException(".resource-sharing entry not found"));
                     }
                 }
