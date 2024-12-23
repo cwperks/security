@@ -111,7 +111,7 @@ public class GetResourceTransportAction<T extends Resource> extends HandledTrans
                             }
                         };
 
-                        resourceSharingService.hasResourceBeenSharedWith(request.getResourceId(), shareListener);
+                        resourceSharingService.isSharedWithCurrentUser(request.getResourceId(), shareListener);
                     } catch (IOException e) {
                         throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
                     }

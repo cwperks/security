@@ -81,7 +81,7 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
     }
 
     @Override
-    public void hasResourceBeenSharedWith(String resourceId, ActionListener<Boolean> resourceSharingListener) {
+    public void isSharedWithCurrentUser(String resourceId, ActionListener<Boolean> resourceSharingListener) {
         User authenticatedUser = (User) client.threadPool()
             .getThreadContext()
             .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);

@@ -123,7 +123,7 @@ public class ListResourceTransportAction<T extends Resource> extends HandledTran
                                 }
                             };
 
-                            resourceSharingService.hasResourceBeenSharedWith(hit.getId(), shareListener);
+                            resourceSharingService.isSharedWithCurrentUser(hit.getId(), shareListener);
 
                         } catch (IOException e) {
                             listResourceListener.onFailure(
