@@ -51,11 +51,11 @@ import org.opensearch.security.sampleextension.actions.update.UpdateSampleResour
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.sampleextension.resource.SampleResourceFactory;
+import org.opensearch.security.sampleextension.resource.SampleResourceParser;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
 import org.opensearch.security.spi.DefaultResourceSharingService;
 import org.opensearch.security.spi.Resource;
-import org.opensearch.security.spi.ResourceFactory;
+import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.threadpool.ThreadPool;
@@ -92,7 +92,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         if (SampleResourceSharingServiceProvider.getInstance().get() == null) {
             System.out.println("Using DefaultResourceSharingService");
             SampleResourceSharingServiceProvider.getInstance()
-                .set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceFactory()));
+                .set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceParser(), xContentRegistry));
         }
         System.out.println(
             "SampleResourceSharingServiceProvider.getInstance(): " + SampleResourceSharingServiceProvider.getInstance().get()
@@ -145,8 +145,8 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     }
 
     @Override
-    public ResourceFactory<? extends Resource> getResourceFactory() {
-        return new SampleResourceFactory();
+    public ResourceParser<? extends Resource> getResourceParser() {
+        return new SampleResourceParser();
     }
 
     @SuppressWarnings("unchecked")

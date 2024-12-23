@@ -11,6 +11,7 @@
 
 package org.opensearch.security.resource;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,14 +26,19 @@ import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.rest.resource.ShareWith;
 import org.opensearch.security.spi.Resource;
-import org.opensearch.security.spi.ResourceFactory;
+import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
@@ -43,12 +49,19 @@ import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_
 public class SecurityResourceSharingService<T extends Resource> implements ResourceSharingService<T> {
     private final Client client;
     private final String resourceIndex;
-    private final ResourceFactory<T> resourceFactory;
+    private final ResourceParser<T> resourceParser;
+    private final NamedXContentRegistry xContentRegistry;
 
-    public SecurityResourceSharingService(Client client, String resourceIndex, ResourceFactory<T> resourceFactory) {
+    public SecurityResourceSharingService(
+        Client client,
+        String resourceIndex,
+        ResourceParser<T> resourceParser,
+        NamedXContentRegistry xContentRegistry
+    ) {
         this.client = client;
         this.resourceIndex = resourceIndex;
-        this.resourceFactory = resourceFactory;
+        this.resourceParser = resourceParser;
+        this.xContentRegistry = xContentRegistry;
     }
 
     private boolean hasPermissionsFor(User authenticatedUser, ResourceSharingEntry sharedWith) {
@@ -131,10 +144,18 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
                                 if (singleResponse != null && !singleResponse.isFailed()) {
                                     GetResponse singleGetResponse = singleResponse.getResponse();
                                     if (singleGetResponse.isExists() && !singleGetResponse.isSourceEmpty()) {
-                                        // TODO Is there a better way to create this instance of a generic w/o using reflection
-                                        T resource = resourceFactory.createResource();
-                                        resource.fromSource(singleGetResponse.getId(), singleGetResponse.getSourceAsMap());
-                                        resources.add(resource);
+                                        try {
+                                            XContentParser parser = XContentHelper.createParser(
+                                                xContentRegistry,
+                                                LoggingDeprecationHandler.INSTANCE,
+                                                singleGetResponse.getSourceAsBytesRef(),
+                                                XContentType.JSON
+                                            );
+                                            T resource = resourceParser.parse(parser, singleGetResponse.getId());
+                                            resources.add(resource);
+                                        } catch (IOException e) {
+                                            throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
+                                        }
                                     } else {
                                         // does not exist or empty source
                                         continue;
@@ -214,9 +235,18 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
             ActionListener<GetResponse> getListener = new ActionListener<GetResponse>() {
                 @Override
                 public void onResponse(GetResponse getResponse) {
-                    T resource = resourceFactory.createResource();
-                    resource.fromSource(getResponse.getId(), getResponse.getSourceAsMap());
-                    getResourceListener.onResponse(resource);
+                    try {
+                        XContentParser parser = XContentHelper.createParser(
+                            xContentRegistry,
+                            LoggingDeprecationHandler.INSTANCE,
+                            getResponse.getSourceAsBytesRef(),
+                            XContentType.JSON
+                        );
+                        T resource = resourceParser.parse(parser, getResponse.getId());
+                        getResourceListener.onResponse(resource);
+                    } catch (IOException e) {
+                        throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
+                    }
                 }
 
                 @Override

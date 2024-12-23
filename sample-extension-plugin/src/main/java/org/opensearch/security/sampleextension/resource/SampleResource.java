@@ -1,14 +1,13 @@
 package org.opensearch.security.sampleextension.resource;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.security.spi.Resource;
 
-public class SampleResource extends Resource {
+public class SampleResource implements Resource {
 
     private String name;
 
@@ -20,12 +19,6 @@ public class SampleResource extends Resource {
 
     public static SampleResource from(StreamInput in) throws IOException {
         return new SampleResource(in);
-    }
-
-    @Override
-    public void fromSource(String resourceId, Map<String, Object> sourceAsMap) {
-        super.fromSource(resourceId, sourceAsMap);
-        this.name = (String) sourceAsMap.get("name");
     }
 
     @Override

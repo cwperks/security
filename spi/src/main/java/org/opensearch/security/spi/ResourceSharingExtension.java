@@ -23,9 +23,9 @@ public interface ResourceSharingExtension {
     String getResourceIndex();
 
     /**
-     * @return The class corresponding to this resource
+     * @return returns a parser for this resource
      */
-    ResourceFactory<? extends Resource> getResourceFactory();
+    ResourceParser<? extends Resource> getResourceParser();
 
     void assignResourceSharingService(ResourceSharingService<? extends Resource> service);
 }
