@@ -16,6 +16,8 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 
+// TODO Job Scheduler keeps track of doc version. Should this keep track of version similarly?
+
 /**
  * Structure to represent resource document version.
  */

@@ -91,8 +91,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         this.client = client;
         if (SampleResourceSharingServiceProvider.getInstance().get() == null) {
             System.out.println("Using DefaultResourceSharingService");
-            SampleResourceSharingServiceProvider.getInstance()
-                .set(new DefaultResourceSharingService<>(client, RESOURCE_INDEX_NAME, new SampleResourceParser(), xContentRegistry));
+            SampleResourceSharingServiceProvider.getInstance().set(new DefaultResourceSharingService<>());
         }
         System.out.println(
             "SampleResourceSharingServiceProvider.getInstance(): " + SampleResourceSharingServiceProvider.getInstance().get()

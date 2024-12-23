@@ -8,12 +8,29 @@
 
 package org.opensearch.security.spi.actions.resource.list;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.opensearch.OpenSearchException;
+import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.client.Client;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
+import org.opensearch.common.xcontent.XContentHelper;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.index.query.MatchAllQueryBuilder;
+import org.opensearch.search.SearchHit;
+import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -24,22 +41,106 @@ import org.opensearch.transport.TransportService;
 public class ListResourceTransportAction<T extends Resource> extends HandledTransportAction<ListResourceRequest, ListResourceResponse<T>> {
     private final ResourceSharingService<T> resourceSharingService;
 
+    private final ResourceParser<T> resourceParser;
+
+    private final Client client;
+
+    private final String resourceIndex;
+
+    private final NamedXContentRegistry xContentRegistry;
+
     public ListResourceTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
         String actionName,
-        ResourceSharingService<T> resourceSharingService
+        String resourceIndex,
+        ResourceSharingService<T> resourceSharingService,
+        ResourceParser<T> resourceParser,
+        Client client,
+        NamedXContentRegistry xContentRegistry
     ) {
         super(actionName, transportService, actionFilters, ListResourceRequest::new);
+        this.client = client;
         this.resourceSharingService = resourceSharingService;
+        this.resourceIndex = resourceIndex;
+        this.xContentRegistry = xContentRegistry;
+        this.resourceParser = resourceParser;
     }
 
     @Override
     protected void doExecute(Task task, ListResourceRequest request, ActionListener<ListResourceResponse<T>> listener) {
-        ActionListener<List<T>> sampleResourceListener = ActionListener.wrap(sampleResourcesList -> {
-            System.out.println("sampleResourcesList: " + sampleResourcesList);
-            listener.onResponse(new ListResourceResponse<T>(sampleResourcesList));
+        ActionListener<List<T>> listResourceListener = ActionListener.wrap(resourcesList -> {
+            System.out.println("resourcesList: " + resourcesList);
+            listener.onResponse(new ListResourceResponse<>(resourcesList));
         }, listener::onFailure);
-        resourceSharingService.listResources(sampleResourceListener);
+        try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
+            SearchRequest sr = new SearchRequest(resourceIndex);
+            SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
+            matchAllQuery.query(new MatchAllQueryBuilder());
+            sr.source(matchAllQuery);
+            ActionListener<SearchResponse> searchListener = new ActionListener<>() {
+                @Override
+                public void onResponse(SearchResponse searchResponse) {
+                    List<T> resources = new ArrayList<>();
+
+                    SearchHit[] hits = searchResponse.getHits().getHits();
+
+                    if (hits.length == 0) {
+                        listResourceListener.onResponse(resources);
+                        return;
+                    }
+
+                    AtomicInteger remainingChecks = new AtomicInteger(hits.length);
+
+                    for (SearchHit hit : hits) {
+                        try {
+                            XContentParser parser = XContentHelper.createParser(
+                                xContentRegistry,
+                                LoggingDeprecationHandler.INSTANCE,
+                                hit.getSourceRef(),
+                                XContentType.JSON
+                            );
+                            T resource = resourceParser.parse(parser, hit.getId());
+
+                            ActionListener<Boolean> shareListener = new ActionListener<>() {
+                                @Override
+                                public void onResponse(Boolean isShared) {
+                                    if (isShared) {
+                                        synchronized (resources) {
+                                            resources.add(resource);
+                                        }
+                                    }
+                                    if (remainingChecks.decrementAndGet() == 0) {
+                                        listResourceListener.onResponse(resources);
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(Exception e) {
+                                    listResourceListener.onFailure(
+                                        new OpenSearchException("Failed to check sharing status: " + e.getMessage(), e)
+                                    );
+                                }
+                            };
+
+                            resourceSharingService.hasResourceBeenSharedWith(hit.getId(), shareListener);
+
+                        } catch (IOException e) {
+                            listResourceListener.onFailure(
+                                new OpenSearchException("Caught exception while loading resources: " + e.getMessage(), e)
+                            );
+                            return;
+                        }
+                    }
+                    listResourceListener.onResponse(resources);
+                }
+
+                @Override
+                public void onFailure(Exception e) {
+                    throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
+                }
+            };
+            client.search(sr, searchListener);
+        }
     }
 }
