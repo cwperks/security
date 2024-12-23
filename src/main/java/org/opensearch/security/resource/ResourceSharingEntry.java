@@ -17,8 +17,7 @@ import java.util.Map;
 
 import org.opensearch.core.xcontent.ToXContentFragment;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.ResourceUser;
-import org.opensearch.security.spi.ShareWith;
+import org.opensearch.security.rest.resource.ShareWith;
 
 public class ResourceSharingEntry implements ToXContentFragment {
     private final String resourceIndex;

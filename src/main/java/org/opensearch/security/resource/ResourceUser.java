@@ -7,7 +7,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi;
+package org.opensearch.security.resource;
 
 import java.io.IOException;
 import java.util.HashSet;
