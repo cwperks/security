@@ -53,7 +53,6 @@ import org.opensearch.security.sampleextension.actions.update.UpdateSampleResour
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceParser;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
-import org.opensearch.security.spi.DefaultResourceSharingService;
 import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingExtension;
@@ -89,10 +88,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        if (SampleResourceSharingServiceProvider.getInstance().get() == null) {
-            System.out.println("Using DefaultResourceSharingService");
-            SampleResourceSharingServiceProvider.getInstance().set(new DefaultResourceSharingService<>());
-        }
         System.out.println(
             "SampleResourceSharingServiceProvider.getInstance(): " + SampleResourceSharingServiceProvider.getInstance().get()
         );

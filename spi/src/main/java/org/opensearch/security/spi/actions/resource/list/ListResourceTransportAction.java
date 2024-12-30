@@ -29,6 +29,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
+import org.opensearch.security.spi.DefaultResourceSharingService;
 import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingService;
@@ -61,7 +62,7 @@ public class ListResourceTransportAction<T extends Resource> extends HandledTran
     ) {
         super(actionName, transportService, actionFilters, ListResourceRequest::new);
         this.client = client;
-        this.resourceSharingService = resourceSharingService;
+        this.resourceSharingService = resourceSharingService != null ? resourceSharingService : new DefaultResourceSharingService<>();
         this.resourceIndex = resourceIndex;
         this.xContentRegistry = xContentRegistry;
         this.resourceParser = resourceParser;
