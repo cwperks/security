@@ -9,6 +9,7 @@
 package org.opensearch.security.spi.actions.resource.get;
 
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -60,6 +61,7 @@ public class GetResourceTransportAction<T extends Resource> extends HandledTrans
     ) {
         super(actionName, transportService, actionFilters, GetResourceRequest::new);
         this.resourceSharingService = resourceSharingService;
+        Objects.requireNonNull(resourceParser);
         this.resourceParser = resourceParser;
         this.resourceIndex = resourceIndex;
         this.client = client;

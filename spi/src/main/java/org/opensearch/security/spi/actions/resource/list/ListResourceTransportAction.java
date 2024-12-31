@@ -11,6 +11,7 @@ package org.opensearch.security.spi.actions.resource.list;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.opensearch.OpenSearchException;
@@ -65,6 +66,7 @@ public class ListResourceTransportAction<T extends Resource> extends HandledTran
         this.resourceSharingService = resourceSharingService != null ? resourceSharingService : new DefaultResourceSharingService<>();
         this.resourceIndex = resourceIndex;
         this.xContentRegistry = xContentRegistry;
+        Objects.requireNonNull(resourceParser);
         this.resourceParser = resourceParser;
     }
 

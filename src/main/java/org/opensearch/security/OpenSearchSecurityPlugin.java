@@ -1080,9 +1080,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         for (ResourceSharingExtension extension : resourceSharingExtensions) {
             ResourceSharingService<?> resourceSharingService = new SecurityResourceSharingService<>(
                 localClient,
-                extension.getResourceIndex(),
-                extension.getResourceParser(),
-                xContentRegistry
+                extension.getResourceIndex()
             );
             extension.assignResourceSharingService(resourceSharingService);
         }

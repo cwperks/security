@@ -25,7 +25,9 @@ public interface ResourceSharingExtension {
     /**
      * @return returns a parser for this resource
      */
-    ResourceParser<? extends Resource> getResourceParser();
+    default ResourceParser<? extends Resource> getResourceParser() {
+        return null;
+    };
 
     void assignResourceSharingService(ResourceSharingService<? extends Resource> service);
 }
