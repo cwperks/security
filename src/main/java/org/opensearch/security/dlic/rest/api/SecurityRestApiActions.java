@@ -18,6 +18,7 @@ import java.util.List;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.plugins.resource.ResourceType;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.security.auditlog.AuditLog;
@@ -26,7 +27,6 @@ import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.hasher.PasswordHasher;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.rest.resource.ShareWithRestAction;
-import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.ssl.SslSettingsManager;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.user.UserService;
@@ -52,7 +52,7 @@ public class SecurityRestApiActions {
         final UserService userService,
         final boolean certificatesReloadEnabled,
         final PasswordHasher passwordHasher,
-        final List<ResourceSharingExtension> resourceSharingExtensions
+        final List<ResourceType> resourceTypes
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,
@@ -67,7 +67,7 @@ public class SecurityRestApiActions {
             ),
             auditLog,
             settings,
-            resourceSharingExtensions
+            resourceTypes
         );
         return List.of(
             new InternalUsersApiAction(clusterService, threadPool, userService, securityApiDependencies, passwordHasher),
@@ -109,7 +109,7 @@ public class SecurityRestApiActions {
                 securityApiDependencies
             ),
             new CertificatesApiAction(clusterService, threadPool, securityApiDependencies),
-            new ShareWithRestAction(resourceSharingExtensions)
+            new ShareWithRestAction(resourceTypes)
         );
     }
 

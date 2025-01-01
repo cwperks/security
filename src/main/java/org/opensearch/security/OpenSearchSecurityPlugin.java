@@ -122,9 +122,12 @@ import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.ResourceAccessControlPlugin;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
+import org.opensearch.plugins.resource.ResourceSharingService;
+import org.opensearch.plugins.resource.ResourceType;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -189,8 +192,6 @@ import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
-import org.opensearch.security.spi.ResourceSharingExtension;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
@@ -245,7 +246,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
         ExtensiblePlugin,
         ExtensionAwarePlugin,
-        IdentityPlugin
+        IdentityPlugin,
+        ResourceAccessControlPlugin
 // CS-ENFORCE-SINGLE
 
 {
@@ -283,7 +285,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
     private final Set<String> indicesToListen = new HashSet<>();
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-    private final List<ResourceSharingExtension> resourceSharingExtensions = new ArrayList<>();
+    private final List<ResourceType> resourceTypes = new ArrayList<>();
     // CS-ENFORCE-SINGLE
 
     public static boolean isActionTraceEnabled() {
@@ -673,7 +675,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
                         passwordHasher,
-                        resourceSharingExtensions
+                        resourceTypes
                     )
                 );
                 log.debug("Added {} rest handler(s)", handlers.size());
@@ -1076,15 +1078,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
 
         ResourceSharingListener.getInstance().initialize(threadPool, localClient);
-        // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-        for (ResourceSharingExtension extension : resourceSharingExtensions) {
-            ResourceSharingService<?> resourceSharingService = new SecurityResourceSharingService<>(
-                localClient,
-                extension.getResourceIndex()
-            );
-            extension.assignResourceSharingService(resourceSharingService);
-        }
-        // CS-ENFORCE-SINGLE
 
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
@@ -2196,20 +2189,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         );
     }
 
-    // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-    @Override
-    public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
-        for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
-            String resourceIndexName = extension.getResourceIndex();
-            System.out.println("loadExtensions");
-            System.out.println("localClient: " + localClient);
-            this.indicesToListen.add(resourceIndexName);
-            resourceSharingExtensions.add(extension);
-            log.info("Loaded resource, index: {}", resourceIndexName);
-        }
-    }
-    // CS-ENFORCE-SINGLE
-
     @SuppressWarnings("removal")
     private void tryAddSecurityProvider() {
         final SecurityManager sm = System.getSecurityManager();
@@ -2232,6 +2211,22 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             }
             return null;
         });
+    }
+
+    @Override
+    public void assignResourceSharingService(ResourceType resourceType) {
+        resourceTypes.add(resourceType);
+        String resourceIndexName = resourceType.getResourceIndex();
+        System.out.println("getResourceSharingService");
+        this.indicesToListen.add(resourceIndexName);
+        ResourceSharingService resourceSharingService = new SecurityResourceSharingService(
+            localClient,
+            resourceType.getResourceType(),
+            resourceType.getResourceIndex()
+        );
+        resourceType.assignResourceSharingService(resourceSharingService);
+
+        log.info("Loaded resource, index: {}", resourceIndexName);
     }
 
     public static class GuiceHolder implements LifecycleComponent {

@@ -73,7 +73,6 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
     }
 
     private void createResource(CreateResourceRequest<T> request, ActionListener<CreateResourceResponse> listener) {
-        log.warn("Sample name: " + request.getResource());
         Resource sample = request.getResource();
         try {
             IndexRequest ir = nodeClient.prepareIndex(resourceIndex)
@@ -81,16 +80,7 @@ public class CreateResourceTransportAction<T extends Resource> extends HandledTr
                 .setSource(sample.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
                 .request();
 
-            log.warn("Index Request: " + ir.toString());
-
-            // ActionListener<IndexResponse> resourceSharingListener = ActionListener.wrap(resourceSharingResponse -> {
-            // listener.onResponse(new CreateResourceResponse("Created resource: " + resourceSharingResponse.toString()));
-            // }, listener::onFailure);
-
             ActionListener<IndexResponse> irListener = ActionListener.wrap(idxResponse -> {
-                log.info("Created resource: " + idxResponse.toString());
-                // ResourceSharingUtils.getInstance()
-                // .indexResourceSharing(idxResponse.getId(), sample, ShareWith.PUBLIC, resourceSharingListener);
                 listener.onResponse(new CreateResourceResponse(idxResponse.getId()));
             }, listener::onFailure);
             nodeClient.index(ir, irListener);

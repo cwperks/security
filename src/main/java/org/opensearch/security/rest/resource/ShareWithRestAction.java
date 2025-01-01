@@ -17,10 +17,10 @@ import com.google.common.collect.ImmutableList;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.plugins.resource.ResourceType;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.security.spi.ResourceSharingExtension;
 
 import static org.opensearch.rest.RestRequest.Method.PUT;
 import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
@@ -29,10 +29,10 @@ public class ShareWithRestAction extends BaseRestHandler {
 
     private final Map<String, String> resourceTypeToIndexMap = new HashMap<>();
 
-    public ShareWithRestAction(final List<ResourceSharingExtension> resourceSharingExtensions) {
-        if (resourceSharingExtensions != null) {
-            for (ResourceSharingExtension resourceSharingExtension : resourceSharingExtensions) {
-                resourceTypeToIndexMap.put(resourceSharingExtension.getResourceType(), resourceSharingExtension.getResourceIndex());
+    public ShareWithRestAction(final List<ResourceType> resourceTypes) {
+        if (resourceTypes != null) {
+            for (ResourceType resourceType : resourceTypes) {
+                resourceTypeToIndexMap.put(resourceType.getResourceType(), resourceType.getResourceIndex());
             }
         }
     }
@@ -57,6 +57,10 @@ public class ShareWithRestAction extends BaseRestHandler {
     public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         String resourceId = request.param("id");
         String resourceType = request.param("resource_type");
+
+        System.out.println("ShareWithRestAction");
+
+        System.out.println("resourceTypeToIndexMap: " + resourceTypeToIndexMap);
 
         if (!resourceTypeToIndexMap.containsKey(resourceType)) {
             throw new IllegalArgumentException("Resource type " + resourceType + " is not supported");

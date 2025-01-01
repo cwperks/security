@@ -20,23 +20,24 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.query.BoolQueryBuilder;
 import org.opensearch.index.query.QueryBuilders;
+import org.opensearch.plugins.resource.ResourceSharingService;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.rest.resource.ShareWith;
-import org.opensearch.security.spi.Resource;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 
-public class SecurityResourceSharingService<T extends Resource> implements ResourceSharingService<T> {
+public class SecurityResourceSharingService implements ResourceSharingService {
     private final Client client;
+    private final String resourceType;
     private final String resourceIndex;
 
-    public SecurityResourceSharingService(Client client, String resourceIndex) {
+    public SecurityResourceSharingService(Client client, String resourceType, String resourceIndex) {
         this.client = client;
+        this.resourceType = resourceType;
         this.resourceIndex = resourceIndex;
     }
 
@@ -62,7 +63,12 @@ public class SecurityResourceSharingService<T extends Resource> implements Resou
     }
 
     @Override
-    public void isSharedWithCurrentUser(String resourceId, ActionListener<Boolean> resourceSharingListener) {
+    public String getResourceType() {
+        return resourceType;
+    }
+
+    @Override
+    public void isSharedWithCurrentRequester(String resourceId, ActionListener<Boolean> resourceSharingListener) {
         User authenticatedUser = (User) client.threadPool()
             .getThreadContext()
             .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
