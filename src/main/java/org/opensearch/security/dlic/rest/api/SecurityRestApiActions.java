@@ -18,7 +18,7 @@ import java.util.List;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.security.auditlog.AuditLog;
@@ -52,7 +52,7 @@ public class SecurityRestApiActions {
         final UserService userService,
         final boolean certificatesReloadEnabled,
         final PasswordHasher passwordHasher,
-        final List<ResourceType> resourceTypes
+        final List<SharableResourceType> resourceTypes
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,

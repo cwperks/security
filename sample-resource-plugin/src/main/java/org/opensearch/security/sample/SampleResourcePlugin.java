@@ -35,7 +35,7 @@ import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.ResourcePlugin;
 import org.opensearch.plugins.SystemIndexPlugin;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -122,7 +122,7 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
     }
 
     @Override
-    public List<ResourceType> getResourceTypes() {
+    public List<SharableResourceType> getResourceTypes() {
         return List.of(SampleResourceType.getInstance());
     }
 }

@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableList;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
@@ -29,9 +29,9 @@ public class ShareWithRestAction extends BaseRestHandler {
 
     private final Map<String, String> resourceTypeToIndexMap = new HashMap<>();
 
-    public ShareWithRestAction(final List<ResourceType> resourceTypes) {
+    public ShareWithRestAction(final List<SharableResourceType> resourceTypes) {
         if (resourceTypes != null) {
-            for (ResourceType resourceType : resourceTypes) {
+            for (SharableResourceType resourceType : resourceTypes) {
                 resourceTypeToIndexMap.put(resourceType.getResourceType(), resourceType.getResourceIndex());
             }
         }

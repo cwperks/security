@@ -127,7 +127,7 @@ import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
 import org.opensearch.plugins.resource.ResourceSharingService;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.repositories.RepositoriesService;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
@@ -284,9 +284,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile PasswordHasher passwordHasher;
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
     private final Set<String> indicesToListen = new HashSet<>();
-    // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-    private final List<ResourceType> resourceTypes = new ArrayList<>();
-    // CS-ENFORCE-SINGLE
+    private final List<SharableResourceType> resourceTypes = new ArrayList<>();
 
     public static boolean isActionTraceEnabled() {
 
@@ -2214,7 +2212,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     }
 
     @Override
-    public void assignResourceSharingService(ResourceType resourceType) {
+    public void assignResourceSharingService(SharableResourceType resourceType) {
         resourceTypes.add(resourceType);
         String resourceIndexName = resourceType.getResourceIndex();
         System.out.println("getResourceSharingService");

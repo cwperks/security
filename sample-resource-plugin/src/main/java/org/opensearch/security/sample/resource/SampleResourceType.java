@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.opensearch.plugins.resource.ResourceSharingService;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 
 import static org.opensearch.security.sample.SampleResourcePlugin.RESOURCE_INDEX_NAME;
 
-public class SampleResourceType implements ResourceType {
+public class SampleResourceType implements SharableResourceType {
     private volatile ResourceSharingService resourceSharingService;
 
     private static final Map<ClassLoader, SampleResourceType> instances = new ConcurrentHashMap<>();

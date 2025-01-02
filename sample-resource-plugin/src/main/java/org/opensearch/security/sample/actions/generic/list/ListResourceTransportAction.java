@@ -28,9 +28,9 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.MatchAllQueryBuilder;
-import org.opensearch.plugins.resource.Resource;
 import org.opensearch.plugins.resource.ResourceParser;
 import org.opensearch.plugins.resource.ResourceSharingService;
+import org.opensearch.plugins.resource.SharableResource;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
@@ -39,7 +39,9 @@ import org.opensearch.transport.TransportService;
 /**
  * Transport action for ListResource.
  */
-public class ListResourceTransportAction<T extends Resource> extends HandledTransportAction<ListResourceRequest, ListResourceResponse<T>> {
+public class ListResourceTransportAction<T extends SharableResource> extends HandledTransportAction<
+    ListResourceRequest,
+    ListResourceResponse<T>> {
     private final ResourceSharingService resourceSharingService;
 
     private final ResourceParser<T> resourceParser;

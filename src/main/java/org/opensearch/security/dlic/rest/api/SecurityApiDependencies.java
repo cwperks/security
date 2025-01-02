@@ -14,7 +14,7 @@ package org.opensearch.security.dlic.rest.api;
 import java.util.List;
 
 import org.opensearch.common.settings.Settings;
-import org.opensearch.plugins.resource.ResourceType;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
@@ -28,7 +28,7 @@ public class SecurityApiDependencies {
     private final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator;
     private final AuditLog auditLog;
     private final Settings settings;
-    private final List<ResourceType> resourceTypes;
+    private final List<SharableResourceType> resourceTypes;
 
     private final PrivilegesEvaluator privilegesEvaluator;
 
@@ -40,7 +40,7 @@ public class SecurityApiDependencies {
         final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator,
         final AuditLog auditLog,
         final Settings settings,
-        final List<ResourceType> resourceTypes
+        final List<SharableResourceType> resourceTypes
     ) {
         this.adminDNs = adminDNs;
         this.configurationRepository = configurationRepository;
@@ -72,7 +72,7 @@ public class SecurityApiDependencies {
         return restApiAdminPrivilegesEvaluator;
     }
 
-    public List<ResourceType> resourceTypes() {
+    public List<SharableResourceType> resourceTypes() {
         return resourceTypes;
     }
 
