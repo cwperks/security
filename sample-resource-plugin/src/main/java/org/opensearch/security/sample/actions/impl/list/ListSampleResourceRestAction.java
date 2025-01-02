@@ -6,44 +6,40 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sample.actions.get;
+package org.opensearch.security.sample.actions.impl.list;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.opensearch.client.node.NodeClient;
-import org.opensearch.plugins.resource.action.get.GetResourceRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.sample.actions.generic.list.ListResourceRequest;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.GET;
 import static org.opensearch.security.sample.SampleResourcePlugin.RESOURCE_INDEX_NAME;
 
-public class GetSampleResourceRestAction extends BaseRestHandler {
+public class ListSampleResourceRestAction extends BaseRestHandler {
 
-    public GetSampleResourceRestAction() {}
+    public ListSampleResourceRestAction() {}
 
     @Override
     public List<Route> routes() {
-        return singletonList(new Route(GET, "/_plugins/resource_sharing_example/resource/{id}"));
+        return singletonList(new Route(GET, "/_plugins/resource_sharing_example/resource"));
     }
 
     @Override
     public String getName() {
-        return "get_sample_resource";
+        return "list_sample_resources";
     }
 
-    @SuppressWarnings("unchecked")
     @Override
-    public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
-        String resourceId = request.param("id");
-
-        final GetResourceRequest getSampleResourceRequest = new GetResourceRequest(resourceId, RESOURCE_INDEX_NAME);
+    public RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) {
+        final ListResourceRequest listSampleResourceRequest = new ListResourceRequest(RESOURCE_INDEX_NAME);
         return channel -> client.executeLocally(
-            GetSampleResourceAction.INSTANCE,
-            getSampleResourceRequest,
+            ListSampleResourceAction.INSTANCE,
+            listSampleResourceRequest,
             new RestToXContentListener<>(channel)
         );
     }

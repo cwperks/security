@@ -6,10 +6,10 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sample.actions.list;
+package org.opensearch.security.sample.actions.impl.list;
 
 import org.opensearch.action.ActionType;
-import org.opensearch.plugins.resource.action.list.ListResourceResponse;
+import org.opensearch.security.sample.actions.generic.list.ListResourceResponse;
 import org.opensearch.security.sample.resource.SampleResource;
 
 /**

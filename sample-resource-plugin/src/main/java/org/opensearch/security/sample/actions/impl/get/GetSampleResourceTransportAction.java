@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sample.actions.list;
+package org.opensearch.security.sample.actions.impl.get;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,7 +15,7 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
-import org.opensearch.plugins.resource.action.list.ListResourceTransportAction;
+import org.opensearch.plugins.resource.action.generic.get.GetResourceTransportAction;
 import org.opensearch.security.sample.resource.SampleResource;
 import org.opensearch.security.sample.resource.SampleResourceParser;
 import org.opensearch.security.sample.resource.SampleResourceType;
@@ -24,22 +24,22 @@ import org.opensearch.transport.TransportService;
 import static org.opensearch.security.sample.SampleResourcePlugin.RESOURCE_INDEX_NAME;
 
 /**
- * Transport action for ListSampleResource.
+ * Transport action for GetSampleResource.
  */
-public class ListSampleResourceTransportAction extends ListResourceTransportAction<SampleResource> {
-    private static final Logger log = LogManager.getLogger(ListSampleResourceTransportAction.class);
+public class GetSampleResourceTransportAction extends GetResourceTransportAction<SampleResource> {
+    private static final Logger log = LogManager.getLogger(GetSampleResourceTransportAction.class);
 
     @Inject
-    public ListSampleResourceTransportAction(
+    public GetSampleResourceTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        NamedXContentRegistry xContentRegistry,
-        Client client
+        Client client,
+        NamedXContentRegistry xContentRegistry
     ) {
         super(
             transportService,
             actionFilters,
-            ListSampleResourceAction.NAME,
+            GetSampleResourceAction.NAME,
             RESOURCE_INDEX_NAME,
             SampleResourceType.getInstance().getResourceSharingService(),
             new SampleResourceParser(),

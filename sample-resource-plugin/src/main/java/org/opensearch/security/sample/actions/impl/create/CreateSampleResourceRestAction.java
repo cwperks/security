@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.sample.actions.create;
+package org.opensearch.security.sample.actions.impl.create;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,10 +14,10 @@ import java.util.Map;
 
 import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.plugins.resource.action.create.CreateResourceRequest;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.sample.actions.generic.create.CreateResourceRequest;
 import org.opensearch.security.sample.resource.SampleResource;
 
 import static java.util.Collections.singletonList;
