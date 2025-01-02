@@ -18,13 +18,9 @@ public class SampleResource implements SharableResource {
         this.lastUpdateTime = now;
     }
 
-    SampleResource(StreamInput in) throws IOException {
+    public SampleResource(StreamInput in) throws IOException {
         this.name = in.readString();
         this.lastUpdateTime = in.readInstant();
-    }
-
-    public static SampleResource from(StreamInput in) throws IOException {
-        return new SampleResource(in);
     }
 
     @Override
