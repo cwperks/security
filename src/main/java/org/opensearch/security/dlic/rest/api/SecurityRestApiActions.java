@@ -18,6 +18,7 @@ import java.util.List;
 import org.opensearch.client.Client;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.plugins.resource.SharableResourceType;
 import org.opensearch.rest.RestController;
 import org.opensearch.rest.RestHandler;
 import org.opensearch.security.auditlog.AuditLog;
@@ -25,6 +26,7 @@ import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.hasher.PasswordHasher;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
+import org.opensearch.security.rest.resource.ShareWithRestAction;
 import org.opensearch.security.ssl.SslSettingsManager;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.user.UserService;
@@ -49,7 +51,8 @@ public class SecurityRestApiActions {
         final SslSettingsManager sslSettingsManager,
         final UserService userService,
         final boolean certificatesReloadEnabled,
-        final PasswordHasher passwordHasher
+        final PasswordHasher passwordHasher,
+        final List<SharableResourceType> resourceTypes
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,
@@ -63,7 +66,8 @@ public class SecurityRestApiActions {
                 settings.getAsBoolean(SECURITY_RESTAPI_ADMIN_ENABLED, false)
             ),
             auditLog,
-            settings
+            settings,
+            resourceTypes
         );
         return List.of(
             new InternalUsersApiAction(clusterService, threadPool, userService, securityApiDependencies, passwordHasher),
@@ -104,7 +108,8 @@ public class SecurityRestApiActions {
                 certificatesReloadEnabled,
                 securityApiDependencies
             ),
-            new CertificatesApiAction(clusterService, threadPool, securityApiDependencies)
+            new CertificatesApiAction(clusterService, threadPool, securityApiDependencies),
+            new ShareWithRestAction(resourceTypes)
         );
     }
 
