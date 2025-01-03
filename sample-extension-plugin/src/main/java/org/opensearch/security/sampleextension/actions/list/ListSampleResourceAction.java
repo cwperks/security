@@ -26,6 +26,6 @@ public class ListSampleResourceAction extends ActionType<ListResourceResponse<Sa
     public static final String NAME = "cluster:admin/sampleresource/list";
 
     private ListSampleResourceAction() {
-        super(NAME, in -> new ListResourceResponse<>(in, SampleResource::from));
+        super(NAME, in -> new ListResourceResponse<>(in, SampleResource::new));
     }
 }

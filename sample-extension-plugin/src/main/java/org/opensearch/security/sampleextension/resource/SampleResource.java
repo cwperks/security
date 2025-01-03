@@ -1,24 +1,26 @@
 package org.opensearch.security.sampleextension.resource;
 
 import java.io.IOException;
+import java.time.Instant;
 
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.SharableResource;
 
-public class SampleResource implements Resource {
+public class SampleResource implements SharableResource {
 
     private String name;
+    private Instant lastUpdateTime;
 
-    public SampleResource() {}
-
-    SampleResource(StreamInput in) throws IOException {
-        this.name = in.readString();
+    public SampleResource() {
+        Instant now = Instant.now();
+        this.lastUpdateTime = now;
     }
 
-    public static SampleResource from(StreamInput in) throws IOException {
-        return new SampleResource(in);
+    public SampleResource(StreamInput in) throws IOException {
+        this.name = in.readString();
+        this.lastUpdateTime = in.readInstant();
     }
 
     @Override
@@ -27,8 +29,10 @@ public class SampleResource implements Resource {
     }
 
     @Override
-    public void writeTo(StreamOutput streamOutput) throws IOException {
-        streamOutput.writeString(name);
+    public void writeTo(StreamOutput out) throws IOException {
+        out.writeString(name);
+        out.writeInstant(lastUpdateTime);
+
     }
 
     @Override
@@ -36,7 +40,21 @@ public class SampleResource implements Resource {
         return "sample_resource";
     }
 
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public Instant getLastUpdateTime() {
+        return lastUpdateTime;
+    }
+
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setLastUpdateTime(Instant lastUpdateTime) {
+        this.lastUpdateTime = lastUpdateTime;
     }
 }

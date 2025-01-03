@@ -15,12 +15,12 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.SharableResource;
 
 /**
  * Request object for CreateSampleResource transport action
  */
-public class CreateResourceRequest<T extends Resource> extends ActionRequest {
+public class CreateResourceRequest<T extends SharableResource> extends ActionRequest {
 
     private final T resource;
 
@@ -45,7 +45,7 @@ public class CreateResourceRequest<T extends Resource> extends ActionRequest {
         return null;
     }
 
-    public Resource getResource() {
+    public SharableResource getResource() {
         return this.resource;
     }
 }

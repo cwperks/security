@@ -13,9 +13,9 @@ import org.opensearch.security.spi.ResourceSharingService;
  * This provider allows for flexible injection of different ResourceSharingService
  * implementations based on runtime conditions.
  */
-public final class SampleResourceSharingServiceProvider implements Provider<ResourceSharingService<SampleResource>> {
+public final class SampleResourceSharingServiceProvider implements Provider<ResourceSharingService> {
 
-    private volatile ResourceSharingService<SampleResource> resourceSharingService;
+    private volatile ResourceSharingService resourceSharingService;
 
     private static final Map<ClassLoader, SampleResourceSharingServiceProvider> instances = new ConcurrentHashMap<>();
 
@@ -38,7 +38,7 @@ public final class SampleResourceSharingServiceProvider implements Provider<Reso
      * @throws IllegalStateException if the service has already been set
      * @throws IllegalArgumentException if the provided service is null
      */
-    public void set(ResourceSharingService<SampleResource> resourceSharingService) {
+    public void set(ResourceSharingService resourceSharingService) {
         if (resourceSharingService == null) {
             throw new IllegalArgumentException("ResourceSharingService cannot be null");
         }
@@ -56,7 +56,7 @@ public final class SampleResourceSharingServiceProvider implements Provider<Reso
      * @return the configured ResourceSharingService
      */
     @Override
-    public ResourceSharingService<SampleResource> get() {
+    public ResourceSharingService get() {
         return resourceSharingService;
     }
 }

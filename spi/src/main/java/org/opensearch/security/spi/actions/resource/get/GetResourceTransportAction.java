@@ -27,19 +27,21 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingService;
+import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 /**
  * Transport action for GetResource.
  */
-public class GetResourceTransportAction<T extends Resource> extends HandledTransportAction<GetResourceRequest, GetResourceResponse<T>> {
+public class GetResourceTransportAction<T extends SharableResource> extends HandledTransportAction<
+    GetResourceRequest,
+    GetResourceResponse<T>> {
     private static final Logger log = LogManager.getLogger(GetResourceTransportAction.class);
 
-    private final ResourceSharingService<T> resourceSharingService;
+    private final ResourceSharingService resourceSharingService;
 
     private final ResourceParser<T> resourceParser;
 
@@ -54,7 +56,7 @@ public class GetResourceTransportAction<T extends Resource> extends HandledTrans
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceSharingService<T> resourceSharingService,
+        ResourceSharingService resourceSharingService,
         ResourceParser<T> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry

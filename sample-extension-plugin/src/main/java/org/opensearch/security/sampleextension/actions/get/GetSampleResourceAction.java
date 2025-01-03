@@ -26,6 +26,6 @@ public class GetSampleResourceAction extends ActionType<GetResourceResponse<Samp
     public static final String NAME = "cluster:admin/sampleresource/get";
 
     private GetSampleResourceAction() {
-        super(NAME, in -> new GetResourceResponse<>(in, SampleResource::from));
+        super(NAME, in -> new GetResourceResponse<>(in, SampleResource::new));
     }
 }

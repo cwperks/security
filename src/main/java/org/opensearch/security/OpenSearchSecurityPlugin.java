@@ -731,6 +731,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     dlsFlsBaseContext
                 )
             );
+            System.out.println("this.indicesToListen: " + this.indicesToListen);
             if (this.indicesToListen.contains(indexModule.getIndex().getName())) {
                 indexModule.addIndexOperationListener(ResourceSharingListener.getInstance());
                 log.warn("Security started listening to operations on index {}", indexModule.getIndex().getName());
@@ -1078,10 +1079,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         ResourceSharingListener.getInstance().initialize(threadPool, localClient);
         // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
         for (ResourceSharingExtension extension : resourceSharingExtensions) {
-            ResourceSharingService<?> resourceSharingService = new SecurityResourceSharingService<>(
-                localClient,
-                extension.getResourceIndex()
-            );
+            ResourceSharingService resourceSharingService = new SecurityResourceSharingService(localClient, extension.getResourceIndex());
             extension.assignResourceSharingService(resourceSharingService);
         }
         // CS-ENFORCE-SINGLE
@@ -2199,9 +2197,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
     @Override
     public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
+        System.out.println("loadExtensions");
         for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
-            System.out.println("loadExtensions");
             System.out.println("localClient: " + localClient);
             this.indicesToListen.add(resourceIndexName);
             resourceSharingExtensions.add(extension);

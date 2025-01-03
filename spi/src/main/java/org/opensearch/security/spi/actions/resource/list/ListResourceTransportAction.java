@@ -30,18 +30,20 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.DefaultResourceSharingService;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.NoopResourceSharingService;
 import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingService;
+import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
 
 /**
  * Transport action for ListResource.
  */
-public class ListResourceTransportAction<T extends Resource> extends HandledTransportAction<ListResourceRequest, ListResourceResponse<T>> {
-    private final ResourceSharingService<T> resourceSharingService;
+public class ListResourceTransportAction<T extends SharableResource> extends HandledTransportAction<
+    ListResourceRequest,
+    ListResourceResponse<T>> {
+    private final ResourceSharingService resourceSharingService;
 
     private final ResourceParser<T> resourceParser;
 
@@ -56,14 +58,14 @@ public class ListResourceTransportAction<T extends Resource> extends HandledTran
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceSharingService<T> resourceSharingService,
+        ResourceSharingService resourceSharingService,
         ResourceParser<T> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
         super(actionName, transportService, actionFilters, ListResourceRequest::new);
         this.client = client;
-        this.resourceSharingService = resourceSharingService != null ? resourceSharingService : new DefaultResourceSharingService<>();
+        this.resourceSharingService = resourceSharingService != null ? resourceSharingService : new NoopResourceSharingService();
         this.resourceIndex = resourceIndex;
         this.xContentRegistry = xContentRegistry;
         Objects.requireNonNull(resourceParser);

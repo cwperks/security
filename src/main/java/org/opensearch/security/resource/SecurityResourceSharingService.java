@@ -23,7 +23,6 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.rest.resource.ShareWith;
-import org.opensearch.security.spi.Resource;
 import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
@@ -31,7 +30,7 @@ import org.opensearch.security.user.User;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 
-public class SecurityResourceSharingService<T extends Resource> implements ResourceSharingService<T> {
+public class SecurityResourceSharingService implements ResourceSharingService {
     private final Client client;
     private final String resourceIndex;
 

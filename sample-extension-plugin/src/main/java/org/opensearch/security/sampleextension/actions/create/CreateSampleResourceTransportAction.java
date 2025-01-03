@@ -28,6 +28,6 @@ public class CreateSampleResourceTransportAction extends CreateResourceTransport
 
     @Inject
     public CreateSampleResourceTransportAction(TransportService transportService, ActionFilters actionFilters, Client nodeClient) {
-        super(transportService, actionFilters, nodeClient, CreateSampleResourceAction.NAME, RESOURCE_INDEX_NAME, SampleResource::from);
+        super(transportService, actionFilters, nodeClient, CreateSampleResourceAction.NAME, RESOURCE_INDEX_NAME, SampleResource::new);
     }
 }

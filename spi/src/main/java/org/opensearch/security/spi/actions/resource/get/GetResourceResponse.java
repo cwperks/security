@@ -16,12 +16,12 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.Resource;
+import org.opensearch.security.spi.SharableResource;
 
 /**
  * Response to a GetResourceRequest
  */
-public class GetResourceResponse<T extends Resource> extends ActionResponse implements ToXContentObject {
+public class GetResourceResponse<T extends SharableResource> extends ActionResponse implements ToXContentObject {
     private final T resource;
 
     /**
