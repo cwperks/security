@@ -223,7 +223,9 @@ public class BackendRegistry {
 
         if (adminDns.isAdminDN(sslPrincipal)) {
             // PKI authenticated REST call
-            threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, new User(sslPrincipal));
+            User superuser = new User(sslPrincipal);
+            threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, superuser);
+            threadPool.getThreadContext().putPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER, superuser);
             auditLog.logSucceededLogin(sslPrincipal, true, null, request);
             return true;
         }
@@ -389,6 +391,11 @@ public class BackendRegistry {
             final User impersonatedUser = impersonate(request, authenticatedUser);
             threadPool.getThreadContext()
                 .putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, impersonatedUser == null ? authenticatedUser : impersonatedUser);
+            threadPool.getThreadContext()
+                .putPersistent(
+                    ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER,
+                    impersonatedUser == null ? authenticatedUser : impersonatedUser
+                );
             auditLog.logSucceededLogin(
                 (impersonatedUser == null ? authenticatedUser : impersonatedUser).getName(),
                 false,
@@ -422,6 +429,7 @@ public class BackendRegistry {
                 anonymousUser.setRequestedTenant(tenant);
 
                 threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, anonymousUser);
+                threadPool.getThreadContext().putPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER, anonymousUser);
                 auditLog.logSucceededLogin(anonymousUser.getName(), false, null, request);
                 if (isDebugEnabled) {
                     log.debug("Anonymous User is authenticated");
