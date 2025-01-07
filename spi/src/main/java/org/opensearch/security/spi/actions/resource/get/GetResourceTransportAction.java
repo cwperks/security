@@ -76,10 +76,10 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
     }
 
     private void getResource(GetResourceRequest request, ActionListener<GetResourceResponse<T>> listener) {
-        ActionListener<T> getResourceListener = ActionListener.wrap(resource -> {
-            System.out.println("resource: " + resource);
-            listener.onResponse(new GetResourceResponse<T>(resource));
-        }, listener::onFailure);
+        ActionListener<T> getResourceListener = ActionListener.wrap(
+            resource -> { listener.onResponse(new GetResourceResponse<T>(resource)); },
+            listener::onFailure
+        );
 
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             GetRequest gr = new GetRequest(resourceIndex);
@@ -95,27 +95,29 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
                             XContentType.JSON
                         );
                         T resource = resourceParser.parse(parser, getResponse.getId());
-                        ActionListener<Boolean> shareListener = new ActionListener<>() {
-                            @Override
-                            public void onResponse(Boolean isShared) {
-                                if (isShared) {
-                                    getResourceListener.onResponse(resource);
-                                } else {
-                                    getResourceListener.onFailure(
-                                        new OpenSearchException("User is not authorized to access this resource")
-                                    );
-                                }
-                            }
-
-                            @Override
-                            public void onFailure(Exception e) {
-                                getResourceListener.onFailure(
-                                    new OpenSearchException("Failed to check sharing status: " + e.getMessage(), e)
-                                );
-                            }
-                        };
-
-                        resourceSharingService.isSharedWithCurrentUser(request.getResourceId(), shareListener);
+                        System.out.println("resource: " + resource);
+                        // ActionListener<Boolean> shareListener = new ActionListener<>() {
+                        // @Override
+                        // public void onResponse(Boolean isShared) {
+                        // if (isShared) {
+                        // getResourceListener.onResponse(resource);
+                        // } else {
+                        // getResourceListener.onFailure(
+                        // new OpenSearchException("User is not authorized to access this resource")
+                        // );
+                        // }
+                        // }
+                        //
+                        // @Override
+                        // public void onFailure(Exception e) {
+                        // getResourceListener.onFailure(
+                        // new OpenSearchException("Failed to check sharing status: " + e.getMessage(), e)
+                        // );
+                        // }
+                        // };
+                        //
+                        // resourceSharingService.isSharedWithCurrentUser(request.getResourceId(), shareListener);
+                        getResourceListener.onResponse(resource);
                     } catch (IOException e) {
                         throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
                     }

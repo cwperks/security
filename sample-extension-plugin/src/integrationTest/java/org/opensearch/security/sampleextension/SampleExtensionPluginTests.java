@@ -71,8 +71,11 @@ public class SampleExtensionPluginTests {
             Thread.sleep(2000);
         }
         try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
-            HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
-            System.out.println("Resource sharing entries: " + response.getBody());
+            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
+            // System.out.println("Resource sharing entries: " + response.getBody());
+
+            HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
+            System.out.println("Sample resources: " + response2.getBody());
         }
 
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
@@ -89,6 +92,32 @@ public class SampleExtensionPluginTests {
             );
             updateResponse.assertStatusCode(HttpStatus.SC_OK);
             System.out.println("Update Response: " + updateResponse.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
+            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
+            // System.out.println("Resource sharing entries: " + response.getBody());
+
+            HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
+            System.out.println("Sample resources: " + response2.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            String shareWithPayload = "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}";
+            HttpResponse shareWithResponse = client.putJson(
+                "_plugins/_security/resource/sample_resource/" + resourceId + "/share_with",
+                shareWithPayload
+            );
+            shareWithResponse.assertStatusCode(HttpStatus.SC_OK);
+            System.out.println("Share With Response: " + shareWithResponse.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
+            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
+            // System.out.println("Resource sharing entries: " + response.getBody());
+
+            HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
+            System.out.println("Sample resources: " + response2.getBody());
         }
     }
 

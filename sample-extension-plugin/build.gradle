@@ -18,7 +18,7 @@ opensearchplugin {
     name 'opensearch-security-sample-extension'
     description 'Sample plugin that extends OpenSearch Security Resource Sharing Extension'
     classname 'org.opensearch.security.sampleextension.SampleExtensionPlugin'
-    extendedPlugins = ['opensearch-security']
+    extendedPlugins = ['opensearch-security;optional=true']
 }
 
 ext {

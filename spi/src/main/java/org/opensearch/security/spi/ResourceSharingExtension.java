@@ -22,12 +22,5 @@ public interface ResourceSharingExtension {
      */
     String getResourceIndex();
 
-    /**
-     * @return returns a parser for this resource
-     */
-    default ResourceParser<? extends SharableResource> getResourceParser() {
-        return null;
-    };
-
     void assignResourceSharingService(ResourceSharingService service);
 }

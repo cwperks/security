@@ -50,12 +50,9 @@ import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTr
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
-import org.opensearch.security.sampleextension.resource.SampleResourceParser;
 import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
-import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
-import org.opensearch.security.spi.SharableResource;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -135,11 +132,6 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     @Override
     public String getResourceIndex() {
         return RESOURCE_INDEX_NAME;
-    }
-
-    @Override
-    public ResourceParser<? extends SharableResource> getResourceParser() {
-        return new SampleResourceParser();
     }
 
     @SuppressWarnings("unchecked")

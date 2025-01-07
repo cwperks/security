@@ -110,7 +110,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         ).map();
         System.out.println("listResourceResponse: " + listResourceResponse);
 
-        Request resourceSharingRequest = new Request("POST", "/.resource-sharing/_search");
+        Request resourceSharingRequest = new Request("POST", "/.sample_extension_resources/_search");
         resourceSharingRequest.setOptions(requestOptions);
         Response resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
         Map<String, Object> resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
@@ -118,7 +118,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
             LoggingDeprecationHandler.INSTANCE,
             resourceSharingResponse.getEntity().getContent()
         ).map();
-        System.out.println("resourceSharingResponse: " + resourceSharingResponseMap);
+        System.out.println("sampleResources: " + resourceSharingResponseMap);
 
         Request updateSharingRequest = new Request("PUT", "/_plugins/_security/resource/sample_resource/" + resourceId + "/share_with");
         updateSharingRequest.setEntity(
@@ -142,7 +142,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
             LoggingDeprecationHandler.INSTANCE,
             resourceSharingResponse.getEntity().getContent()
         ).map();
-        System.out.println("resourceSharingResponse after update: " + resourceSharingResponseMap);
+        System.out.println("sampleResources after update: " + resourceSharingResponseMap);
 
         listResponse = client().performRequest(listRequest);
         listResourceResponse = JsonXContent.jsonXContent.createParser(

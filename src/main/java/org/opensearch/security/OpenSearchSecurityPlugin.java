@@ -176,7 +176,6 @@ import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resource.ResourceSharingListener;
-import org.opensearch.security.resource.SecurityResourceSharingService;
 import org.opensearch.security.rest.DashboardsInfoAction;
 import org.opensearch.security.rest.SecurityConfigUpdateAction;
 import org.opensearch.security.rest.SecurityHealthAction;
@@ -190,7 +189,6 @@ import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.ResourceSharingExtension;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
@@ -1078,10 +1076,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         ResourceSharingListener.getInstance().initialize(threadPool, localClient);
         // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-        for (ResourceSharingExtension extension : resourceSharingExtensions) {
-            ResourceSharingService resourceSharingService = new SecurityResourceSharingService(localClient, extension.getResourceIndex());
-            extension.assignResourceSharingService(resourceSharingService);
-        }
+        // for (ResourceSharingExtension extension : resourceSharingExtensions) {
+        // ResourceSharingService resourceSharingService = new SecurityResourceSharingService(localClient, extension.getResourceIndex());
+        // extension.assignResourceSharingService(resourceSharingService);
+        // }
         // CS-ENFORCE-SINGLE
 
         // Register opensearch dynamic settings

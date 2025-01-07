@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.search.SearchRequest;
@@ -78,6 +77,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
             System.out.println("resourcesList: " + resourcesList);
             listener.onResponse(new ListResourceResponse<>(resourcesList));
         }, listener::onFailure);
+        System.out.println("List resource do execute");
         try (ThreadContext.StoredContext ignore = client.threadPool().getThreadContext().stashContext()) {
             SearchRequest sr = new SearchRequest(resourceIndex);
             SearchSourceBuilder matchAllQuery = new SearchSourceBuilder();
@@ -95,9 +95,8 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
                         return;
                     }
 
-                    AtomicInteger remainingChecks = new AtomicInteger(hits.length);
-
                     for (SearchHit hit : hits) {
+                        System.out.println("hit: " + hit.getSourceAsMap());
                         try {
                             XContentParser parser = XContentHelper.createParser(
                                 xContentRegistry,
@@ -106,30 +105,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
                                 XContentType.JSON
                             );
                             T resource = resourceParser.parse(parser, hit.getId());
-
-                            ActionListener<Boolean> shareListener = new ActionListener<>() {
-                                @Override
-                                public void onResponse(Boolean isShared) {
-                                    if (isShared) {
-                                        synchronized (resources) {
-                                            resources.add(resource);
-                                        }
-                                    }
-                                    if (remainingChecks.decrementAndGet() == 0) {
-                                        listResourceListener.onResponse(resources);
-                                    }
-                                }
-
-                                @Override
-                                public void onFailure(Exception e) {
-                                    listResourceListener.onFailure(
-                                        new OpenSearchException("Failed to check sharing status: " + e.getMessage(), e)
-                                    );
-                                }
-                            };
-
-                            resourceSharingService.isSharedWithCurrentUser(hit.getId(), shareListener);
-
+                            resources.add(resource);
                         } catch (IOException e) {
                             listResourceListener.onFailure(
                                 new OpenSearchException("Caught exception while loading resources: " + e.getMessage(), e)
