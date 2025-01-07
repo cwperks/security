@@ -33,12 +33,10 @@ import static org.opensearch.security.systemindex.sampleplugin.SystemIndexPlugin
 
 public class RestBulkIndexDocumentIntoMixOfSystemIndexAction extends BaseRestHandler {
 
-    private final Client client;
-    private final PluginContextSwitcher contextSwitcher;
+    private final Client pluginClient;
 
-    public RestBulkIndexDocumentIntoMixOfSystemIndexAction(Client client, PluginContextSwitcher contextSwitcher) {
-        this.client = client;
-        this.contextSwitcher = contextSwitcher;
+    public RestBulkIndexDocumentIntoMixOfSystemIndexAction(RunAsClientWrapper pluginClientWrapper) {
+        this.pluginClient = pluginClientWrapper.get();
     }
 
     @Override
@@ -57,19 +55,14 @@ public class RestBulkIndexDocumentIntoMixOfSystemIndexAction extends BaseRestHan
 
             @Override
             public void accept(RestChannel channel) throws Exception {
-                contextSwitcher.runAs(() -> {
-                    BulkRequestBuilder builder = client.prepareBulk();
-                    builder.add(new IndexRequest(SYSTEM_INDEX_1).source("content", 1));
-                    builder.add(new IndexRequest(SYSTEM_INDEX_2).source("content", 1));
-                    builder.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                    BulkRequest bulkRequest = builder.request();
-                    client.bulk(bulkRequest, ActionListener.wrap(r -> {
-                        channel.sendResponse(
-                            new BytesRestResponse(RestStatus.OK, r.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS))
-                        );
-                    }, fr -> { channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, String.valueOf(fr))); }));
-                    return null;
-                });
+                BulkRequestBuilder builder = pluginClient.prepareBulk();
+                builder.add(new IndexRequest(SYSTEM_INDEX_1).source("content", 1));
+                builder.add(new IndexRequest(SYSTEM_INDEX_2).source("content", 1));
+                builder.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
+                BulkRequest bulkRequest = builder.request();
+                pluginClient.bulk(bulkRequest, ActionListener.wrap(r -> {
+                    channel.sendResponse(new BytesRestResponse(RestStatus.OK, r.toXContent(channel.newBuilder(), ToXContent.EMPTY_PARAMS)));
+                }, fr -> { channel.sendResponse(new BytesRestResponse(RestStatus.FORBIDDEN, String.valueOf(fr))); }));
             }
         };
     }

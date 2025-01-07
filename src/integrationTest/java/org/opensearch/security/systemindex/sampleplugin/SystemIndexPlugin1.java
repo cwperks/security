@@ -30,7 +30,6 @@ import org.opensearch.core.common.io.stream.NamedWriteableRegistry;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.env.NodeEnvironment;
-import org.opensearch.identity.PluginSubject;
 import org.opensearch.indices.SystemIndexDescriptor;
 import org.opensearch.plugins.IdentityAwarePlugin;
 import org.opensearch.plugins.Plugin;
@@ -45,7 +44,7 @@ import org.opensearch.watcher.ResourceWatcherService;
 public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, IdentityAwarePlugin {
     public static final String SYSTEM_INDEX_1 = ".system-index1";
 
-    private PluginContextSwitcher contextSwitcher;
+    private RunAsClientWrapper pluginClientWrapper;
 
     private Client client;
 
@@ -64,8 +63,8 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, Ide
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        this.contextSwitcher = new PluginContextSwitcher();
-        return List.of(contextSwitcher);
+        this.pluginClientWrapper = new RunAsClientWrapper();
+        return List.of(this.pluginClientWrapper);
     }
 
     @Override
@@ -86,9 +85,9 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, Ide
     ) {
         return List.of(
             new RestIndexDocumentIntoSystemIndexAction(client),
-            new RestRunClusterHealthAction(client, contextSwitcher),
-            new RestBulkIndexDocumentIntoSystemIndexAction(client, contextSwitcher),
-            new RestBulkIndexDocumentIntoMixOfSystemIndexAction(client, contextSwitcher)
+            new RestRunClusterHealthAction(client),
+            new RestBulkIndexDocumentIntoSystemIndexAction(pluginClientWrapper),
+            new RestBulkIndexDocumentIntoMixOfSystemIndexAction(pluginClientWrapper)
         );
     }
 
@@ -101,9 +100,9 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, Ide
     }
 
     @Override
-    public void assignSubject(PluginSubject pluginSystemSubject) {
-        if (contextSwitcher != null) {
-            this.contextSwitcher.initialize(pluginSystemSubject);
+    public void assignRunAsClient(Client pluginClient) {
+        if (this.pluginClientWrapper != null) {
+            this.pluginClientWrapper.initialize(pluginClient);
         }
     }
 }

@@ -1,0 +1,10 @@
+description: >
+  This plugin needs permission to write to the security audit log index when configured
+  to use an OpenSearch Index for the audit log. By default the index will match the pattern
+  'security-auditlog-'YYYY.MM.dd, but can be configured with the plugins.security.audit.config.index
+  setting
+cluster.actions:
+  - cluster:monitor/health
+index.actions:
+  security-auditlog*:
+    - indices:data/write/index*

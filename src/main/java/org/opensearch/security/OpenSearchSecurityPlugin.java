@@ -110,7 +110,6 @@ import org.opensearch.extensions.ExtensionsManager;
 import org.opensearch.http.HttpServerTransport;
 import org.opensearch.http.HttpServerTransport.Dispatcher;
 import org.opensearch.http.netty4.ssl.SecureNetty4HttpServerTransport;
-import org.opensearch.identity.PluginSubject;
 import org.opensearch.identity.Subject;
 import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
@@ -165,7 +164,7 @@ import org.opensearch.security.hasher.PasswordHasher;
 import org.opensearch.security.hasher.PasswordHasherFactory;
 import org.opensearch.security.http.NonSslHttpServerTransport;
 import org.opensearch.security.http.XFFResolver;
-import org.opensearch.security.identity.ContextProvidingPluginSubject;
+import org.opensearch.security.identity.RunAsClient;
 import org.opensearch.security.identity.SecurityTokenManager;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
@@ -2146,12 +2145,12 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     }
 
     @Override
-    public PluginSubject getPluginSubject(Plugin plugin) {
+    public Client getRunAsClient(Plugin plugin) {
         Set<String> clusterActions = new HashSet<>();
         clusterActions.add(BulkAction.NAME);
-        PluginSubject subject = new ContextProvidingPluginSubject(threadPool, settings, plugin);
-        sf.updatePluginToClusterActions(subject.getPrincipal().getName(), clusterActions);
-        return subject;
+        RunAsClient pluginClient = new RunAsClient(localClient, plugin);
+        sf.updatePluginToClusterActions(pluginClient.getPrincipal().getName(), clusterActions);
+        return pluginClient;
     }
 
     @Override
