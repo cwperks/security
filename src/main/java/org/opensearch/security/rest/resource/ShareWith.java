@@ -10,7 +10,6 @@ package org.opensearch.security.rest.resource;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.opensearch.core.common.io.stream.NamedWriteable;
 import org.opensearch.core.common.io.stream.StreamInput;
@@ -20,27 +19,27 @@ import org.opensearch.core.xcontent.XContentBuilder;
 
 public class ShareWith implements NamedWriteable, ToXContentFragment {
 
-    public final static ShareWith PRIVATE = new ShareWith(List.of(), List.of());
-    public final static ShareWith PUBLIC = new ShareWith(List.of("*"), List.of("*"));
+    public final static ShareWith PRIVATE = new ShareWith(List.of("unlimited"), List.of(), List.of());
+    public final static ShareWith PUBLIC = new ShareWith(List.of("unlimited"), List.of("*"), List.of("*"));
 
+    private final List<String> allowedActions;
     private final List<String> users;
     private final List<String> backendRoles;
 
-    public ShareWith(List<String> users, List<String> backendRoles) {
+    public ShareWith(List<String> allowedActions, List<String> users, List<String> backendRoles) {
+        this.allowedActions = allowedActions;
         this.users = users;
         this.backendRoles = backendRoles;
     }
 
     public ShareWith(StreamInput in) throws IOException {
+        this.allowedActions = in.readStringList();
         this.users = in.readStringList();
         this.backendRoles = in.readStringList();
     }
 
-    @SuppressWarnings("unchecked")
-    public static ShareWith fromSource(Map<String, Object> sourceAsMap) {
-        List<String> users = (List<String>) sourceAsMap.get("users");
-        List<String> backendRoles = (List<String>) sourceAsMap.get("backend_roles");
-        return new ShareWith(users, backendRoles);
+    public List<String> getAllowedActions() {
+        return allowedActions;
     }
 
     public List<String> getUsers() {
@@ -53,7 +52,11 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
-        return builder.startObject().field("users", users).field("backend_roles", backendRoles).endObject();
+        return builder.startObject()
+            .field("allowedActions", allowedActions)
+            .field("users", users)
+            .field("backend_roles", backendRoles)
+            .endObject();
     }
 
     @Override
@@ -63,6 +66,7 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
+        out.writeStringCollection(allowedActions);
         out.writeStringCollection(users);
         out.writeStringCollection(backendRoles);
     }

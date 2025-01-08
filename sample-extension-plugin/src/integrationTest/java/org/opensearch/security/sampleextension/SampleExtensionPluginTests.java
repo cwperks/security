@@ -103,7 +103,8 @@ public class SampleExtensionPluginTests {
         }
 
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
-            String shareWithPayload = "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}";
+            String shareWithPayload =
+                "{\"share_with\":{\"allowed_actions\": [\"unlimited\"], \"users\": [\"admin\"], \"backend_roles\": []}}";
             HttpResponse shareWithResponse = client.putJson(
                 "_plugins/_security/resource/sample_resource/" + resourceId + "/share_with",
                 shareWithPayload

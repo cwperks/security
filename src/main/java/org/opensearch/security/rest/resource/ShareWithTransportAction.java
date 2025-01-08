@@ -17,6 +17,7 @@ import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
+import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
 import org.opensearch.client.Client;
@@ -58,16 +59,20 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
                     if (getResponse.isExists()) {
                         // TODO ensure the update does not overwrite existing values
                         UpdateRequest updateRequest = new UpdateRequest(request.getResourceIndex(), request.getResourceId());
+                        updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                         try {
                             XContentBuilder builder = XContentFactory.jsonBuilder();
                             builder.startObject();
                             {
-                                builder.startObject("share_with");
+                                builder.startArray("share_with");
                                 {
+                                    builder.startObject();
+                                    builder.field("allowed_actions", request.getShareWith().getAllowedActions());
                                     builder.field("users", request.getShareWith().getUsers());
                                     builder.field("backend_roles", request.getShareWith().getBackendRoles());
+                                    builder.endObject();
                                 }
-                                builder.endObject();
+                                builder.endArray();
                             }
                             builder.endObject();
                             updateRequest.doc(builder);

@@ -70,7 +70,11 @@ public class ShareWithRestAction extends BaseRestHandler {
         }
 
         Map<String, Object> shareWithMap = (Map<String, Object>) source.get("share_with");
-        ShareWith shareWith = new ShareWith((List<String>) shareWithMap.get("users"), (List<String>) shareWithMap.get("backend_roles"));
+        ShareWith shareWith = new ShareWith(
+            (List<String>) shareWithMap.get("allowed_actions"),
+            (List<String>) shareWithMap.get("users"),
+            (List<String>) shareWithMap.get("backend_roles")
+        );
 
         final ShareWithRequest shareWithRequest = new ShareWithRequest(resourceId, resourceTypeToIndexMap.get(resourceType), shareWith);
         return channel -> client.executeLocally(ShareWithAction.INSTANCE, shareWithRequest, new RestToXContentListener<>(channel));
