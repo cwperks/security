@@ -97,6 +97,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
 
                     for (SearchHit hit : hits) {
                         System.out.println("hit: " + hit.getSourceAsMap());
+                        System.out.println("hit score: " + hit.getScore());
                         try {
                             XContentParser parser = XContentHelper.createParser(
                                 xContentRegistry,

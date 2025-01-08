@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
@@ -29,20 +30,28 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.IndexService;
 import org.opensearch.index.mapper.SeqNoFieldMapper;
+import org.opensearch.index.query.AbstractQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryShardContext;
 import org.opensearch.index.shard.ShardUtils;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.compliance.ComplianceIndexingOperationListener;
 import org.opensearch.security.privileges.DocumentAllowList;
+import org.opensearch.security.privileges.PrivilegesConfigurationValidationException;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
 import org.opensearch.security.privileges.dlsfls.DlsFlsProcessedConfig;
 import org.opensearch.security.privileges.dlsfls.DlsRestriction;
+import org.opensearch.security.privileges.dlsfls.DocumentPrivileges;
 import org.opensearch.security.privileges.dlsfls.FieldMasking;
 import org.opensearch.security.privileges.dlsfls.FieldPrivileges;
 import org.opensearch.security.support.ConfigConstants;
@@ -61,6 +70,7 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
     private final LongSupplier nowInMillis;
     private final Supplier<DlsFlsProcessedConfig> dlsFlsProcessedConfigSupplier;
     private final DlsFlsBaseContext dlsFlsBaseContext;
+    private final NamedXContentRegistry xContentRegistry;
 
     public SecurityFlsDlsIndexSearcherWrapper(
         final IndexService indexService,
@@ -71,7 +81,8 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
         final ComplianceIndexingOperationListener ciol,
         final PrivilegesEvaluator evaluator,
         final Supplier<DlsFlsProcessedConfig> dlsFlsProcessedConfigSupplier,
-        final DlsFlsBaseContext dlsFlsBaseContext
+        final DlsFlsBaseContext dlsFlsBaseContext,
+        final NamedXContentRegistry xContentRegistry
     ) {
         super(indexService, settings, adminDNs, evaluator);
         Set<String> metadataFieldsCopy;
@@ -94,6 +105,7 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
         this.clusterService = clusterService;
         this.indexService = indexService;
         this.auditlog = auditlog;
+        this.xContentRegistry = xContentRegistry;
         final boolean allowNowinDlsQueries = settings.getAsBoolean(ConfigConstants.SECURITY_UNSUPPORTED_ALLOW_NOW_IN_DLS, false);
         if (allowNowinDlsQueries) {
             nowInMillis = () -> System.currentTimeMillis();
@@ -110,13 +122,14 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
     protected DirectoryReader dlsFlsWrap(final DirectoryReader reader, boolean isAdmin) throws IOException {
 
         final ShardId shardId = ShardUtils.extractShardId(reader);
+        assert shardId != null;
         PrivilegesEvaluationContext privilegesEvaluationContext = this.dlsFlsBaseContext.getPrivilegesEvaluationContext();
 
         if (log.isTraceEnabled()) {
             log.trace("dlsFlsWrap(); index: {}; privilegeEvaluationContext: {}", index.getName(), privilegesEvaluationContext);
         }
 
-        if (isAdmin || privilegesEvaluationContext == null) {
+        if ((isAdmin || privilegesEvaluationContext == null) && !shardId.getIndexName().equals(".sample_extension_resources")) {
             return new DlsFlsFilterLeafReader.DlsFlsDirectoryReader(
                 reader,
                 FieldPrivileges.FlsRule.ALLOW_ALL,
@@ -131,10 +144,77 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
             );
         }
 
+        System.out.println("shardID: " + shardId.getIndexName());
+
+        if (shardId.getIndexName().equals(".sample_extension_resources")) {
+            System.out.println("dlsFlsWarp: " + shardId.getIndexName() + " is .sample_extension_resources");
+        }
+
         try {
 
             DlsFlsProcessedConfig config = this.dlsFlsProcessedConfigSupplier.get();
             DlsRestriction dlsRestriction;
+
+            if (shardId.getIndex().getName().equals(".sample_extension_resources")) {
+                String queryString = """
+                            { "bool": {
+                                  "should": [
+                                    {
+                                      "term": {
+                                        "resource_user.name": "resource_sharing_test_user"
+                                      }
+                                    },
+                                    {
+                                      "terms": {
+                                        "share_with.backend_roles": ["admin"]
+                                      }
+                                    },
+                                    {
+                                      "term": {
+                                        "share_with.users": "dne"
+                                      }
+                                    }
+                                  ],
+                                  "minimum_should_match": 1
+                                }
+                            }
+                    """;
+                System.out.println("queryString: " + queryString);
+                dlsRestriction = new DlsRestriction(
+                    List.of(new DocumentPrivileges.RenderedDlsQuery(parseQuery(queryString, xContentRegistry), queryString))
+                );
+                QueryShardContext queryShardContext = this.indexService.newQueryShardContext(shardId.getId(), null, nowInMillis, null);
+                Query dlsQuery = dlsQuery = new ConstantScoreQuery(dlsRestriction.toBooleanQueryBuilder(queryShardContext, null).build());
+                String action = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ACTION_NAME);
+                System.out.println("action: " + threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ACTION_NAME));
+                if (action.startsWith("indices:data/read/search")) {
+                    return new DlsFlsFilterLeafReader.DlsFlsDirectoryReader(
+                        reader,
+                        FieldPrivileges.FlsRule.ALLOW_ALL,
+                        dlsQuery,
+                        indexService,
+                        threadContext,
+                        clusterService,
+                        auditlog,
+                        FieldMasking.FieldMaskingRule.ALLOW_ALL,
+                        shardId,
+                        metaFields
+                    );
+                } else {
+                    return new DlsFlsFilterLeafReader.DlsFlsDirectoryReader(
+                        reader,
+                        FieldPrivileges.FlsRule.ALLOW_ALL,
+                        null,
+                        indexService,
+                        threadContext,
+                        clusterService,
+                        auditlog,
+                        FieldMasking.FieldMaskingRule.ALLOW_ALL,
+                        shardId,
+                        metaFields
+                    );
+                }
+            }
 
             if (!this.dlsFlsBaseContext.isDlsDoneOnFilterLevel()) {
                 dlsRestriction = config.getDocumentPrivileges().getRestriction(privilegesEvaluationContext, index.getName());
@@ -199,8 +279,26 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
             );
 
         } catch (PrivilegesEvaluationException e) {
+            System.out.println("caught PrivilegesEvaluationException: " + e.getMessage());
             log.error("Error while evaluating DLS/FLS for {}", this.index.getName(), e);
             throw new OpenSearchException("Error while evaluating DLS/FLS", e);
+        } catch (PrivilegesConfigurationValidationException e) {
+            System.out.println("caught exception: " + e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected QueryBuilder parseQuery(String queryString, NamedXContentRegistry xContentRegistry)
+        throws PrivilegesConfigurationValidationException {
+        try {
+            XContentParser parser = JsonXContent.jsonXContent.createParser(
+                xContentRegistry,
+                DeprecationHandler.THROW_UNSUPPORTED_OPERATION,
+                queryString
+            );
+            return AbstractQueryBuilder.parseInnerQueryBuilder(parser);
+        } catch (Exception e) {
+            throw new PrivilegesConfigurationValidationException("Invalid DLS query: " + queryString, e);
         }
     }
 }

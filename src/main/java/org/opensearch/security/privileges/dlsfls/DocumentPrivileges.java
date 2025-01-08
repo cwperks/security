@@ -193,7 +193,7 @@ public class DocumentPrivileges extends AbstractRuleBasedPrivileges<DocumentPriv
         private final QueryBuilder queryBuilder;
         private final String renderedSource;
 
-        RenderedDlsQuery(QueryBuilder queryBuilder, String renderedSource) {
+        public RenderedDlsQuery(QueryBuilder queryBuilder, String renderedSource) {
             this.queryBuilder = queryBuilder;
             this.renderedSource = renderedSource;
         }

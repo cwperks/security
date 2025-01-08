@@ -726,7 +726,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     ciol,
                     evaluator,
                     dlsFlsValve::getCurrentConfig,
-                    dlsFlsBaseContext
+                    dlsFlsBaseContext,
+                    namedXContentRegistry.get()
                 )
             );
             System.out.println("this.indicesToListen: " + this.indicesToListen);
