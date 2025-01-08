@@ -2,6 +2,8 @@ package org.opensearch.security.sampleextension.resource;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.core.xcontent.XContentParserUtils;
@@ -25,17 +27,36 @@ public class SampleResourceParser implements ResourceParser<SampleResource> {
                     resource.setLastUpdateTime(Instant.ofEpochMilli(parser.longValue()));
                     break;
                 case "resource_user":
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_OBJECT, parser.currentToken(), parser);
+                    Deque<XContentParser.Token> ruStack = new ArrayDeque<>();
+                    ruStack.add(parser.currentToken());
                     // TODO Complete the parsing here
-                    while (!XContentParser.Token.END_OBJECT.equals(parser.nextToken())) {
+                    while (!ruStack.isEmpty()) {
+                        XContentParser.Token token = parser.nextToken();
+                        if (XContentParser.Token.START_OBJECT.equals(token)) {
+                            ruStack.add(token);
+                        } else if (XContentParser.Token.END_OBJECT.equals(token)) {
+                            ruStack.pop();
+                        }
                         String field = parser.currentName();
                     }
                     XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, parser.currentToken(), parser);
                     break;
                 case "share_with":
-                    while (!XContentParser.Token.END_OBJECT.equals(parser.nextToken())) {
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.START_ARRAY, parser.currentToken(), parser);
+                    Deque<XContentParser.Token> swStack = new ArrayDeque<>();
+                    swStack.add(parser.currentToken());
+                    // TODO Complete the parsing here
+                    while (!swStack.isEmpty()) {
+                        XContentParser.Token token = parser.nextToken();
+                        if (XContentParser.Token.START_ARRAY.equals(token)) {
+                            swStack.add(token);
+                        } else if (XContentParser.Token.END_ARRAY.equals(token)) {
+                            swStack.pop();
+                        }
                         String field = parser.currentName();
                     }
-                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_OBJECT, parser.currentToken(), parser);
+                    XContentParserUtils.ensureExpectedToken(XContentParser.Token.END_ARRAY, parser.currentToken(), parser);
                     break;
                 default:
                     XContentParserUtils.throwUnknownToken(parser.currentToken(), parser.getTokenLocation());

@@ -17,6 +17,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import org.opensearch.test.framework.TestSecurityConfig;
 import org.opensearch.test.framework.cluster.ClusterManager;
 import org.opensearch.test.framework.cluster.LocalCluster;
 import org.opensearch.test.framework.cluster.TestRestClient;
@@ -32,12 +33,16 @@ import static org.opensearch.test.framework.TestSecurityConfig.User.USER_ADMIN;
 @ThreadLeakScope(ThreadLeakScope.Scope.NONE)
 public class SampleExtensionPluginTests {
 
+    public final static TestSecurityConfig.User SHARED_WITH_USER = new TestSecurityConfig.User("resource_sharing_test_user").roles(
+        new TestSecurityConfig.Role("customrole").indexPermissions("*").on("*").clusterPermissions("*")
+    );
+
     @ClassRule
     public static LocalCluster cluster = new LocalCluster.Builder().clusterManager(ClusterManager.SINGLENODE)
         .plugin(SampleExtensionPlugin.class)
         .anonymousAuth(true)
         .authc(AUTHC_HTTPBASIC_INTERNAL)
-        .users(USER_ADMIN)
+        .users(USER_ADMIN, SHARED_WITH_USER)
         .build();
 
     @Test
@@ -95,16 +100,15 @@ public class SampleExtensionPluginTests {
         }
 
         try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
-            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
-            // System.out.println("Resource sharing entries: " + response.getBody());
 
             HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
             System.out.println("Sample resources: " + response2.getBody());
         }
 
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
-            String shareWithPayload =
-                "{\"share_with\":{\"allowed_actions\": [\"unlimited\"], \"users\": [\"admin\"], \"backend_roles\": []}}";
+            String shareWithPayload = "{\"share_with\":{\"allowed_actions\": [\"unlimited\"], \"users\": [\""
+                + SHARED_WITH_USER.getName()
+                + "\"], \"backend_roles\": []}}";
             HttpResponse shareWithResponse = client.putJson(
                 "_plugins/_security/resource/sample_resource/" + resourceId + "/share_with",
                 shareWithPayload
@@ -114,11 +118,16 @@ public class SampleExtensionPluginTests {
         }
 
         try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
-            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
-            // System.out.println("Resource sharing entries: " + response.getBody());
 
             HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
             System.out.println("Sample resources: " + response2.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(SHARED_WITH_USER)) {
+
+            HttpResponse listResponse = client.get("_plugins/resource_sharing_example/resource");
+            listResponse.assertStatusCode(HttpStatus.SC_OK);
+            System.out.println("List Response: " + listResponse.getBody());
         }
     }
 
