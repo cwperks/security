@@ -437,7 +437,6 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                         + "}"
                         + "}"
                 );
-                System.out.println("queryString: " + queryString);
                 dlsRestriction = new DlsRestriction(
                     List.of(new DocumentPrivileges.RenderedDlsQuery(parseQuery(queryString, namedXContentRegistry), queryString))
                 );

@@ -13,15 +13,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 
 import org.opensearch.client.Request;
 import org.opensearch.client.RequestOptions;
 import org.opensearch.client.Response;
+import org.opensearch.common.collect.Tuple;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.json.JsonXContent;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
@@ -54,55 +54,76 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         );
     }
 
-    public void testCreateSampleResource() throws IOException, InterruptedException {
-        String strongPassword = "myStrongPassword123!";
-        Request createUserRequest = new Request("PUT", "/_opendistro/_security/api/internalusers/craig");
-        createUserRequest.setJsonEntity("{\"password\":\"" + strongPassword + "\",\"backend_roles\":[\"admin\"]}");
-        client().performRequest(createUserRequest);
+    private static Map<String, String> createSampleResource(String name, Optional<Tuple<String, String>> credentials) throws IOException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler((warnings) -> false);
+        credentials.ifPresent(
+            stringStringTuple -> options.addHeader(
+                "Authorization",
+                "Basic "
+                    + Base64.getEncoder()
+                        .encodeToString((stringStringTuple.v1() + ":" + stringStringTuple.v2()).getBytes(StandardCharsets.UTF_8))
+            )
+        );
 
-        RequestOptions.Builder requestOptions = RequestOptions.DEFAULT.toBuilder();
-        requestOptions.setWarningsHandler((warnings) -> false);
-
-        Request createRequest = new Request("POST", "/_plugins/resource_sharing_example/resource");
-        createRequest.setEntity(new StringEntity("{\"name\":\"ExampleResource1\"}"));
-        createRequest.setOptions(requestOptions);
-        Response response = client().performRequest(createRequest);
+        Request request = new Request("POST", "/_plugins/resource_sharing_example/resource");
+        request.setEntity(new StringEntity("{\"name\":\"" + name + "\"}"));
+        request.setOptions(options);
+        Response response = client().performRequest(request);
         Map<String, String> createResourceResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
             response.getEntity().getContent()
         ).mapStrings();
         System.out.println("createResourceResponse: " + createResourceResponse);
+        return createResourceResponse;
+    }
 
-        Request createRequest2 = new Request("POST", "/_plugins/resource_sharing_example/resource");
-        createRequest2.setEntity(new StringEntity("{\"name\":\"ExampleResource2\"}"));
-        RequestOptions.Builder requestOptions2 = RequestOptions.DEFAULT.toBuilder();
-        requestOptions2.setWarningsHandler((warnings) -> false);
-        requestOptions2.addHeader(
-            "Authorization",
-            "Basic " + Base64.getEncoder().encodeToString(("craig:" + strongPassword).getBytes(StandardCharsets.UTF_8))
+    private static Map<String, String> updateSharing(String resourceId, String payload, Optional<Tuple<String, String>> credentials)
+        throws IOException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler((warnings) -> false);
+        credentials.ifPresent(
+            stringStringTuple -> options.addHeader(
+                "Authorization",
+                "Basic "
+                    + Base64.getEncoder()
+                        .encodeToString((stringStringTuple.v1() + ":" + stringStringTuple.v2()).getBytes(StandardCharsets.UTF_8))
+            )
         );
-        createRequest2.setOptions(requestOptions2);
-        Response response2 = client().performRequest(createRequest2);
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode indexResponseNode = objectMapper.readTree(response2.getEntity().getContent());
-
-        String resourceId = indexResponseNode.get("resourceId").asText();
-        Map<String, String> createResourceResponse2 = JsonXContent.jsonXContent.createParser(
+        Request updateSharingRequest = new Request("PUT", "/_plugins/_security/resource/sample_resource/" + resourceId + "/share_with");
+        updateSharingRequest.setEntity(new StringEntity(payload));
+        options.addHeader("Content-Type", "application/json");
+        updateSharingRequest.setOptions(options);
+        Response updateResponse = client().performRequest(updateSharingRequest);
+        Map<String, String> updateSharingResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
-            response2.getEntity().getContent()
+            updateResponse.getEntity().getContent()
         ).mapStrings();
-        System.out.println("createResourceResponse2: " + createResourceResponse2);
+        return updateSharingResponse;
+    }
+
+    public void testCreateSampleResource() throws IOException, InterruptedException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler((warnings) -> false);
+
+        String strongPassword = "myStrongPassword123!";
+        Request createUserRequest = new Request("PUT", "/_opendistro/_security/api/internalusers/testuser");
+        createUserRequest.setJsonEntity("{\"password\":\"" + strongPassword + "\",\"backend_roles\":[\"admin\"]}");
+        client().performRequest(createUserRequest);
+
+        createSampleResource("ExampleResource1", Optional.empty());
+        String resourceId = createSampleResource("ExampleResource2", Optional.of(Tuple.tuple("testuser", strongPassword))).get(
+            "resourceId"
+        );
 
         // Sleep to give ResourceSharingListener time to create the .resource-sharing index
         Thread.sleep(1000);
 
         Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
-        listRequest.setOptions(requestOptions);
+        listRequest.setOptions(options);
         Response listResponse = client().performRequest(listRequest);
-        JsonNode resNode = objectMapper.readTree(listResponse.getEntity().getContent());
-        System.out.println("resNode: " + resNode);
         Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
@@ -111,7 +132,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         System.out.println("listResourceResponse: " + listResourceResponse);
 
         Request resourceSharingRequest = new Request("POST", "/.sample_extension_resources/_search");
-        resourceSharingRequest.setOptions(requestOptions);
+        resourceSharingRequest.setOptions(options);
         Response resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
         Map<String, Object> resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
@@ -120,18 +141,11 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         ).map();
         System.out.println("sampleResources: " + resourceSharingResponseMap);
 
-        Request updateSharingRequest = new Request("PUT", "/_plugins/_security/resource/sample_resource/" + resourceId + "/share_with");
-        updateSharingRequest.setEntity(
-            new StringEntity("{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}")
+        Map<String, String> updateSharingResponse = updateSharing(
+            resourceId,
+            "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}",
+            Optional.of(Tuple.tuple("testuser", strongPassword))
         );
-        requestOptions.addHeader("Content-Type", "application/json");
-        updateSharingRequest.setOptions(requestOptions);
-        Response updateResponse = client().performRequest(updateSharingRequest);
-        Map<String, String> updateSharingResponse = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            updateResponse.getEntity().getContent()
-        ).mapStrings();
         System.out.println("updateSharingResponse: " + updateSharingResponse);
 
         Thread.sleep(1000);

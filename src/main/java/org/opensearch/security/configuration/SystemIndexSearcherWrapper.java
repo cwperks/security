@@ -58,7 +58,7 @@ public class SystemIndexSearcherWrapper implements CheckedFunction<DirectoryRead
     protected final ThreadContext threadContext;
     protected final Index index;
     protected final String securityIndex;
-    private final AdminDNs adminDns;
+    protected final AdminDNs adminDns;
     private ConfigModel configModel;
     private final PrivilegesEvaluator evaluator;
     private final WildcardMatcher protectedIndexMatcher;

@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.OpenSearchException;
+import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
@@ -82,6 +83,11 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
             ActionListener<GetResponse> getListener = new ActionListener<>() {
                 @Override
                 public void onResponse(GetResponse getResponse) {
+                    System.out.println("Get response: " + getResponse.isExists());
+                    if (!getResponse.isExists()) {
+                        getResourceListener.onFailure(new ResourceNotFoundException("Resource not found"));
+                        return;
+                    }
                     try {
                         XContentParser parser = XContentHelper.createParser(
                             xContentRegistry,
@@ -91,27 +97,6 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
                         );
                         T resource = resourceParser.parse(parser, getResponse.getId());
                         System.out.println("resource: " + resource);
-                        // ActionListener<Boolean> shareListener = new ActionListener<>() {
-                        // @Override
-                        // public void onResponse(Boolean isShared) {
-                        // if (isShared) {
-                        // getResourceListener.onResponse(resource);
-                        // } else {
-                        // getResourceListener.onFailure(
-                        // new OpenSearchException("User is not authorized to access this resource")
-                        // );
-                        // }
-                        // }
-                        //
-                        // @Override
-                        // public void onFailure(Exception e) {
-                        // getResourceListener.onFailure(
-                        // new OpenSearchException("Failed to check sharing status: " + e.getMessage(), e)
-                        // );
-                        // }
-                        // };
-                        //
-                        // resourceSharingService.isSharedWithCurrentUser(request.getResourceId(), shareListener);
                         getResourceListener.onResponse(resource);
                     } catch (IOException e) {
                         throw new OpenSearchException("Caught exception while loading resources: " + e.getMessage());
