@@ -179,7 +179,6 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
                                 }
                             }
                     """;
-                System.out.println("queryString: " + queryString);
                 dlsRestriction = new DlsRestriction(
                     List.of(new DocumentPrivileges.RenderedDlsQuery(parseQuery(queryString, xContentRegistry), queryString))
                 );
@@ -288,7 +287,7 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
         }
     }
 
-    protected QueryBuilder parseQuery(String queryString, NamedXContentRegistry xContentRegistry)
+    public static QueryBuilder parseQuery(String queryString, NamedXContentRegistry xContentRegistry)
         throws PrivilegesConfigurationValidationException {
         try {
             XContentParser parser = JsonXContent.jsonXContent.createParser(

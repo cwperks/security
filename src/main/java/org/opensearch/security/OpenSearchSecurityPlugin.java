@@ -279,7 +279,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
-    private final Set<String> indicesToListen = new HashSet<>();
+    private final Set<String> sharableResourceIndices = new HashSet<>();
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
     private final List<ResourceSharingExtension> resourceSharingExtensions = new ArrayList<>();
     // CS-ENFORCE-SINGLE
@@ -730,8 +730,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     namedXContentRegistry.get()
                 )
             );
-            System.out.println("this.indicesToListen: " + this.indicesToListen);
-            if (this.indicesToListen.contains(indexModule.getIndex().getName())) {
+            System.out.println("this.indicesToListen: " + this.sharableResourceIndices);
+            if (this.sharableResourceIndices.contains(indexModule.getIndex().getName())) {
                 indexModule.addIndexOperationListener(ResourceSharingListener.getInstance());
                 log.warn("Security started listening to operations on index {}", indexModule.getIndex().getName());
             }
@@ -1158,7 +1158,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 resolver,
                 xContentRegistry,
                 threadPool,
-                dlsFlsBaseContext
+                dlsFlsBaseContext,
+                adminDns,
+                sharableResourceIndices
             );
             cr.subscribeOnChange(configMap -> { ((DlsFlsValveImpl) dlsFlsValve).updateConfiguration(cr.getConfiguration(CType.ROLES)); });
         }
@@ -2200,7 +2202,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
             System.out.println("localClient: " + localClient);
-            this.indicesToListen.add(resourceIndexName);
+            this.sharableResourceIndices.add(resourceIndexName);
             resourceSharingExtensions.add(extension);
             log.info("Loaded resource, index: {}", resourceIndexName);
         }

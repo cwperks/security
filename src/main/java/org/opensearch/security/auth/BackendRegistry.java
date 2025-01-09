@@ -225,7 +225,7 @@ public class BackendRegistry {
             // PKI authenticated REST call
             User superuser = new User(sslPrincipal);
             threadContext.putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, superuser);
-            threadPool.getThreadContext().putPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER, superuser);
+            threadContext.putPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER, superuser);
             auditLog.logSucceededLogin(sslPrincipal, true, null, request);
             return true;
         }

@@ -141,8 +141,8 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
             // System.out.println("DlsGetEvaluator");
             // System.out.println("dlsQuery: " + dlsQuery);
             // System.out.println("applyDlsHere: " + applyDlsHere);
-            // if (dlsQuery != null && applyDlsHere) {
-            if (dlsQuery != null) {
+            if (dlsQuery != null && applyDlsHere) {
+                // if (dlsQuery != null) {
                 // borrowed from Apache Lucene (Copyright Apache Software Foundation (ASF))
                 // https://github.com/apache/lucene-solr/blob/branch_6_3/lucene/misc/src/java/org/apache/lucene/index/PKIndexSplitter.java
                 final IndexSearcher searcher = new IndexSearcher(DlsFlsFilterLeafReader.this);
