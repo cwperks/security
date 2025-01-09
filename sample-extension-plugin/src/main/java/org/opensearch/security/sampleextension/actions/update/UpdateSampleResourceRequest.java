@@ -14,11 +14,14 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
+import org.opensearch.security.spi.ResourceRequest;
+
+import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
 
 /**
  * Request object for UpdateSampleResource transport action
  */
-public class UpdateSampleResourceRequest extends ActionRequest {
+public class UpdateSampleResourceRequest extends ActionRequest implements ResourceRequest {
 
     private String resourceId;
     private String name;
@@ -28,8 +31,14 @@ public class UpdateSampleResourceRequest extends ActionRequest {
         this.name = name;
     }
 
+    @Override
     public String getResourceId() {
         return resourceId;
+    }
+
+    @Override
+    public String getResourceIndex() {
+        return RESOURCE_INDEX_NAME;
     }
 
     public String getName() {

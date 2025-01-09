@@ -7,17 +7,17 @@ import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 
-public class ResourceRequest extends ActionRequest {
+public abstract class AbstractResourceRequest extends ActionRequest {
     protected final String resourceIndex;
 
     /**
      * Default constructor
      */
-    public ResourceRequest(String resourceIndex) {
+    public AbstractResourceRequest(String resourceIndex) {
         this.resourceIndex = resourceIndex;
     }
 
-    public ResourceRequest(StreamInput in) throws IOException {
+    public AbstractResourceRequest(StreamInput in) throws IOException {
         this.resourceIndex = in.readString();
     }
 

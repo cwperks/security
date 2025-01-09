@@ -100,6 +100,8 @@ import org.opensearch.security.securityconf.impl.DashboardSignInOption;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ActionGroupsV7;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
+import org.opensearch.security.spi.ResourceRequest;
+import org.opensearch.security.spi.ResourceSharingInfo;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -152,6 +154,7 @@ public class PrivilegesEvaluator {
     private DynamicConfigModel dcm;
     private final NamedXContentRegistry namedXContentRegistry;
     private final Settings settings;
+    private final ConfigurationRepository configurationRepository;
     private final AtomicReference<ActionPrivileges> actionPrivileges = new AtomicReference<>();
 
     public PrivilegesEvaluator(
@@ -168,10 +171,10 @@ public class PrivilegesEvaluator {
         final IndexResolverReplacer irr,
         NamedXContentRegistry namedXContentRegistry
     ) {
-
         super();
         this.resolver = resolver;
         this.auditLog = auditLog;
+        this.configurationRepository = configurationRepository;
 
         this.threadContext = threadContext;
         this.privilegesInterceptor = privilegesInterceptor;
@@ -378,6 +381,27 @@ public class PrivilegesEvaluator {
                 );
             }
             return presponse;
+        }
+
+        // TODO Create resource privileges evaluator
+        if (request instanceof ResourceRequest) {
+            System.out.println("Fetching sharing info for " + ((ResourceRequest) request).getResourceId());
+            ResourceSharingInfo sharingInfo = configurationRepository.getResourceFromIndex((ResourceRequest) request);
+            // TODO Expand on resource authz this is solely based on resource owner
+            System.out.println("Sharing info: " + sharingInfo);
+            System.out.println("Sharing info Resource User: " + sharingInfo.getResourceUser().getName());
+            System.out.println("Sharing info Resource User: " + sharingInfo.getResourceUser().getRoles());
+            System.out.println("Sharing info Resource User: " + sharingInfo.getResourceUser().getBackendRoles());
+            System.out.println("Sharing info Share with: " + sharingInfo.getShareWith());
+            if (sharingInfo != null && sharingInfo.getResourceUser() != null) {
+                if (sharingInfo.getResourceUser().getName().equals(user.getName())) {
+                    presponse.allowed = true;
+                    return presponse;
+                } else {
+                    presponse.allowed = false;
+                    return presponse;
+                }
+            }
         }
 
         final Resolved requestedResolved = context.getResolvedRequest();

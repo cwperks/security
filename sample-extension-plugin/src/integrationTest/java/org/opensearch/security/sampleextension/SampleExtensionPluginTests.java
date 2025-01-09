@@ -131,4 +131,45 @@ public class SampleExtensionPluginTests {
         }
     }
 
+    @Test
+    public void testCreateResourceAndTryUpdateWithOtherUser() throws Exception {
+        String resourceId;
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            String sampleResource = "{\"name\":\"sample\"}";
+            HttpResponse response = client.postJson("_plugins/resource_sharing_example/resource", sampleResource);
+            response.assertStatusCode(HttpStatus.SC_OK);
+            System.out.println("Response: " + response.getBody());
+
+            resourceId = response.getTextFromJsonBody("/resourceId");
+
+            System.out.println("resourceId: " + resourceId);
+            Thread.sleep(2000);
+        }
+        try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
+            // HttpResponse response = client.postJson(".resource-sharing/_search", "{\"query\" : {\"match_all\" : {}}}");
+            // System.out.println("Resource sharing entries: " + response.getBody());
+
+            HttpResponse response2 = client.postJson(".sample_extension_resources/_search", "{\"query\" : {\"match_all\" : {}}}");
+            System.out.println("Sample resources: " + response2.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            Thread.sleep(1000);
+
+            HttpResponse getResponse = client.get("_plugins/resource_sharing_example/resource/" + resourceId);
+            getResponse.assertStatusCode(HttpStatus.SC_OK);
+            System.out.println("Get Response: " + getResponse.getBody());
+        }
+
+        try (TestRestClient client = cluster.getRestClient(SHARED_WITH_USER)) {
+            String sampleResourceUpdated = "{\"name\":\"sampleUpdated\"}";
+            HttpResponse updateResponse = client.putJson(
+                "_plugins/resource_sharing_example/resource/update/" + resourceId,
+                sampleResourceUpdated
+            );
+            updateResponse.assertStatusCode(HttpStatus.SC_FORBIDDEN);
+            System.out.println("Update Response: " + updateResponse.getBody());
+        }
+    }
+
 }

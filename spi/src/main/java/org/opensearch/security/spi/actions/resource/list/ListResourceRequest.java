@@ -11,12 +11,12 @@ package org.opensearch.security.spi.actions.resource.list;
 import java.io.IOException;
 
 import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.security.spi.actions.ResourceRequest;
+import org.opensearch.security.spi.actions.AbstractResourceRequest;
 
 /**
  * Request object for ListResource transport action
  */
-public class ListResourceRequest extends ResourceRequest {
+public class ListResourceRequest extends AbstractResourceRequest {
 
     // TODO Change this into Search instead of List
 

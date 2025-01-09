@@ -11,12 +11,12 @@ package org.opensearch.security.spi.actions.resource.get;
 import java.io.IOException;
 
 import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.security.spi.actions.ResourceRequest;
+import org.opensearch.security.spi.actions.AbstractResourceRequest;
 
 /**
  * Request object for GetResource transport action
  */
-public class GetResourceRequest extends ResourceRequest {
+public class GetResourceRequest extends AbstractResourceRequest {
     private final String resourceId;
 
     /**

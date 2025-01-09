@@ -171,7 +171,7 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
                                     },
                                     {
                                       "term": {
-                                        "share_with.users": "dne"
+                                        "share_with.users": "resource_sharing_test_user"
                                       }
                                     }
                                   ],
@@ -184,7 +184,7 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
                     List.of(new DocumentPrivileges.RenderedDlsQuery(parseQuery(queryString, xContentRegistry), queryString))
                 );
                 QueryShardContext queryShardContext = this.indexService.newQueryShardContext(shardId.getId(), null, nowInMillis, null);
-                Query dlsQuery = dlsQuery = new ConstantScoreQuery(dlsRestriction.toBooleanQueryBuilder(queryShardContext, null).build());
+                Query dlsQuery = new ConstantScoreQuery(dlsRestriction.toBooleanQueryBuilder(queryShardContext, null).build());
                 String action = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ACTION_NAME);
                 System.out.println("action: " + threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ACTION_NAME));
                 if (action.startsWith("indices:data/read/search")) {
