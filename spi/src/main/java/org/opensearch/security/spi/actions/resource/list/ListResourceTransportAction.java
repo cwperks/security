@@ -29,9 +29,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.NoopResourceSharingService;
 import org.opensearch.security.spi.ResourceParser;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -42,7 +40,6 @@ import org.opensearch.transport.TransportService;
 public class ListResourceTransportAction<T extends SharableResource> extends HandledTransportAction<
     ListResourceRequest,
     ListResourceResponse<T>> {
-    private final ResourceSharingService resourceSharingService;
 
     private final ResourceParser<T> resourceParser;
 
@@ -57,14 +54,12 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceSharingService resourceSharingService,
         ResourceParser<T> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
         super(actionName, transportService, actionFilters, ListResourceRequest::new);
         this.client = client;
-        this.resourceSharingService = resourceSharingService != null ? resourceSharingService : new NoopResourceSharingService();
         this.resourceIndex = resourceIndex;
         this.xContentRegistry = xContentRegistry;
         Objects.requireNonNull(resourceParser);
@@ -97,7 +92,6 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
 
                     for (SearchHit hit : hits) {
                         System.out.println("hit: " + hit.getSourceAsMap());
-                        System.out.println("hit score: " + hit.getScore());
                         try {
                             XContentParser parser = XContentHelper.createParser(
                                 xContentRegistry,

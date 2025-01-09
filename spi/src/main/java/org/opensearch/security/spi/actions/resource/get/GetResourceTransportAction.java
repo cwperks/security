@@ -28,7 +28,6 @@ import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.security.spi.ResourceParser;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -40,8 +39,6 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
     GetResourceRequest,
     GetResourceResponse<T>> {
     private static final Logger log = LogManager.getLogger(GetResourceTransportAction.class);
-
-    private final ResourceSharingService resourceSharingService;
 
     private final ResourceParser<T> resourceParser;
 
@@ -56,13 +53,11 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceSharingService resourceSharingService,
         ResourceParser<T> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
         super(actionName, transportService, actionFilters, GetResourceRequest::new);
-        this.resourceSharingService = resourceSharingService;
         Objects.requireNonNull(resourceParser);
         this.resourceParser = resourceParser;
         this.resourceIndex = resourceIndex;

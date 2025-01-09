@@ -50,9 +50,7 @@ import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTr
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
-import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
 import org.opensearch.security.spi.ResourceSharingExtension;
-import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -84,10 +82,7 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.client = client;
-        System.out.println(
-            "SampleResourceSharingServiceProvider.getInstance(): " + SampleResourceSharingServiceProvider.getInstance().get()
-        );
-        return List.of(SampleResourceSharingServiceProvider.getInstance());
+        return List.of();
     }
 
     @Override
@@ -132,11 +127,5 @@ public class SampleExtensionPlugin extends Plugin implements ActionPlugin, Syste
     @Override
     public String getResourceIndex() {
         return RESOURCE_INDEX_NAME;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void assignResourceSharingService(ResourceSharingService service) {
-        SampleResourceSharingServiceProvider.getInstance().set(service);
     }
 }

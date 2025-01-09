@@ -17,7 +17,6 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceParser;
-import org.opensearch.security.sampleextension.resource.SampleResourceSharingServiceProvider;
 import org.opensearch.security.spi.actions.resource.list.ListResourceTransportAction;
 import org.opensearch.transport.TransportService;
 
@@ -33,7 +32,6 @@ public class ListSampleResourceTransportAction extends ListResourceTransportActi
     public ListSampleResourceTransportAction(
         TransportService transportService,
         ActionFilters actionFilters,
-        SampleResourceSharingServiceProvider resourceSharingService,
         NamedXContentRegistry xContentRegistry,
         Client client
     ) {
@@ -42,7 +40,6 @@ public class ListSampleResourceTransportAction extends ListResourceTransportActi
             actionFilters,
             ListSampleResourceAction.NAME,
             RESOURCE_INDEX_NAME,
-            resourceSharingService.get(),
             new SampleResourceParser(),
             client,
             xContentRegistry

@@ -21,6 +21,4 @@ public interface ResourceSharingExtension {
      * @return resource index name.
      */
     String getResourceIndex();
-
-    void assignResourceSharingService(ResourceSharingService service);
 }
