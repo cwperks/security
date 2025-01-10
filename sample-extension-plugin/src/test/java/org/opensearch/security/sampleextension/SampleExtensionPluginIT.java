@@ -168,7 +168,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
 
         Map<String, String> updateSharingResponse = updateSharing(
             resourceId,
-            "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"*\"]}}",
+            "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"action_group\": \"unlimited\"}}",
             Optional.of(Tuple.tuple("testuser", strongPassword))
         );
         System.out.println("updateSharingResponse: " + updateSharingResponse);

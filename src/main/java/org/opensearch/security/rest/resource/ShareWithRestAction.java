@@ -20,7 +20,7 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
-import org.opensearch.security.spi.ResourceSharingExtension;
+import org.opensearch.security.spi.SharableResourceExtension;
 
 import static org.opensearch.rest.RestRequest.Method.PUT;
 import static org.opensearch.security.dlic.rest.support.Utils.addRoutesPrefix;
@@ -29,9 +29,9 @@ public class ShareWithRestAction extends BaseRestHandler {
 
     private final Map<String, String> resourceTypeToIndexMap = new HashMap<>();
 
-    public ShareWithRestAction(final List<ResourceSharingExtension> resourceSharingExtensions) {
-        if (resourceSharingExtensions != null) {
-            for (ResourceSharingExtension resourceSharingExtension : resourceSharingExtensions) {
+    public ShareWithRestAction(final List<SharableResourceExtension> sharableResourceExtensions) {
+        if (sharableResourceExtensions != null) {
+            for (SharableResourceExtension resourceSharingExtension : sharableResourceExtensions) {
                 resourceTypeToIndexMap.put(resourceSharingExtension.getResourceType(), resourceSharingExtension.getResourceIndex());
             }
         }
@@ -71,7 +71,7 @@ public class ShareWithRestAction extends BaseRestHandler {
 
         Map<String, Object> shareWithMap = (Map<String, Object>) source.get("share_with");
         ShareWith shareWith = new ShareWith(
-            (List<String>) shareWithMap.get("allowed_actions"),
+            (String) shareWithMap.get("action_group"),
             (List<String>) shareWithMap.get("users"),
             (List<String>) shareWithMap.get("backend_roles")
         );

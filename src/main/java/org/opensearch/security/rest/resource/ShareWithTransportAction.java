@@ -35,8 +35,6 @@ import org.opensearch.transport.TransportService;
 public class ShareWithTransportAction extends HandledTransportAction<ShareWithRequest, ShareWithResponse> {
     private static final Logger log = LogManager.getLogger(ShareWithTransportAction.class);
 
-    public static final String RESOURCE_SHARING_INDEX = ".resource-sharing";
-
     private final TransportService transportService;
     private final Client nodeClient;
 
@@ -64,15 +62,14 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
                             XContentBuilder builder = XContentFactory.jsonBuilder();
                             builder.startObject();
                             {
-                                builder.startArray("share_with");
+                                builder.startObject("share_with");
                                 {
-                                    builder.startObject();
-                                    builder.field("allowed_actions", request.getShareWith().getAllowedActions());
+                                    builder.startObject(request.getShareWith().getActionGroup());
                                     builder.field("users", request.getShareWith().getUsers());
                                     builder.field("backend_roles", request.getShareWith().getBackendRoles());
                                     builder.endObject();
                                 }
-                                builder.endArray();
+                                builder.endObject();
                             }
                             builder.endObject();
                             updateRequest.doc(builder);

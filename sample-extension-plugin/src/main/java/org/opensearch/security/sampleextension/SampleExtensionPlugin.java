@@ -50,7 +50,7 @@ import org.opensearch.security.sampleextension.actions.list.ListSampleResourceTr
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceRestAction;
 import org.opensearch.security.sampleextension.actions.update.UpdateSampleResourceTransportAction;
-import org.opensearch.security.spi.ResourceSharingExtension;
+import org.opensearch.security.spi.SharableResourceExtension;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
 
@@ -60,7 +60,7 @@ import org.opensearch.watcher.ResourceWatcherService;
  * It use ".sample_extension_resources" index to manage its resources, and exposes a REST API
  *
  */
-public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, ResourceSharingExtension {
+public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, SharableResourceExtension {
     private static final Logger log = LogManager.getLogger(SampleExtensionPlugin.class);
 
     public static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";

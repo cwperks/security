@@ -11,7 +11,7 @@ package org.opensearch.security.spi;
 /**
  * SPI of security.
  */
-public interface ResourceSharingExtension {
+public interface SharableResourceExtension {
     /**
      * @return resource type string.
      */

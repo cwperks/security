@@ -188,7 +188,7 @@ import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
-import org.opensearch.security.spi.ResourceSharingExtension;
+import org.opensearch.security.spi.SharableResourceExtension;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
@@ -281,7 +281,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
     private final Set<String> sharableResourceIndices = new HashSet<>();
     // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-    private final List<ResourceSharingExtension> resourceSharingExtensions = new ArrayList<>();
+    private final List<SharableResourceExtension> resourceSharingExtensions = new ArrayList<>();
     // CS-ENFORCE-SINGLE
 
     public static boolean isActionTraceEnabled() {
@@ -2200,7 +2200,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
         System.out.println("loadExtensions");
-        for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
+        for (SharableResourceExtension extension : loader.loadExtensions(SharableResourceExtension.class)) {
             String resourceIndexName = extension.getResourceIndex();
             System.out.println("localClient: " + localClient);
             this.sharableResourceIndices.add(resourceIndexName);

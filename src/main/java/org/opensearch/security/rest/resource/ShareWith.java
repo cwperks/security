@@ -19,27 +19,27 @@ import org.opensearch.core.xcontent.XContentBuilder;
 
 public class ShareWith implements NamedWriteable, ToXContentFragment {
 
-    public final static ShareWith PRIVATE = new ShareWith(List.of("unlimited"), List.of(), List.of());
-    public final static ShareWith PUBLIC = new ShareWith(List.of("unlimited"), List.of("*"), List.of("*"));
+    public final static ShareWith PRIVATE = new ShareWith("unlimited", List.of(), List.of());
+    public final static ShareWith PUBLIC = new ShareWith("unlimited", List.of("*"), List.of("*"));
 
-    private final List<String> allowedActions;
+    private final String actionGroup;
     private final List<String> users;
     private final List<String> backendRoles;
 
-    public ShareWith(List<String> allowedActions, List<String> users, List<String> backendRoles) {
-        this.allowedActions = allowedActions;
+    public ShareWith(String actionGroup, List<String> users, List<String> backendRoles) {
+        this.actionGroup = actionGroup;
         this.users = users;
         this.backendRoles = backendRoles;
     }
 
     public ShareWith(StreamInput in) throws IOException {
-        this.allowedActions = in.readStringList();
+        this.actionGroup = in.readString();
         this.users = in.readStringList();
         this.backendRoles = in.readStringList();
     }
 
-    public List<String> getAllowedActions() {
-        return allowedActions;
+    public String getActionGroup() {
+        return actionGroup;
     }
 
     public List<String> getUsers() {
@@ -53,7 +53,7 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         return builder.startObject()
-            .field("allowedActions", allowedActions)
+            .field("action_group", actionGroup)
             .field("users", users)
             .field("backend_roles", backendRoles)
             .endObject();
@@ -66,7 +66,7 @@ public class ShareWith implements NamedWriteable, ToXContentFragment {
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeStringCollection(allowedActions);
+        out.writeString(actionGroup);
         out.writeStringCollection(users);
         out.writeStringCollection(backendRoles);
     }

@@ -18,7 +18,7 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
-import org.opensearch.security.spi.ResourceSharingExtension;
+import org.opensearch.security.spi.SharableResourceExtension;
 import org.opensearch.security.support.ConfigConstants;
 
 public class SecurityApiDependencies {
@@ -28,7 +28,7 @@ public class SecurityApiDependencies {
     private final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator;
     private final AuditLog auditLog;
     private final Settings settings;
-    private final List<ResourceSharingExtension> resourceSharingExtensions;
+    private final List<SharableResourceExtension> resourceSharingExtensions;
 
     private final PrivilegesEvaluator privilegesEvaluator;
 
@@ -40,7 +40,7 @@ public class SecurityApiDependencies {
         final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator,
         final AuditLog auditLog,
         final Settings settings,
-        final List<ResourceSharingExtension> resourceSharingExtensions
+        final List<SharableResourceExtension> resourceSharingExtensions
     ) {
         this.adminDNs = adminDNs;
         this.configurationRepository = configurationRepository;
@@ -72,7 +72,7 @@ public class SecurityApiDependencies {
         return restApiAdminPrivilegesEvaluator;
     }
 
-    public List<ResourceSharingExtension> resourceSharingExtensions() {
+    public List<SharableResourceExtension> resourceSharingExtensions() {
         return resourceSharingExtensions;
     }
 
