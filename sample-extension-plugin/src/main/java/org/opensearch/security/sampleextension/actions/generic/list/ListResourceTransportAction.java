@@ -19,6 +19,7 @@ import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.common.CheckedFunction;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -29,7 +30,6 @@ import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.MatchAllQueryBuilder;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
-import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -41,7 +41,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
     ListResourceRequest,
     ListResourceResponse<T>> {
 
-    private final ResourceParser<T> resourceParser;
+    private final CheckedFunction<XContentParser, T, IOException> resourceParser;
 
     private final Client client;
 
@@ -54,7 +54,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceParser<T> resourceParser,
+        CheckedFunction<XContentParser, T, IOException> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
@@ -99,7 +99,7 @@ public class ListResourceTransportAction<T extends SharableResource> extends Han
                                 hit.getSourceRef(),
                                 XContentType.JSON
                             );
-                            T resource = resourceParser.parse(parser, hit.getId());
+                            T resource = resourceParser.apply(parser);
                             resources.add(resource);
                         } catch (IOException e) {
                             listResourceListener.onFailure(

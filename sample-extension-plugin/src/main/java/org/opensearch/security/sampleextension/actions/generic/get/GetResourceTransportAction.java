@@ -21,6 +21,7 @@ import org.opensearch.action.get.GetResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.client.Client;
+import org.opensearch.common.CheckedFunction;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
@@ -28,7 +29,6 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
-import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.SharableResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
@@ -41,7 +41,7 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
     GetResourceResponse<T>> {
     private static final Logger log = LogManager.getLogger(GetResourceTransportAction.class);
 
-    private final ResourceParser<T> resourceParser;
+    private final CheckedFunction<XContentParser, T, IOException> resourceParser;
 
     private final String resourceIndex;
 
@@ -54,7 +54,7 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
         ActionFilters actionFilters,
         String actionName,
         String resourceIndex,
-        ResourceParser<T> resourceParser,
+        CheckedFunction<XContentParser, T, IOException> resourceParser,
         Client client,
         NamedXContentRegistry xContentRegistry
     ) {
@@ -95,7 +95,7 @@ public class GetResourceTransportAction<T extends SharableResource> extends Hand
                             getResponse.getSourceAsBytesRef(),
                             XContentType.JSON
                         );
-                        T resource = resourceParser.parse(parser, getResponse.getId());
+                        T resource = resourceParser.apply(parser);
                         System.out.println("resource: " + resource);
                         getResourceListener.onResponse(resource);
                     } catch (IOException e) {

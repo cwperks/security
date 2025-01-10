@@ -17,7 +17,6 @@ import org.opensearch.common.inject.Inject;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.security.sampleextension.actions.generic.get.GetResourceTransportAction;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.sampleextension.resource.SampleResourceParser;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
@@ -40,7 +39,7 @@ public class GetSampleResourceTransportAction extends GetResourceTransportAction
             actionFilters,
             GetSampleResourceAction.NAME,
             RESOURCE_INDEX_NAME,
-            new SampleResourceParser(),
+            SampleResource::fromXContent,
             client,
             xContentRegistry
         );
