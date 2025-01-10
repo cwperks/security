@@ -2,8 +2,7 @@ package org.opensearch.security.spi;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 import org.opensearch.core.ParseField;
 import org.opensearch.core.xcontent.ConstructingObjectParser;
@@ -16,14 +15,14 @@ import org.opensearch.core.xcontent.XContentParser;
  */
 public class ResourceSharingInfo {
     private final ResourceUser resourceUser;
-    private final Map<String, ShareWith> shareWith;
+    private final List<ShareWith> shareWith;
 
     public ResourceSharingInfo(ResourceUser resourceUser) {
         this.resourceUser = resourceUser;
-        this.shareWith = Collections.emptyMap();
+        this.shareWith = Collections.emptyList();
     }
 
-    public ResourceSharingInfo(ResourceUser resourceUser, Map<String, ShareWith> shareWith) {
+    public ResourceSharingInfo(ResourceUser resourceUser, List<ShareWith> shareWith) {
         this.resourceUser = resourceUser;
         this.shareWith = shareWith;
     }
@@ -32,7 +31,7 @@ public class ResourceSharingInfo {
         return resourceUser;
     }
 
-    public Map<String, ShareWith> getShareWith() {
+    public List<ShareWith> getShareWith() {
         return shareWith;
     }
 
@@ -40,7 +39,7 @@ public class ResourceSharingInfo {
     private static final ConstructingObjectParser<ResourceSharingInfo, Void> PARSER = new ConstructingObjectParser<>(
         "resource_sharing_info",
         true,
-        a -> new ResourceSharingInfo((ResourceUser) a[0], (Map<String, ShareWith>) a[1])
+        a -> new ResourceSharingInfo((ResourceUser) a[0], (List<ShareWith>) a[1])
     );
 
     static {
@@ -49,21 +48,11 @@ public class ResourceSharingInfo {
             (p, c) -> ResourceUser.fromXContent(p),
             new ParseField("resource_user")
         );
-        PARSER.declareObject(ConstructingObjectParser.optionalConstructorArg(), (p, c) -> {
-            Map<String, ShareWith> shareWithMap = new HashMap<>();
-            String fieldName;
-            while ((fieldName = p.currentName()) != null) {
-                if (p.nextToken() == XContentParser.Token.START_OBJECT) {
-                    shareWithMap.put(fieldName, ShareWith.fromXContent(p));
-                }
-            }
-            return shareWithMap;
-        }, new ParseField("share_with"));
-        // PARSER.declareObjectArray(
-        // ConstructingObjectParser.optionalConstructorArg(),
-        // (p, c) -> ShareWith.fromXContent(p),
-        // new ParseField("share_with")
-        // );
+        PARSER.declareObjectArray(
+            ConstructingObjectParser.optionalConstructorArg(),
+            (p, c) -> ShareWith.fromXContent(p),
+            new ParseField("share_with")
+        );
     }
 
     public static ResourceSharingInfo parse(XContentParser parser) throws IOException {

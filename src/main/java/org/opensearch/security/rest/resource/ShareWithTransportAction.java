@@ -62,14 +62,15 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
                             XContentBuilder builder = XContentFactory.jsonBuilder();
                             builder.startObject();
                             {
-                                builder.startObject("share_with");
+                                builder.startArray("share_with");
                                 {
-                                    builder.startObject(request.getShareWith().getActionGroup());
+                                    builder.startObject();
+                                    builder.field("allowed_actions", request.getShareWith().getAllowedActions());
                                     builder.field("users", request.getShareWith().getUsers());
                                     builder.field("backend_roles", request.getShareWith().getBackendRoles());
                                     builder.endObject();
                                 }
-                                builder.endObject();
+                                builder.endArray();
                             }
                             builder.endObject();
                             updateRequest.doc(builder);

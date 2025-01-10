@@ -71,7 +71,7 @@ public class ShareWithRestAction extends BaseRestHandler {
 
         Map<String, Object> shareWithMap = (Map<String, Object>) source.get("share_with");
         ShareWith shareWith = new ShareWith(
-            (String) shareWithMap.get("action_group"),
+            (List<String>) shareWithMap.get("allowed_actions"),
             (List<String>) shareWithMap.get("users"),
             (List<String>) shareWithMap.get("backend_roles")
         );

@@ -99,7 +99,6 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
             LoggingDeprecationHandler.INSTANCE,
             listResponse.getEntity().getContent()
         ).map();
-        System.out.println("listResourceResponse: " + listResourceResponse);
         return listResourceResponse;
     }
 
@@ -131,18 +130,19 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
     private static Map<String, Object> listSampleResourcesWithAdminClient() throws IOException {
         RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
         options.setWarningsHandler((warnings) -> false);
-        Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
-        listRequest.setOptions(options);
-        Response listResponse = client().performRequest(listRequest);
-        Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
+        Request request = new Request("POST", "/.sample_extension_resources/_search");
+        request.setOptions(options);
+        Response listResponse = adminClient().performRequest(request);
+        Map<String, Object> response = JsonXContent.jsonXContent.createParser(
             NamedXContentRegistry.EMPTY,
             LoggingDeprecationHandler.INSTANCE,
             listResponse.getEntity().getContent()
         ).map();
-        System.out.println("listResourceResponse: " + listResourceResponse);
-        return listResourceResponse;
+        System.out.println("listResourceResponse: " + response);
+        return response;
     }
 
+    @SuppressWarnings("unchecked")
     public void testCreateSampleResource() throws IOException, InterruptedException {
         RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
         options.setWarningsHandler((warnings) -> false);
@@ -163,12 +163,15 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         Map<String, Object> listResourceResponse = listSampleResource(Optional.empty());
         System.out.println("listResourceResponse: " + listResourceResponse);
 
+        Map<String, Object> listResourceResponseTestUser = listSampleResource(Optional.of(Tuple.tuple("testuser", strongPassword)));
+        System.out.println("listResourceResponseTestUser: " + listResourceResponseTestUser);
+
         Map<String, Object> allSampleResources = listSampleResourcesWithAdminClient();
-        System.out.println("allSampleResources: " + allSampleResources);
+        System.out.println("allSampleResources with admin client: " + allSampleResources);
 
         Map<String, String> updateSharingResponse = updateSharing(
             resourceId,
-            "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"action_group\": \"unlimited\"}}",
+            "{\"share_with\":{\"users\": [\"admin\"], \"backend_roles\": [], \"allowed_actions\": [\"unlimited\"]}}",
             Optional.of(Tuple.tuple("testuser", strongPassword))
         );
         System.out.println("updateSharingResponse: " + updateSharingResponse);
@@ -179,6 +182,8 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         System.out.println("allSampleResources after update: " + allSampleResources);
 
         listResourceResponse = listSampleResource(Optional.empty());
+        // Expect 2 resources to be returned, one created by admin user and one created by testuser and shared with admin
         System.out.println("listResourceResponse after update: " + listResourceResponse);
+        Assert.assertEquals(2, ((List<String>) listResourceResponse.get("resources")).size());
     }
 }
