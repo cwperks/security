@@ -15,9 +15,9 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.security.sampleextension.actions.generic.list.ListResourceTransportAction;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.security.sampleextension.resource.SampleResourceParser;
-import org.opensearch.security.spi.actions.resource.list.ListResourceTransportAction;
 import org.opensearch.transport.TransportService;
 
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;

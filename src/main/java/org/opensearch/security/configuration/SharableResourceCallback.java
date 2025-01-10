@@ -27,7 +27,7 @@
 package org.opensearch.security.configuration;
 
 import org.opensearch.action.get.MultiGetResponse.Failure;
-import org.opensearch.security.spi.ResourceSharingInfo;
+import org.opensearch.security.resource.ResourceSharingInfo;
 
 public interface SharableResourceCallback {
 

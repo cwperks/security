@@ -6,28 +6,34 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.resource.list;
+package org.opensearch.security.sampleextension.actions.generic.list;
 
 import java.io.IOException;
 
+import org.opensearch.action.ActionRequest;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.security.spi.actions.AbstractResourceRequest;
 
 /**
  * Request object for ListResource transport action
  */
-public class ListResourceRequest extends AbstractResourceRequest {
+public class ListResourceRequest extends ActionRequest {
 
     // TODO Change this into Search instead of List
 
     /**
      * Default constructor
      */
-    public ListResourceRequest(String resourceIndex) {
-        super(resourceIndex);
+    public ListResourceRequest() {
+        super();
     }
 
     public ListResourceRequest(StreamInput in) throws IOException {
         super(in);
+    }
+
+    @Override
+    public ActionRequestValidationException validate() {
+        return null;
     }
 }

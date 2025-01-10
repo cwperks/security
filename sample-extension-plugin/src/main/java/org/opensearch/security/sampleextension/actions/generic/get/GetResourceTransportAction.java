@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.resource.get;
+package org.opensearch.security.sampleextension.actions.generic.get;
 
 import java.io.IOException;
 import java.util.Objects;

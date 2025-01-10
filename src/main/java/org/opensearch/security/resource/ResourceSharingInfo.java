@@ -1,4 +1,15 @@
-package org.opensearch.security.spi;
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
+package org.opensearch.security.resource;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -7,6 +18,7 @@ import java.util.List;
 import org.opensearch.core.ParseField;
 import org.opensearch.core.xcontent.ConstructingObjectParser;
 import org.opensearch.core.xcontent.XContentParser;
+import org.opensearch.security.rest.resource.ShareWith;
 
 /**
  * ResourceSharingInfo is a subset of the fields in a SharableResource document that correspond to the owner

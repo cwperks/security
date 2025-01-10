@@ -15,7 +15,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
 
-import org.opensearch.security.spi.ResourceSharingInfo;
+import org.opensearch.security.resource.ResourceSharingInfo;
 
 /**
  * Data structure that holds the result when loading resource by id

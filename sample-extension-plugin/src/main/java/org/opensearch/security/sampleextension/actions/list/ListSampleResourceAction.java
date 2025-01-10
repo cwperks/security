@@ -9,8 +9,8 @@
 package org.opensearch.security.sampleextension.actions.list;
 
 import org.opensearch.action.ActionType;
+import org.opensearch.security.sampleextension.actions.generic.list.ListResourceResponse;
 import org.opensearch.security.sampleextension.resource.SampleResource;
-import org.opensearch.security.spi.actions.resource.list.ListResourceResponse;
 
 /**
  * Action to list sample resources

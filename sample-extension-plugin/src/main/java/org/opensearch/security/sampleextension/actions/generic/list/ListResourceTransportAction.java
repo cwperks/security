@@ -6,7 +6,7 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.resource.list;
+package org.opensearch.security.sampleextension.actions.generic.list;
 
 import java.io.IOException;
 import java.util.ArrayList;

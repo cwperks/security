@@ -6,30 +6,35 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.resource.get;
+package org.opensearch.security.sampleextension.actions.generic.get;
 
 import java.io.IOException;
 
+import org.opensearch.action.ActionRequest;
+import org.opensearch.action.ActionRequestValidationException;
 import org.opensearch.core.common.io.stream.StreamInput;
-import org.opensearch.security.spi.actions.AbstractResourceRequest;
 
 /**
  * Request object for GetResource transport action
  */
-public class GetResourceRequest extends AbstractResourceRequest {
+public class GetResourceRequest extends ActionRequest {
     private final String resourceId;
 
     /**
      * Default constructor
      */
-    public GetResourceRequest(String resourceId, String resourceIndex) {
-        super(resourceIndex);
+    public GetResourceRequest(String resourceId) {
         this.resourceId = resourceId;
     }
 
     public GetResourceRequest(StreamInput in) throws IOException {
         super(in);
         this.resourceId = in.readString();
+    }
+
+    @Override
+    public ActionRequestValidationException validate() {
+        return null;
     }
 
     public String getResourceId() {

@@ -1,9 +1,18 @@
-package org.opensearch.security.spi;
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
+package org.opensearch.security.resource;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.opensearch.core.ParseField;
 import org.opensearch.core.common.io.stream.NamedWriteable;
@@ -46,14 +55,6 @@ public class ResourceUser implements NamedWriteable, ToXContentFragment {
 
     public List<String> getBackendRoles() {
         return backendRoles;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static ResourceUser fromSource(Map<String, Object> sourceAsMap) {
-        String name = (String) sourceAsMap.get("name");
-        List<String> roles = new ArrayList<>((List<String>) sourceAsMap.get("roles"));
-        List<String> backendRoles = new ArrayList<>((List<String>) sourceAsMap.get("backend_roles"));
-        return new ResourceUser(name, roles, backendRoles);
     }
 
     @Override

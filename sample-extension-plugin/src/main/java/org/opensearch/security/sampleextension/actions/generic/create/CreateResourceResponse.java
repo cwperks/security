@@ -6,36 +6,34 @@
  * compatible open source license.
  */
 
-package org.opensearch.security.spi.actions.resource.list;
+package org.opensearch.security.sampleextension.actions.generic.create;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.opensearch.core.action.ActionResponse;
 import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.StreamOutput;
 import org.opensearch.core.xcontent.ToXContentObject;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.security.spi.SharableResource;
 
 /**
- * Response to a ListResourceRequest
+ * Response to a CreateSampleResourceRequest
  */
-public class ListResourceResponse<T extends SharableResource> extends ActionResponse implements ToXContentObject {
-    private final List<T> resources;
+public class CreateResourceResponse extends ActionResponse implements ToXContentObject {
+    private final String resourceId;
 
     /**
      * Default constructor
      *
-     * @param resources The resources
+     * @param resourceId The resourceId
      */
-    public ListResourceResponse(List<T> resources) {
-        this.resources = resources;
+    public CreateResourceResponse(String resourceId) {
+        this.resourceId = resourceId;
     }
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
-        out.writeList(resources);
+        out.writeString(resourceId);
     }
 
     /**
@@ -43,14 +41,14 @@ public class ListResourceResponse<T extends SharableResource> extends ActionResp
      *
      * @param in the stream input
      */
-    public ListResourceResponse(final StreamInput in, Reader<T> resourceReader) throws IOException {
-        resources = in.readList(resourceReader);
+    public CreateResourceResponse(final StreamInput in) throws IOException {
+        resourceId = in.readString();
     }
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
         builder.startObject();
-        builder.field("resources", resources);
+        builder.field("resourceId", resourceId);
         builder.endObject();
         return builder;
     }
