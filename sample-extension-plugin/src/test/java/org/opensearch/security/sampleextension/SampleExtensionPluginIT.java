@@ -54,7 +54,7 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         );
     }
 
-    private static Map<String, String> createSampleResource(String name, Optional<Tuple<String, String>> credentials) throws IOException {
+    private Map<String, String> createSampleResource(String name, Optional<Tuple<String, String>> credentials) throws IOException {
         RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
         options.setWarningsHandler((warnings) -> false);
         credentials.ifPresent(
@@ -79,7 +79,31 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         return createResourceResponse;
     }
 
-    private static Map<String, String> updateSharing(String resourceId, String payload, Optional<Tuple<String, String>> credentials)
+    private Map<String, Object> listSampleResource(Optional<Tuple<String, String>> credentials) throws IOException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler((warnings) -> false);
+        credentials.ifPresent(
+            stringStringTuple -> options.addHeader(
+                "Authorization",
+                "Basic "
+                    + Base64.getEncoder()
+                        .encodeToString((stringStringTuple.v1() + ":" + stringStringTuple.v2()).getBytes(StandardCharsets.UTF_8))
+            )
+        );
+
+        Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
+        listRequest.setOptions(options);
+        Response listResponse = client().performRequest(listRequest);
+        Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            listResponse.getEntity().getContent()
+        ).map();
+        System.out.println("listResourceResponse: " + listResourceResponse);
+        return listResourceResponse;
+    }
+
+    private Map<String, String> updateSharing(String resourceId, String payload, Optional<Tuple<String, String>> credentials)
         throws IOException {
         RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
         options.setWarningsHandler((warnings) -> false);
@@ -104,6 +128,21 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         return updateSharingResponse;
     }
 
+    private static Map<String, Object> listSampleResourcesWithAdminClient() throws IOException {
+        RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
+        options.setWarningsHandler((warnings) -> false);
+        Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
+        listRequest.setOptions(options);
+        Response listResponse = client().performRequest(listRequest);
+        Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
+            NamedXContentRegistry.EMPTY,
+            LoggingDeprecationHandler.INSTANCE,
+            listResponse.getEntity().getContent()
+        ).map();
+        System.out.println("listResourceResponse: " + listResourceResponse);
+        return listResourceResponse;
+    }
+
     public void testCreateSampleResource() throws IOException, InterruptedException {
         RequestOptions.Builder options = RequestOptions.DEFAULT.toBuilder();
         options.setWarningsHandler((warnings) -> false);
@@ -121,25 +160,11 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
         // Sleep to give ResourceSharingListener time to create the .resource-sharing index
         Thread.sleep(1000);
 
-        Request listRequest = new Request("GET", "/_plugins/resource_sharing_example/resource");
-        listRequest.setOptions(options);
-        Response listResponse = client().performRequest(listRequest);
-        Map<String, Object> listResourceResponse = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            listResponse.getEntity().getContent()
-        ).map();
+        Map<String, Object> listResourceResponse = listSampleResource(Optional.empty());
         System.out.println("listResourceResponse: " + listResourceResponse);
 
-        Request resourceSharingRequest = new Request("POST", "/.sample_extension_resources/_search");
-        resourceSharingRequest.setOptions(options);
-        Response resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
-        Map<String, Object> resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            resourceSharingResponse.getEntity().getContent()
-        ).map();
-        System.out.println("sampleResources: " + resourceSharingResponseMap);
+        Map<String, Object> allSampleResources = listSampleResourcesWithAdminClient();
+        System.out.println("allSampleResources: " + allSampleResources);
 
         Map<String, String> updateSharingResponse = updateSharing(
             resourceId,
@@ -150,20 +175,10 @@ public class SampleExtensionPluginIT extends ODFERestTestCase {
 
         Thread.sleep(1000);
 
-        resourceSharingResponse = adminClient().performRequest(resourceSharingRequest);
-        resourceSharingResponseMap = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            resourceSharingResponse.getEntity().getContent()
-        ).map();
-        System.out.println("sampleResources after update: " + resourceSharingResponseMap);
+        allSampleResources = listSampleResourcesWithAdminClient();
+        System.out.println("allSampleResources after update: " + allSampleResources);
 
-        listResponse = client().performRequest(listRequest);
-        listResourceResponse = JsonXContent.jsonXContent.createParser(
-            NamedXContentRegistry.EMPTY,
-            LoggingDeprecationHandler.INSTANCE,
-            listResponse.getEntity().getContent()
-        ).map();
+        listResourceResponse = listSampleResource(Optional.empty());
         System.out.println("listResourceResponse after update: " + listResourceResponse);
     }
 }
