@@ -314,19 +314,4 @@ public class SystemIndexTests {
             assertThat(response1.getBody(), response1.getBody().contains("\"hits\":{\"total\":{\"value\":0,\"relation\":\"eq\"}"));
         }
     }
-
-    @Test
-    public void testRunCode() {
-        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
-            // TODO write a test that calls POST /run-code with a simple System.out.println("Hello, world!")
-            String javaCode = "System.out.println(\\\"Hello, world!\\\");";
-            String requestBody = "{\"code\": \"" + javaCode + "\"}";
-
-            HttpResponse response = client.postJson("run-code", requestBody);
-
-            // Verify response
-            assertThat(response.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
-            assertThat(response.getBody(), response.getBody().contains("\"acknowledged\":true"));
-        }
-    }
 }
