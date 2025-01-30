@@ -12,18 +12,21 @@ package org.opensearch.security.systemindex.sampleplugin;
 
 // CS-SUPPRESS-SINGLE: RegexpSingleline It is not possible to use phrase "cluster manager" instead of master here
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticCollector;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
 import javax.tools.JavaCompiler;
-import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
+import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
 import org.opensearch.action.support.ActionFilters;
@@ -42,7 +45,7 @@ public class TransportRunCodeAction extends HandledTransportAction<RunCodeReques
 
     @Inject
     public TransportRunCodeAction(final TransportService transportService, final ActionFilters actionFilters, final Client client) {
-        super(RunClusterHealthAction.NAME, transportService, actionFilters, RunCodeRequest::new);
+        super(RunCodeAction.NAME, transportService, actionFilters, RunCodeRequest::new);
         this.client = client;
     }
 
@@ -68,103 +71,104 @@ public class TransportRunCodeAction extends HandledTransportAction<RunCodeReques
                 className,
                 code
             );
-            // Create in-memory compiler
-            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-            InMemoryClassLoader classLoader = new InMemoryClassLoader();
-            InMemoryFileManager fileManager = new InMemoryFileManager(compiler.getStandardFileManager(null, null, null), classLoader);
 
-            // Prepare source code
-            JavaFileObject sourceFile = new InMemorySourceFile(className, sourceCode);
+            // Debug logging
+            logger.debug("Compiling source code:\n{}", sourceCode);
+
+            // Set up the compiler
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            if (compiler == null) {
+                throw new IllegalStateException("No Java compiler available");
+            }
+
+            // Create our custom class loader
+            final Map<String, byte[]> classBytes = new HashMap<>();
+            ClassLoader loader = new ClassLoader(this.getClass().getClassLoader()) {
+                @Override
+                protected Class<?> findClass(String name) throws ClassNotFoundException {
+                    byte[] bytes = classBytes.get(name);
+                    if (bytes == null) {
+                        throw new ClassNotFoundException(name);
+                    }
+                    return defineClass(name, bytes, 0, bytes.length);
+                }
+            };
+
+            // Set up the file manager and compilation units
+            JavaFileObject sourceFile = new SimpleJavaFileObject(
+                URI.create("string:///" + className.replace('.', '/') + JavaFileObject.Kind.SOURCE.extension),
+                JavaFileObject.Kind.SOURCE
+            ) {
+                @Override
+                public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+                    return sourceCode;
+                }
+            };
+
+            JavaFileObject classFile = new SimpleJavaFileObject(
+                URI.create("string:///" + className.replace('.', '/') + JavaFileObject.Kind.CLASS.extension),
+                JavaFileObject.Kind.CLASS
+            ) {
+                @Override
+                public OutputStream openOutputStream() {
+                    return new ByteArrayOutputStream() {
+                        @Override
+                        public void close() throws IOException {
+                            classBytes.put(className, toByteArray());
+                        }
+                    };
+                }
+            };
+
+            // Create file manager
+            ForwardingJavaFileManager<StandardJavaFileManager> fileManager = new ForwardingJavaFileManager<StandardJavaFileManager>(
+                compiler.getStandardFileManager(null, null, null)
+            ) {
+                @Override
+                public JavaFileObject getJavaFileForOutput(
+                    Location location,
+                    String className,
+                    JavaFileObject.Kind kind,
+                    FileObject sibling
+                ) {
+                    return classFile;
+                }
+            };
 
             // Compile
-            JavaCompiler.CompilationTask javaTask = compiler.getTask(null, fileManager, null, null, null, Arrays.asList(sourceFile));
+            DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<>();
+            JavaCompiler.CompilationTask javaTask = compiler.getTask(null, fileManager, diagnostics, null, null, Arrays.asList(sourceFile));
 
-            if (!javaTask.call()) {
-                actionListener.onFailure(new IllegalStateException("Compilation failed"));
+            boolean success = javaTask.call();
+
+            if (!success) {
+                StringBuilder sb = new StringBuilder();
+                for (Diagnostic<? extends JavaFileObject> diagnostic : diagnostics.getDiagnostics()) {
+                    sb.append(diagnostic.toString()).append("\n");
+                }
+                logger.error("Compilation failed: {}", sb.toString());
+                actionListener.onFailure(new IllegalStateException("Compilation failed: " + sb.toString()));
                 return;
             }
 
+            // Debug logging
+            logger.debug(
+                "Compilation successful. Class bytes size: {}",
+                classBytes.get(className) != null ? classBytes.get(className).length : "null"
+            );
+
             // Load and execute
-            Class<?> loadedClass = classLoader.loadClass(className);
+            Class<?> loadedClass = loader.loadClass(className);
             Method executeMethod = loadedClass.getMethod("execute");
             Object result = executeMethod.invoke(null);
+
+            logger.debug("Execution result: {}", result);
 
             actionListener.onResponse(new AcknowledgedResponse(true));
 
         } catch (Exception e) {
+            logger.error("Error executing code", e);
             actionListener.onFailure(e);
-        }
-    }
-
-    // Custom ClassLoader
-    private static class InMemoryClassLoader extends ClassLoader {
-        private final Map<String, byte[]> classData = new HashMap<>();
-
-        public void addClass(String name, byte[] data) {
-            classData.put(name, data);
-        }
-
-        @Override
-        protected Class<?> findClass(String name) throws ClassNotFoundException {
-            byte[] data = classData.get(name);
-            if (data == null) {
-                throw new ClassNotFoundException(name);
-            }
-            return defineClass(name, data, 0, data.length);
-        }
-    }
-
-    // Custom JavaFileObject for in-memory source code
-    private static class InMemorySourceFile extends SimpleJavaFileObject {
-        private final String code;
-
-        public InMemorySourceFile(String className, String code) {
-            super(URI.create("string:///" + className.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
-            this.code = code;
-        }
-
-        @Override
-        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-            return code;
-        }
-    }
-
-    // Custom FileManager for in-memory compilation
-    private static class InMemoryFileManager extends ForwardingJavaFileManager<JavaFileManager> {
-        private final InMemoryClassLoader classLoader;
-
-        public InMemoryFileManager(JavaFileManager fileManager, InMemoryClassLoader classLoader) {
-            super(fileManager);
-            this.classLoader = classLoader;
-        }
-
-        @Override
-        public JavaFileObject getJavaFileForOutput(
-            JavaFileManager.Location location,
-            String className,
-            JavaFileObject.Kind kind,
-            FileObject sibling
-        ) {
-            return new InMemoryClassFile(className, classLoader);
-        }
-    }
-
-    // Custom JavaFileObject for in-memory bytecode
-    private static class InMemoryClassFile extends SimpleJavaFileObject {
-        private final String className;
-        private final InMemoryClassLoader classLoader;
-        private ByteArrayOutputStream outputStream;
-
-        public InMemoryClassFile(String className, InMemoryClassLoader classLoader) {
-            super(URI.create("byte:///" + className.replace('.', '/') + Kind.CLASS.extension), Kind.CLASS);
-            this.className = className;
-            this.classLoader = classLoader;
-        }
-
-        @Override
-        public OutputStream openOutputStream() {
-            outputStream = new ByteArrayOutputStream();
-            return outputStream;
         }
     }
 }

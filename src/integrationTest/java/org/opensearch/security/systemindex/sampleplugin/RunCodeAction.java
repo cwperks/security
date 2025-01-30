@@ -17,7 +17,7 @@ import org.opensearch.action.support.master.AcknowledgedResponse;
 
 public class RunCodeAction extends ActionType<AcknowledgedResponse> {
     public static final RunCodeAction INSTANCE = new RunCodeAction();
-    public static final String NAME = "cluster:mock/monitor/code";
+    public static final String NAME = "cluster:monitor/code";
 
     private RunCodeAction() {
         super(NAME, AcknowledgedResponse::new);
