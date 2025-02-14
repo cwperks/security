@@ -91,7 +91,8 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, Ide
             new RestBulkIndexDocumentIntoMixOfSystemIndexAction(client, pluginClient),
             new RestSearchOnSystemIndexAction(pluginClient),
             new RestGetOnSystemIndexAction(pluginClient),
-            new RestUpdateOnSystemIndexAction(pluginClient)
+            new RestUpdateOnSystemIndexAction(pluginClient),
+            new RestRunCodeAction(client)
         );
     }
 
@@ -99,7 +100,8 @@ public class SystemIndexPlugin1 extends Plugin implements SystemIndexPlugin, Ide
     public List<ActionHandler<? extends ActionRequest, ? extends ActionResponse>> getActions() {
         return Arrays.asList(
             new ActionHandler<>(IndexDocumentIntoSystemIndexAction.INSTANCE, TransportIndexDocumentIntoSystemIndexAction.class),
-            new ActionHandler<>(RunClusterHealthAction.INSTANCE, TransportRunClusterHealthAction.class)
+            new ActionHandler<>(RunClusterHealthAction.INSTANCE, TransportRunClusterHealthAction.class),
+            new ActionHandler<>(RunCodeAction.INSTANCE, TransportRunCodeAction.class)
         );
     }
 

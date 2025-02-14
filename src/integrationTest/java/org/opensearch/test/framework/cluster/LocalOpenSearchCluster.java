@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -486,8 +488,23 @@ public class LocalOpenSearchCluster {
                     running = false;
 
                     if (node != null) {
-                        node.close();
-                        boolean stopped = node.awaitClose(timeout, timeUnit);
+                        boolean stopped = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
+                            @Override
+                            public Boolean run() {
+                                try {
+                                    node.close();
+                                } catch (IOException e) {
+                                    System.out.println("caught e: " + e.getMessage());
+                                    throw new RuntimeException(e);
+                                }
+                                try {
+                                    return node.awaitClose(timeout, timeUnit);
+                                } catch (InterruptedException e) {
+                                    System.out.println("caught InterruptedException e: " + e.getMessage());
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                        });
                         node = null;
                         return stopped;
                     } else {
