@@ -57,7 +57,7 @@ public class Netty4HttpRequestHeaderVerifier extends SimpleChannelInboundHandler
         this.injectUserEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_UNSUPPORTED_INJECT_USER_ENABLED, false);
         boolean disabled = settings.getAsBoolean(ConfigConstants.SECURITY_DISABLED, false);
         if (disabled) {
-            sslConfig = new SSLConfig(false, false);
+            sslConfig = new SSLConfig(false, false, false);
         } else {
             sslConfig = new SSLConfig(settings);
         }

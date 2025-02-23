@@ -113,14 +113,9 @@ public class SecuritySSLRequestHandler<T extends TransportRequest> implements Tr
                 if (SSLConfig.isDualModeEnabled()) {
                     log.info("Communication in dual mode. Skipping SSL handler check");
                     threadContext.putTransient(ConfigConstants.SECURITY_SSL_DUAL_MODE_SKIP_SECURITY, Boolean.TRUE);
-                    messageReceivedDecorate(request, actualHandler, channel, task);
-                    return;
                 }
-                final String msg = "No ssl handler found (SG 11)";
-                // log.error(msg);
-                final Exception exception = new OpenSearchException(msg);
-                channel.sendResponse(exception);
-                throw exception;
+                messageReceivedDecorate(request, actualHandler, channel, task);
+                return;
             }
 
             final Certificate[] peerCerts = sslhandler.engine().getSession().getPeerCertificates();

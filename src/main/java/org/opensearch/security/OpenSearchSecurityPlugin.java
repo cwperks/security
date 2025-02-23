@@ -413,10 +413,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         log.info("Clustername: {}", settings.get("cluster.name", "opensearch"));
 
-        if (!transportSSLEnabled && !SSLConfig.isSslOnlyMode()) {
-            throw new IllegalStateException(SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED + " must be set to 'true'");
-        }
-
         if (!client) {
             final List<Path> filesWithWrongPermissions = AccessController.doPrivileged(new PrivilegedAction<List<Path>>() {
                 @Override
@@ -1255,7 +1251,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         builder.put(super.additionalSettings());
 
         if (!SSLConfig.isSslOnlyMode()) {
-            builder.put(NetworkModule.TRANSPORT_TYPE_KEY, "org.opensearch.security.ssl.http.netty.SecuritySSLNettyTransport");
+            if (transportSSLEnabled) {
+                builder.put(NetworkModule.TRANSPORT_TYPE_KEY, "org.opensearch.security.ssl.http.netty.SecuritySSLNettyTransport");
+            }
             builder.put(NetworkModule.HTTP_TYPE_KEY, "org.opensearch.security.http.SecurityHttpServerTransport");
         }
         return builder.build();

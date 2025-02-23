@@ -19,21 +19,30 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.SecuritySettings;
 
+import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED;
+import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED_DEFAULT;
+
 public class SSLConfig {
 
     private static final Logger logger = LogManager.getLogger(SSLConfig.class);
 
     private final boolean sslOnly;
     private volatile boolean dualModeEnabled;
+    private volatile boolean transportSSLEnabled;
 
-    public SSLConfig(final boolean sslOnly, final boolean dualModeEnabled) {
+    public SSLConfig(final boolean sslOnly, final boolean dualModeEnabled, final boolean transportSSLEnabled) {
         this.sslOnly = sslOnly;
         this.dualModeEnabled = dualModeEnabled;
+        this.transportSSLEnabled = transportSSLEnabled;
         logger.info("SSL dual mode is {}", isDualModeEnabled() ? "enabled" : "disabled");
     }
 
     public SSLConfig(final Settings settings) {
-        this(settings.getAsBoolean(ConfigConstants.SECURITY_SSL_ONLY, false), SecuritySettings.SSL_DUAL_MODE_SETTING.get(settings));
+        this(
+            settings.getAsBoolean(ConfigConstants.SECURITY_SSL_ONLY, false),
+            SecuritySettings.SSL_DUAL_MODE_SETTING.get(settings),
+            settings.getAsBoolean(SECURITY_SSL_TRANSPORT_ENABLED, SECURITY_SSL_TRANSPORT_ENABLED_DEFAULT)
+        );
     }
 
     public void registerClusterSettingsChangeListener(final ClusterSettings clusterSettings) {
@@ -56,5 +65,9 @@ public class SSLConfig {
 
     public boolean isSslOnlyMode() {
         return sslOnly;
+    }
+
+    public boolean isTransportSSLEnabled() {
+        return transportSSLEnabled;
     }
 }

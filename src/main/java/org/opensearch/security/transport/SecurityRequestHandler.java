@@ -70,6 +70,7 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
     private final AuditLog auditLog;
     private final InterClusterRequestEvaluator requestEvalProvider;
     private final ClusterService cs;
+    private final SSLConfig SSLConfig;
 
     SecurityRequestHandler(
         String action,
@@ -86,6 +87,7 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
         this.auditLog = auditLog;
         this.requestEvalProvider = requestEvalProvider;
         this.cs = cs;
+        this.SSLConfig = SSLConfig;
     }
 
     @Override
@@ -265,7 +267,8 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
 
             String principal = null;
 
-            if ((principal = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_SSL_TRANSPORT_PRINCIPAL)) == null) {
+            if (SSLConfig.isTransportSSLEnabled()
+                && (principal = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_SSL_TRANSPORT_PRINCIPAL)) == null) {
                 Exception ex = new OpenSearchSecurityException(
                     "No SSL client certificates found for transport type "
                         + transportChannel.getChannelType()
@@ -286,9 +289,10 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
 
                 // network intercluster request or cross search cluster request
                 // CS-SUPPRESS-SINGLE: RegexpSingleline Used to allow/disallow TLS connections to extensions
-                if (!(HeaderHelper.isInterClusterRequest(getThreadContext())
-                    || HeaderHelper.isTrustedClusterRequest(getThreadContext())
-                    || HeaderHelper.isExtensionRequest(getThreadContext()))) {
+                if (SSLConfig.isTransportSSLEnabled()
+                    && !(HeaderHelper.isInterClusterRequest(getThreadContext())
+                        || HeaderHelper.isTrustedClusterRequest(getThreadContext())
+                        || HeaderHelper.isExtensionRequest(getThreadContext()))) {
                     // CS-ENFORCE-SINGLE
                     final OpenSearchException exception = ExceptionUtils.clusterWrongNodeCertConfigException(principal);
                     log.error(exception.toString());

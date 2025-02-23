@@ -146,7 +146,7 @@ public class OpenSearchSecuritySSLPlugin extends Plugin implements SystemIndexPl
             this.extendedKeyUsageEnabled = false;
             this.sslSettingsManager = null;
             this.configPath = null;
-            SSLConfig = new SSLConfig(false, false);
+            SSLConfig = new SSLConfig(false, false, false);
 
             AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
