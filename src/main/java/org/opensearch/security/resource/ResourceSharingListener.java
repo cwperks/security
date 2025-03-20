@@ -18,14 +18,15 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
-import org.opensearch.client.Client;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.client.Client;
 
 public class ResourceSharingListener implements IndexingOperationListener {
     private final static Logger log = LogManager.getLogger(ResourceSharingListener.class);
@@ -68,9 +69,9 @@ public class ResourceSharingListener implements IndexingOperationListener {
         System.out.println("postIndex called on " + shardId.getIndexName());
         System.out.println("resourceId: " + resourceId);
         System.out.println("resourceIndex: " + resourceIndex);
-        User authenticatedUser = (User) client.threadPool()
+        User authenticatedUser = ((UserSubjectImpl) client.threadPool()
             .getThreadContext()
-            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER)).getUser();
         System.out.println("resourceUser: " + authenticatedUser);
         ResourceUser resourceUser = new ResourceUser(
             authenticatedUser.getName(),

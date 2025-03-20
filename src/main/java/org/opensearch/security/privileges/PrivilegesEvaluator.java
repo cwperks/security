@@ -157,7 +157,6 @@ public class PrivilegesEvaluator {
     private DynamicConfigModel dcm;
     private final NamedXContentRegistry namedXContentRegistry;
     private final Settings settings;
-    private final ConfigurationRepository configurationRepository;
     private final Map<String, Set<String>> pluginToClusterActions;
     private final AtomicReference<ActionPrivileges> actionPrivileges = new AtomicReference<>();
 
@@ -199,7 +198,6 @@ public class PrivilegesEvaluator {
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();
         this.namedXContentRegistry = namedXContentRegistry;
-        this.configurationRepository = configurationRepository;
 
         if (configurationRepository != null) {
             configurationRepository.subscribeOnChange(configMap -> {

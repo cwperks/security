@@ -69,6 +69,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.query.QuerySearchResult;
 import org.opensearch.security.OpenSearchSecurityPlugin;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
@@ -84,14 +85,13 @@ import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.user.User;
 import org.opensearch.security.support.HeaderHelper;
+import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
-import static org.opensearch.security.privileges.PrivilegesEvaluator.isClusterPerm;
-
 import static org.opensearch.security.configuration.SecurityFlsDlsIndexSearcherWrapper.parseQuery;
+import static org.opensearch.security.privileges.PrivilegesEvaluator.isClusterPerm;
 
 public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
@@ -405,7 +405,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
             if (sharableResourceIndices.contains(index)
                 && threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER) != null) {
-                User user = (User) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+                User user = ((UserSubjectImpl) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER))
+                    .getUser();
                 if (adminDNs.isAdmin(user)) {
                     return;
                 }

@@ -41,6 +41,10 @@ public class UserSubjectImpl implements UserSubject {
         return userPrincipal;
     }
 
+    public User getUser() {
+        return user;
+    }
+
     @Override
     public <T> T runAs(Callable<T> callable) throws Exception {
         try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {

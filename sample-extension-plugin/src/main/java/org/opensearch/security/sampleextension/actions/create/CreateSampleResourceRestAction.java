@@ -12,13 +12,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import org.opensearch.client.node.NodeClient;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
 import org.opensearch.security.sampleextension.actions.generic.create.CreateResourceRequest;
 import org.opensearch.security.sampleextension.resource.SampleResource;
+import org.opensearch.transport.client.node.NodeClient;
 
 import static java.util.Collections.singletonList;
 import static org.opensearch.rest.RestRequest.Method.POST;

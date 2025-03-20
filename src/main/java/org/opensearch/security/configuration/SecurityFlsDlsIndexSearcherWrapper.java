@@ -43,6 +43,7 @@ import org.opensearch.index.query.QueryBuilder;
 import org.opensearch.index.query.QueryShardContext;
 import org.opensearch.index.shard.ShardUtils;
 import org.opensearch.security.auditlog.AuditLog;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.compliance.ComplianceIndexingOperationListener;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesConfigurationValidationException;
@@ -156,7 +157,8 @@ public class SecurityFlsDlsIndexSearcherWrapper extends SystemIndexSearcherWrapp
 
             if (sharableResourceIndices.contains(shardId.getIndexName())
                 && threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER) != null) {
-                User user = (User) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+                User user = ((UserSubjectImpl) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER))
+                    .getUser();
                 if (adminDns.isAdmin(user)) {
                     return new DlsFlsFilterLeafReader.DlsFlsDirectoryReader(
                         reader,
