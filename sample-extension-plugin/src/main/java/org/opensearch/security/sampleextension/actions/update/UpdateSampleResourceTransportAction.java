@@ -18,13 +18,13 @@ import org.opensearch.action.index.IndexResponse;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.support.WriteRequest;
-import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.security.sampleextension.resource.SampleResource;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 import static org.opensearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.opensearch.security.sampleextension.SampleExtensionPlugin.RESOURCE_INDEX_NAME;
