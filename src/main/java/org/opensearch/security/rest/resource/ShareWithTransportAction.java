@@ -20,7 +20,6 @@ import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
-import org.opensearch.client.Client;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -32,6 +31,7 @@ import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.tasks.Task;
 import org.opensearch.transport.TransportService;
+import org.opensearch.transport.client.Client;
 
 /**
  * Transport action for UpdateResourceSharing.
@@ -65,7 +65,7 @@ public class ShareWithTransportAction extends HandledTransportAction<ShareWithRe
             nodeClient.search(searchRequest, new ActionListener<>() {
                 @Override
                 public void onResponse(SearchResponse searchResponse) {
-                    if (Objects.requireNonNull(searchResponse.getHits().getTotalHits()).value == 1) {
+                    if (Objects.requireNonNull(searchResponse.getHits().getTotalHits()).value() == 1) {
                         SearchHit hit = searchResponse.getHits().getAt(0);
                         UpdateRequest updateRequest = new UpdateRequest(RESOURCE_SHARING_INDEX, hit.getId());
                         try {

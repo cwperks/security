@@ -15,7 +15,6 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.ResourceNotFoundException;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
-import org.opensearch.client.Client;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -27,6 +26,7 @@ import org.opensearch.security.spi.ResourceSharingService;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
+import org.opensearch.transport.client.Client;
 
 import static org.opensearch.security.resource.ResourceSharingListener.RESOURCE_SHARING_INDEX;
 
