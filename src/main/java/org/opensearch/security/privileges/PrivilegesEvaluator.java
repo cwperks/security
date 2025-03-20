@@ -29,6 +29,7 @@ package org.opensearch.security.privileges;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -112,6 +113,7 @@ import org.greenrobot.eventbus.Subscribe;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.traceAction;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT;
+import static org.opensearch.security.support.SecurityUtils.escapePipe;
 
 public class PrivilegesEvaluator {
 
@@ -144,6 +146,7 @@ public class PrivilegesEvaluator {
     private final boolean checkSnapshotRestoreWritePrivileges;
 
     private final ClusterInfoHolder clusterInfoHolder;
+    private final ConfigurationRepository configurationRepository;
     private ConfigModel configModel;
     private final IndexResolverReplacer irr;
     private final SnapshotRestoreEvaluator snapshotRestoreEvaluator;
@@ -155,6 +158,7 @@ public class PrivilegesEvaluator {
     private final NamedXContentRegistry namedXContentRegistry;
     private final Settings settings;
     private final ConfigurationRepository configurationRepository;
+    private final Map<String, Set<String>> pluginToClusterActions;
     private final AtomicReference<ActionPrivileges> actionPrivileges = new AtomicReference<>();
 
     public PrivilegesEvaluator(
@@ -178,6 +182,7 @@ public class PrivilegesEvaluator {
 
         this.threadContext = threadContext;
         this.privilegesInterceptor = privilegesInterceptor;
+        this.pluginToClusterActions = new HashMap<>();
         this.clusterStateSupplier = clusterStateSupplier;
         this.settings = settings;
 
@@ -194,6 +199,7 @@ public class PrivilegesEvaluator {
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();
         this.namedXContentRegistry = namedXContentRegistry;
+        this.configurationRepository = configurationRepository;
 
         if (configurationRepository != null) {
             configurationRepository.subscribeOnChange(configMap -> {
@@ -234,7 +240,8 @@ public class PrivilegesEvaluator {
                 DynamicConfigFactory.addStatics(rolesConfiguration.clone()),
                 flattenedActionGroups,
                 () -> clusterStateSupplier.get().metadata().getIndicesLookup(),
-                settings
+                settings,
+                pluginToClusterActions
             );
             Metadata metadata = clusterStateSupplier.get().metadata();
             actionPrivileges.updateStatefulIndexPrivileges(metadata.getIndicesLookup(), metadata.version());
@@ -272,12 +279,14 @@ public class PrivilegesEvaluator {
     private void setUserInfoInThreadContext(User user) {
         if (threadContext.getTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT) == null) {
             StringJoiner joiner = new StringJoiner("|");
-            joiner.add(user.getName());
-            joiner.add(String.join(",", user.getRoles()));
-            joiner.add(String.join(",", user.getSecurityRoles()));
+            // Escape any pipe characters in the values before joining
+            joiner.add(escapePipe(user.getName()));
+            joiner.add(escapePipe(String.join(",", user.getRoles())));
+            joiner.add(escapePipe(String.join(",", user.getSecurityRoles())));
+
             String requestedTenant = user.getRequestedTenant();
             if (!Strings.isNullOrEmpty(requestedTenant)) {
-                joiner.add(requestedTenant);
+                joiner.add(escapePipe(requestedTenant));
             }
             threadContext.putTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT, joiner.toString());
         }
@@ -861,5 +870,9 @@ public class PrivilegesEvaluator {
         }
 
         return Collections.unmodifiableList(ret);
+    }
+
+    public void updatePluginToClusterActions(String pluginIdentifier, Set<String> clusterActions) {
+        pluginToClusterActions.put(pluginIdentifier, clusterActions);
     }
 }
