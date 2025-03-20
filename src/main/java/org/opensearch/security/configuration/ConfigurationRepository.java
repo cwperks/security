@@ -80,9 +80,11 @@ import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.env.Environment;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.config.AuditConfig;
+import org.opensearch.security.resource.ResourceSharingInfo;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.spi.ResourceRequest;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.state.SecurityMetadata;
 import org.opensearch.security.support.ConfigConstants;
@@ -586,6 +588,33 @@ public class ConfigurationRepository implements ClusterStateListener {
      */
     public ConfigurationMap getConfigurationsFromIndex(Collection<CType<?>> configTypes, boolean logComplianceEvent) {
         return getConfigurationsFromIndex(configTypes, logComplianceEvent, this.acceptInvalid);
+    }
+
+    public ResourceSharingInfo getResourceFromIndex(ResourceRequest request) {
+        System.out.println("request.getId: " + request.getResourceId());
+        System.out.println("request.getIndexName: " + request.getResourceIndex());
+        final ThreadContext threadContext = threadPool.getThreadContext();
+        final ResourceSharingInfoMap.Builder resultBuilder = new ResourceSharingInfoMap.Builder();
+
+        try (StoredContext ctx = threadContext.stashContext()) {
+            threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
+
+            resultBuilder.with(cl.load(request.getResourceId(), request.getResourceIndex(), 10, TimeUnit.SECONDS));
+
+        } catch (Exception e) {
+            throw new OpenSearchException(e);
+        }
+
+        ResourceSharingInfoMap result = resultBuilder.build();
+
+        // if (logComplianceEvent && auditLog.getComplianceConfig() != null && auditLog.getComplianceConfig().isEnabled()) {
+        // CType<?> configurationType = configTypes.iterator().next();
+        // Map<String, String> fields = new HashMap<String, String>();
+        // fields.put(configurationType.toLCString(), Strings.toString(MediaTypeRegistry.JSON, result.get(configurationType)));
+        // auditLog.logDocumentRead(this.securityIndex, configurationType.toLCString(), null, fields);
+        // }
+
+        return result.get(request.getResourceId());
     }
 
     public ConfigurationMap getConfigurationsFromIndex(

@@ -140,6 +140,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
         public DlsGetEvaluator(final Query dlsQuery, final LeafReader in, boolean applyDlsHere) throws IOException {
             if (dlsQuery != null && applyDlsHere) {
+                System.out.println("Applying dls query on get request: " + dlsQuery.toString());
                 // borrowed from Apache Lucene (Copyright Apache Software Foundation (ASF))
                 // https://github.com/apache/lucene-solr/blob/branch_6_3/lucene/misc/src/java/org/apache/lucene/index/PKIndexSplitter.java
                 final IndexSearcher searcher = new IndexSearcher(DlsFlsFilterLeafReader.this);

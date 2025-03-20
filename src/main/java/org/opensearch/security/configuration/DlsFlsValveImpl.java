@@ -17,8 +17,10 @@ import java.security.PrivilegedAction;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import com.google.common.collect.ImmutableList;
@@ -67,6 +69,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.query.QuerySearchResult;
 import org.opensearch.security.OpenSearchSecurityPlugin;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
@@ -74,6 +77,7 @@ import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
 import org.opensearch.security.privileges.dlsfls.DlsFlsLegacyHeaders;
 import org.opensearch.security.privileges.dlsfls.DlsFlsProcessedConfig;
 import org.opensearch.security.privileges.dlsfls.DlsRestriction;
+import org.opensearch.security.privileges.dlsfls.DocumentPrivileges;
 import org.opensearch.security.privileges.dlsfls.FieldMasking;
 import org.opensearch.security.privileges.dlsfls.IndexToRuleMap;
 import org.opensearch.security.resolver.IndexResolverReplacer;
@@ -82,9 +86,11 @@ import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
+import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
+import static org.opensearch.security.configuration.SecurityFlsDlsIndexSearcherWrapper.parseQuery;
 import static org.opensearch.security.privileges.PrivilegesEvaluator.isClusterPerm;
 
 public class DlsFlsValveImpl implements DlsFlsRequestValve {
@@ -102,6 +108,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     private final AtomicReference<DlsFlsProcessedConfig> dlsFlsProcessedConfig = new AtomicReference<>();
     private final FieldMasking.Config fieldMaskingConfig;
     private final Settings settings;
+    private final Set<String> sharableResourceIndices;
+    private final AdminDNs adminDNs;
 
     public DlsFlsValveImpl(
         Settings settings,
@@ -110,7 +118,9 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         IndexNameExpressionResolver resolver,
         NamedXContentRegistry namedXContentRegistry,
         ThreadPool threadPool,
-        DlsFlsBaseContext dlsFlsBaseContext
+        DlsFlsBaseContext dlsFlsBaseContext,
+        AdminDNs adminDNs,
+        Set<String> sharableResourceIndices
     ) {
         super();
         this.nodeClient = nodeClient;
@@ -122,6 +132,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         this.fieldMaskingConfig = FieldMasking.Config.fromSettings(settings);
         this.dlsFlsBaseContext = dlsFlsBaseContext;
         this.settings = settings;
+        this.adminDNs = adminDNs;
+        this.sharableResourceIndices = sharableResourceIndices;
 
         clusterService.addListener(event -> {
             DlsFlsProcessedConfig config = dlsFlsProcessedConfig.get();
@@ -356,6 +368,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     public void handleSearchContext(SearchContext searchContext, ThreadPool threadPool, NamedXContentRegistry namedXContentRegistry) {
         try {
             String index = searchContext.indexShard().indexSettings().getIndex().getName();
+            System.out.println("handleSearchContext: " + index);
 
             if (log.isTraceEnabled()) {
                 log.trace("handleSearchContext(); index: {}", index);
@@ -382,13 +395,63 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             }
 
             PrivilegesEvaluationContext privilegesEvaluationContext = this.dlsFlsBaseContext.getPrivilegesEvaluationContext();
-            if (privilegesEvaluationContext == null) {
+            if (privilegesEvaluationContext == null && !sharableResourceIndices.contains(index)) {
                 return;
             }
 
             DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
 
-            DlsRestriction dlsRestriction = config.getDocumentPrivileges().getRestriction(privilegesEvaluationContext, index);
+            DlsRestriction dlsRestriction;
+
+            if (sharableResourceIndices.contains(index)
+                && threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER) != null) {
+                User user = ((UserSubjectImpl) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER))
+                    .getUser();
+                if (adminDNs.isAdmin(user)) {
+                    return;
+                }
+
+                String username = user.getName();
+                Set<String> backendRoles = user.getRoles();
+
+                // Convert backend roles to JSON array string
+                String backendRolesJson = backendRoles.stream().map(role -> "\"" + role + "\"").collect(Collectors.joining(", "));
+
+                String queryString = String.format(
+                    "{ \"bool\": {"
+                        + "\"should\": ["
+                        + "{"
+                        + "\"term\": {"
+                        + "\"resource_user.name\": \""
+                        + username
+                        + "\""
+                        + "}"
+                        + "},"
+                        + "{"
+                        + "\"terms\": {"
+                        + "\"share_with.backend_roles\": ["
+                        + backendRolesJson
+                        + "]"
+                        + "}"
+                        + "},"
+                        + "{"
+                        + "\"term\": {"
+                        + "\"share_with.users\": \""
+                        + username
+                        + "\""
+                        + "}"
+                        + "}"
+                        + "],"
+                        + "\"minimum_should_match\": 1"
+                        + "}"
+                        + "}"
+                );
+                dlsRestriction = new DlsRestriction(
+                    List.of(new DocumentPrivileges.RenderedDlsQuery(parseQuery(queryString, namedXContentRegistry), queryString))
+                );
+            } else {
+                dlsRestriction = config.getDocumentPrivileges().getRestriction(privilegesEvaluationContext, index);
+            }
 
             if (log.isTraceEnabled()) {
                 log.trace("handleSearchContext(); index: {}; dlsRestriction: {}", index, dlsRestriction);

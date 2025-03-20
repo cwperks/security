@@ -45,6 +45,7 @@ import org.opensearch.action.get.MultiGetResponse;
 import org.opensearch.action.get.MultiGetResponse.Failure;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.xcontent.LoggingDeprecationHandler;
 import org.opensearch.common.xcontent.XContentHelper;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
@@ -53,6 +54,7 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.auditlog.config.AuditConfig;
+import org.opensearch.security.resource.ResourceSharingInfo;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.support.ConfigConstants;
@@ -207,6 +209,68 @@ public class ConfigurationLoaderSecurity7 {
         return result.build();
     }
 
+    ResourceSharingInfoMap load(final String resourceId, final String resourceIndex, long timeout, TimeUnit timeUnit)
+        throws InterruptedException, TimeoutException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        ResourceSharingInfoMap.Builder result = new ResourceSharingInfoMap.Builder();
+        final boolean isDebugEnabled = log.isDebugEnabled();
+        loadResourceAsync(resourceId, resourceIndex, new SharableResourceCallback() {
+
+            @Override
+            public void success(ResourceSharingInfo sharingInfo) {
+                if (latch.getCount() <= 0) {
+                    log.error("Latch already counted down (for {})  (index={})", resourceId, securityIndex);
+                }
+
+                result.with(resourceId, sharingInfo);
+
+                latch.countDown();
+                if (isDebugEnabled) {
+                    log.debug("Received resource for {} (of {}) with current latch value={}", resourceId, resourceIndex, latch.getCount());
+                }
+            }
+
+            @Override
+            public void singleFailure(Failure failure) {
+                log.error(
+                    "Failure {} retrieving configuration for {} (index={})",
+                    failure == null ? null : failure.getMessage(),
+                    resourceId,
+                    resourceIndex,
+                    failure.getFailure()
+                );
+            }
+
+            @Override
+            public void noData(String resourceId) {
+                result.with(resourceId, null);
+                log.warn("No data for {} while retrieving resource  (index={})", resourceId, resourceIndex);
+            }
+
+            @Override
+            public void failure(Throwable t) {
+                log.error("Exception while retrieving resource for {} (index={})", resourceId, resourceIndex, t);
+            }
+        });
+
+        if (!latch.await(timeout, timeUnit)) {
+            // timeout
+            throw new TimeoutException(
+                "Timeout after "
+                    + timeout
+                    + ""
+                    + timeUnit
+                    + " while retrieving resource for "
+                    + resourceId
+                    + "(index="
+                    + resourceIndex
+                    + ")"
+            );
+        }
+
+        return result.build();
+    }
+
     void loadAsync(final CType<?>[] events, final ConfigCallback callback, boolean acceptInvalid) {
         if (events == null || events.length == 0) {
             log.warn("No config events requested to load");
@@ -239,6 +303,64 @@ public class ConfigurationLoaderSecurity7 {
                                     callback.success(dConf.deepClone());
                                 } else {
                                     callback.failure(new Exception("Cannot parse settings for " + singleGetResponse.getId()));
+                                }
+                            } catch (Exception e) {
+                                log.error(e.toString());
+                                callback.failure(e);
+                            }
+                        } else {
+                            // does not exist or empty source
+                            callback.noData(singleGetResponse.getId());
+                        }
+                    } else {
+                        // failure
+                        callback.singleFailure(singleResponse == null ? null : singleResponse.getFailure());
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                callback.failure(e);
+            }
+        });
+
+    }
+
+    void loadResourceAsync(final String resourceId, final String resourceIndex, final SharableResourceCallback callback) {
+        if (resourceId == null || resourceIndex == null) {
+            log.warn("resourceId or resourceIndex missing. Both resourceId and resourceIndex must be present.");
+            return;
+        }
+
+        final MultiGetRequest mget = new MultiGetRequest();
+        mget.add(resourceIndex, resourceId);
+
+        mget.refresh(true);
+        mget.realtime(true);
+
+        client.multiGet(mget, new ActionListener<MultiGetResponse>() {
+            @Override
+            public void onResponse(MultiGetResponse response) {
+                MultiGetItemResponse[] responses = response.getResponses();
+                for (int i = 0; i < responses.length; i++) {
+                    MultiGetItemResponse singleResponse = responses[i];
+                    if (singleResponse != null && !singleResponse.isFailed()) {
+                        GetResponse singleGetResponse = singleResponse.getResponse();
+                        if (singleGetResponse.isExists() && !singleGetResponse.isSourceEmpty()) {
+                            // success
+                            try {
+                                XContentParser parser = XContentHelper.createParser(
+                                    NamedXContentRegistry.EMPTY,
+                                    LoggingDeprecationHandler.INSTANCE,
+                                    singleGetResponse.getSourceAsBytesRef(),
+                                    XContentType.JSON
+                                );
+                                final ResourceSharingInfo sharingInfo = ResourceSharingInfo.parse(parser);
+                                if (sharingInfo != null) {
+                                    callback.success(sharingInfo);
+                                } else {
+                                    callback.failure(new Exception("Cannot parse resource sharing info for " + singleGetResponse.getId()));
                                 }
                             } catch (Exception e) {
                                 log.error(e.toString());
