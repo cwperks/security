@@ -196,6 +196,7 @@ import org.opensearch.security.rest.resource.ShareWithAction;
 import org.opensearch.security.rest.resource.ShareWithTransportAction;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
+import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.ResourceSharingExtension;
@@ -2256,6 +2257,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 try (InputStream in = resource.openStream(); Reader yamlReader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
                     JsonNode pluginPermissions = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
                     System.out.println("pluginPermissions: " + pluginPermissions);
+                    RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
+                    System.out.println("role: " + role);
                 }
             } catch (URISyntaxException | IOException e) {
                 throw new RuntimeException(e);
