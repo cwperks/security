@@ -28,10 +28,18 @@ package org.opensearch.security;
 
 // CS-SUPPRESS-SINGLE: RegexpSingleline Extensions manager used to allow/disallow TLS connections to extensions
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.AccessController;
 import java.security.MessageDigest;
@@ -59,6 +67,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.google.common.collect.Lists;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -121,6 +130,7 @@ import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
@@ -190,6 +200,7 @@ import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
+import org.opensearch.security.spi.SecurePluginExtension;
 import org.opensearch.security.ssl.ExternalSecurityKeyStore;
 import org.opensearch.security.ssl.OpenSearchSecureSettingsFactory;
 import org.opensearch.security.ssl.OpenSearchSecuritySSLPlugin;
@@ -2218,6 +2229,37 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             this.indicesToListen.add(resourceIndexName);
             resourceSharingExtensions.add(extension);
             log.info("Loaded resource, index: {}", resourceIndexName);
+        }
+
+        for (SecurePluginExtension extension : loader.loadExtensions(SecurePluginExtension.class)) {
+            System.out.println("ProtectionDomain: " + extension.getClass().getProtectionDomain().getCodeSource());
+            try {
+                Path jarPath = Paths.get(extension.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+                PluginInfo pluginInfo = PluginInfo.readFromProperties(jarPath.getParent().toAbsolutePath());
+                System.out.println("pluginInfo: " + pluginInfo);
+                // TODO Parse plugin-permissions.yml file (available as resource on classpath) into RoleV7 object
+                /**
+                 * Example yml
+                 *
+                 * cluster_permissions:
+                 *   - "cluster:monitor/health"
+                 * index_permissions:
+                 *   - index_patterns:
+                 *       - "security-auditlog*"
+                 *     allowed_actions:
+                 *       - "indices:data/write/index*"
+                 */
+                URL resource = extension.getClass().getClassLoader().getResource("plugin-permissions.yml");
+                if (resource == null) {
+                    throw new FileNotFoundException("plugin-permissions.yml not found on classpath");
+                }
+                try (InputStream in = resource.openStream(); Reader yamlReader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                    JsonNode pluginPermissions = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
+                    System.out.println("pluginPermissions: " + pluginPermissions);
+                }
+            } catch (URISyntaxException | IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
     // CS-ENFORCE-SINGLE

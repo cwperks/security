@@ -54,6 +54,7 @@ import org.opensearch.security.sampleextension.resource.SampleResourceSharingSer
 import org.opensearch.security.spi.ResourceParser;
 import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.spi.ResourceSharingService;
+import org.opensearch.security.spi.SecurePluginExtension;
 import org.opensearch.security.spi.SharableResource;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
@@ -65,7 +66,12 @@ import org.opensearch.watcher.ResourceWatcherService;
  * It use ".sample_extension_resources" index to manage its resources, and exposes a REST API
  *
  */
-public class SampleExtensionPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, ResourceSharingExtension {
+public class SampleExtensionPlugin extends Plugin
+    implements
+        ActionPlugin,
+        SystemIndexPlugin,
+        ResourceSharingExtension,
+        SecurePluginExtension {
     private static final Logger log = LogManager.getLogger(SampleExtensionPlugin.class);
 
     public static final String RESOURCE_INDEX_NAME = ".sample_extension_resources";
