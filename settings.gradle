@@ -5,3 +5,6 @@
  */
 
 rootProject.name = 'opensearch-security'
+
+include "sample-plugin"
+project(":sample-plugin").name = rootProject.name + "-sample-plugin"
