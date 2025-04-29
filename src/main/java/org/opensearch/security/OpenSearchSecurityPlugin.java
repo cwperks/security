@@ -835,6 +835,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     }
                 }
             }.toListener());
+
+            indexModule.addIndexEventListener(cr);
         }
     }
 

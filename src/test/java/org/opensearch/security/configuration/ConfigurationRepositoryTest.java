@@ -40,11 +40,15 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.node.DiscoveryNodes;
+import org.opensearch.cluster.routing.ShardRouting;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Priority;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.index.Index;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
+import org.opensearch.index.shard.IndexShard;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
@@ -72,6 +76,8 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_USE_CLUSTER_STATE;
@@ -567,6 +573,34 @@ public class ConfigurationRepositoryTest {
         ConfigurationMap result = configurationRepository.getConfigurationsFromIndex(CType.values(), false, false);
 
         assertThat(result.size(), is(CType.values().size()));
+    }
+
+    @Test
+    public void afterIndexShardStarted_whenSecurityIndexUpdated() throws InterruptedException, TimeoutException {
+        Settings settings = Settings.builder().build();
+        ConfigurationRepository configurationRepository = spy(createConfigurationRepository(settings));
+        IndexShard indexShard = mock(IndexShard.class);
+        ShardRouting shardRouting = mock(ShardRouting.class);
+        ShardId shardId = mock(ShardId.class);
+        Index index = mock(Index.class);
+
+        // Setup mock behavior
+        when(indexShard.shardId()).thenReturn(shardId);
+        when(shardId.getIndex()).thenReturn(index);
+        when(index.getName()).thenReturn(ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX);
+        when(indexShard.routingEntry()).thenReturn(shardRouting);
+
+        // when replica shard updated
+        when(shardRouting.primary()).thenReturn(false);
+        doReturn(false).when(configurationRepository).reloadConfiguration(any());
+        configurationRepository.afterIndexShardStarted(indexShard);
+        verify(configurationRepository, never()).reloadConfiguration(any());
+
+        // when primary shard updated
+        doReturn(true).when(configurationRepository).reloadConfiguration(any());
+        when(shardRouting.primary()).thenReturn(true);
+        configurationRepository.afterIndexShardStarted(indexShard);
+        verify(configurationRepository).reloadConfiguration(CType.values());
     }
 
     void assertClusterState(final ArgumentCaptor<ClusterStateUpdateTask> clusterStateUpdateTaskCaptor) throws Exception {
