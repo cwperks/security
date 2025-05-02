@@ -593,7 +593,6 @@ public class ConfigurationRepositoryTest {
         // when replica shard updated
         when(shardRouting.primary()).thenReturn(false);
         doReturn(true).when(configurationRepository).isIndexRestoredFromSnapshot(any());
-        doReturn(false).when(configurationRepository).reloadConfiguration(any());
         configurationRepository.afterIndexShardStarted(indexShard);
         verify(configurationRepository, never()).reloadConfiguration(any());
 
