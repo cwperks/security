@@ -704,7 +704,7 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
         }
     }
 
-    private boolean isIndexRestoredFromSnapshot(Index index) {
+    boolean isIndexRestoredFromSnapshot(Index index) {
         try {
             ClusterState clusterState = clusterService.state();
             RestoreInProgress restoreInProgress = clusterState.custom(RestoreInProgress.TYPE);
