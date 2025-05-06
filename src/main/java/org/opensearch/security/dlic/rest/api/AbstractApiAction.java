@@ -34,7 +34,6 @@ import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.CheckedSupplier;
 import org.opensearch.common.action.ActionFuture;
-import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
@@ -602,17 +601,9 @@ public abstract class AbstractApiAction extends BaseRestHandler {
             securityApiDependencies.auditLog().logGrantedPrivileges(userName, SecurityRequestFactory.from(request));
         }
 
-        final var originalUserAndRemoteAddress = Utils.userAndRemoteAddressFrom(threadPool.getThreadContext());
-        final Object originalOrigin = threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN);
-
         return channel -> threadPool.generic().submit(() -> {
-            try (StoredContext ignore = threadPool.getThreadContext().stashContext()) {
+            try {
                 threadPool.getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
-                threadPool.getThreadContext()
-                    .putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, originalUserAndRemoteAddress.getLeft());
-                threadPool.getThreadContext()
-                    .putTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS, originalUserAndRemoteAddress.getRight());
-                threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, originalOrigin);
 
                 requestHandlers = Optional.ofNullable(requestHandlers).orElseGet(requestHandlersBuilder::build);
                 final var requestHandler = requestHandlers.getOrDefault(request.method(), methodNotImplementedHandler);
