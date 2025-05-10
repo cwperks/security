@@ -90,7 +90,7 @@ public class SnapshotRestoreHelper {
     }
 
     @SuppressWarnings("removal")
-    private static void setCurrentThreadName(final String name) {
+    public static void setCurrentThreadName(final String name) {
         final SecurityManager sm = System.getSecurityManager();
 
         if (sm != null) {
