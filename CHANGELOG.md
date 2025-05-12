@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Added
 - [Resource Permissions] Introduces Centralized Resource Access Control Framework ([#5281](https://github.com/opensearch-project/security/pull/5281))
 - Github workflow for changelog verification ([#5318](https://github.com/opensearch-project/security/pull/5318))
+- Register cluster settings listener for `plugins.security.cache.ttl_minutes` ([#5324](https://github.com/opensearch-project/security/pull/5324))
 
 ### Changed
 
@@ -31,6 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Fixed
 - Corrections in DlsFlsFilterLeafReader regarding PointVales and object valued attributes ([#5303](https://github.com/opensearch-project/security/pull/5303))
 - Fix issue computing diffs in compliance audit log when writing to security index ([#5279](https://github.com/opensearch-project/security/pull/5279))
+- Fixing dependabot broken pull_request workflow for changelog update ([#5331](https://github.com/opensearch-project/security/pull/5331))
 
 ### Security
 
