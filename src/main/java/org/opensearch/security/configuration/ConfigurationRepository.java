@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,6 +66,7 @@ import org.opensearch.cluster.ClusterChangedEvent;
 import org.opensearch.cluster.ClusterState;
 import org.opensearch.cluster.ClusterStateListener;
 import org.opensearch.cluster.ClusterStateUpdateTask;
+import org.opensearch.cluster.RestoreInProgress;
 import org.opensearch.cluster.health.ClusterHealthStatus;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.MappingMetadata;
@@ -75,9 +77,13 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.common.Strings;
+import org.opensearch.core.index.Index;
+import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.MediaTypeRegistry;
 import org.opensearch.env.Environment;
+import org.opensearch.index.shard.IndexEventListener;
+import org.opensearch.index.shard.IndexShard;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
@@ -93,8 +99,9 @@ import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_USE_CLUSTER_STATE;
+import static org.opensearch.security.support.SnapshotRestoreHelper.setCurrentThreadName;
 
-public class ConfigurationRepository implements ClusterStateListener {
+public class ConfigurationRepository implements ClusterStateListener, IndexEventListener {
     private static final Logger LOGGER = LogManager.getLogger(ConfigurationRepository.class);
 
     private final String securityIndex;
@@ -666,6 +673,57 @@ public class ConfigurationRepository implements ClusterStateListener {
                     return null;
                 }
             });
+        }
+    }
+
+    @Override
+    public void afterIndexShardStarted(IndexShard indexShard) {
+        final ShardId shardId = indexShard.shardId();
+        final Index index = shardId.getIndex();
+        final String threadName = Thread.currentThread().getName();
+
+        // TODO Can I distinguish between an index restored from a snapshot vs a create index request here?
+
+        // Check if this is a security index shard
+        if (securityIndex.equals(index.getName())) {
+            // Only trigger on primary shard to avoid multiple reloads
+            if (indexShard.routingEntry() != null && indexShard.routingEntry().primary()) {
+                LOGGER.info("Security index primary shard {} started - config reloading", shardId);
+                try {
+                    setCurrentThreadName("[" + ThreadPool.Names.GENERIC + "]");
+                    if (isIndexRestoredFromSnapshot(index)) {
+                        reloadConfiguration(CType.values());
+                    }
+                } finally {
+                    setCurrentThreadName(threadName);
+                }
+
+            } else {
+                LOGGER.debug("Security index replica shard {} started - ignoring for config reload", shardId);
+            }
+        }
+    }
+
+    boolean isIndexRestoredFromSnapshot(Index index) {
+        try {
+            ClusterState clusterState = clusterService.state();
+            RestoreInProgress restoreInProgress = clusterState.custom(RestoreInProgress.TYPE);
+
+            if (restoreInProgress != null) {
+                // Check all restore operations in progress
+                Iterator<RestoreInProgress.Entry> restoreIterator = restoreInProgress.iterator();
+                while (restoreIterator.hasNext()) {
+                    RestoreInProgress.Entry entry = restoreIterator.next();
+                    if (entry.indices().contains(index.getName())) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        } catch (Exception e) {
+            LOGGER.warn("Could not determine if index {} was restored from snapshot, assuming new index", index.getName(), e);
+            return false;
         }
     }
 }
