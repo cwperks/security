@@ -16,11 +16,11 @@ Compatible with OpenSearch and OpenSearch Dashboards version 3.0.0-beta1
 * Run Security build on image from opensearch-build ([#4966](https://github.com/opensearch-project/security/pull/4966))
 
 #### Bug Fixes
-* Fix version matcher string in demo config installer ([#5157](https://github.com/opensearch-project/security/pull/5157)
+* Fix version matcher string in demo config installer ([#5157](https://github.com/opensearch-project/security/pull/5157))
 * Escape pipe character for injected users ([#5175](https://github.com/opensearch-project/security/pull/5175))
 * Assume default of v7 models if _meta portion is not present ([#5193](https://github.com/opensearch-project/security/pull/5193))
-* Fixed IllegalArgumentException when building stateful index privileges ([#5217](https://github.com/opensearch-project/security/pull/5217)
-* DlsFlsFilterLeafReader::termVectors implementation causes assertion errors for users with FLS/FM active ([#5243](https://github.com/opensearch-project/security/pull/5243)
+* Fixed IllegalArgumentException when building stateful index privileges ([#5217](https://github.com/opensearch-project/security/pull/5217))
+* DlsFlsFilterLeafReader::termVectors implementation causes assertion errors for users with FLS/FM active ([#5243](https://github.com/opensearch-project/security/pull/5243))
 
 #### Maintenance
 * Update AuditConfig.DEPRECATED_KEYS deprecation message to match 4.0 ([#5155](https://github.com/opensearch-project/security/pull/5155))
