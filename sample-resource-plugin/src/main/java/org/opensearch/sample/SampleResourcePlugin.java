@@ -55,6 +55,7 @@ import org.opensearch.sample.resource.actions.transport.RevokeResourceAccessTran
 import org.opensearch.sample.resource.actions.transport.ShareResourceTransportAction;
 import org.opensearch.sample.resource.actions.transport.UpdateResourceTransportAction;
 import org.opensearch.script.ScriptService;
+import org.opensearch.security.spi.SecurePluginExtension;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -68,13 +69,10 @@ import static org.opensearch.security.spi.resources.FeatureConfigConstants.OPENS
  * It uses ".sample_resource_sharing_plugin" index to manage its resources, and exposes few REST APIs that manage CRUD operations on sample resources.
  *
  */
-public class SampleResourcePlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
+public class SampleResourcePlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, SecurePluginExtension {
     private static final Logger log = LogManager.getLogger(SampleResourcePlugin.class);
-    private boolean isResourceSharingEnabled = false;
 
-    public SampleResourcePlugin(final Settings settings) {
-        isResourceSharingEnabled = settings.getAsBoolean(OPENSEARCH_RESOURCE_SHARING_ENABLED, OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT);
-    }
+    public SampleResourcePlugin() {}
 
     @Override
     public Collection<Object> createComponents(
@@ -103,6 +101,10 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<DiscoveryNodes> nodesInCluster
     ) {
+        boolean isResourceSharingEnabled = settings.getAsBoolean(
+            OPENSEARCH_RESOURCE_SHARING_ENABLED,
+            OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT
+        );
         List<RestHandler> handlers = new ArrayList<>();
         handlers.add(new CreateResourceRestAction());
         handlers.add(new GetResourceRestAction());
@@ -122,10 +124,8 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
         actions.add(new ActionHandler<>(GetResourceAction.INSTANCE, GetResourceTransportAction.class));
         actions.add(new ActionHandler<>(UpdateResourceAction.INSTANCE, UpdateResourceTransportAction.class));
         actions.add(new ActionHandler<>(DeleteResourceAction.INSTANCE, DeleteResourceTransportAction.class));
-        if (isResourceSharingEnabled) {
-            actions.add(new ActionHandler<>(ShareResourceAction.INSTANCE, ShareResourceTransportAction.class));
-            actions.add(new ActionHandler<>(RevokeResourceAccessAction.INSTANCE, RevokeResourceAccessTransportAction.class));
-        }
+        actions.add(new ActionHandler<>(ShareResourceAction.INSTANCE, ShareResourceTransportAction.class));
+        actions.add(new ActionHandler<>(RevokeResourceAccessAction.INSTANCE, RevokeResourceAccessTransportAction.class));
         return actions;
     }
 

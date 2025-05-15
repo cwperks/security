@@ -33,13 +33,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.AccessController;
 import java.security.MessageDigest;
@@ -131,7 +129,6 @@ import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
-import org.opensearch.plugins.PluginInfo;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
@@ -2301,11 +2298,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
 
         for (SecurePluginExtension extension : loader.loadExtensions(SecurePluginExtension.class)) {
-            System.out.println("ProtectionDomain: " + extension.getClass().getProtectionDomain().getCodeSource());
             try {
-                Path jarPath = Paths.get(extension.getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
-                PluginInfo pluginInfo = PluginInfo.readFromProperties(jarPath.getParent().toAbsolutePath());
-                System.out.println("pluginInfo: " + pluginInfo);
                 // TODO Parse plugin-permissions.yml file (available as resource on classpath) into RoleV7 object
                 /**
                  * Example yml
@@ -2328,7 +2321,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
                     System.out.println("role: " + role);
                 }
-            } catch (URISyntaxException | IOException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
