@@ -242,6 +242,7 @@ import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.ENDPOINTS_WITH_PERMISSIONS;
 import static org.opensearch.security.dlic.rest.api.RestApiAdminPrivilegesEvaluator.SECURITY_CONFIG_UPDATE;
+import static org.opensearch.security.identity.ContextProvidingPluginSubject.getPluginPrincipalName;
 import static org.opensearch.security.privileges.dlsfls.FieldMasking.Config.BLAKE2B_LEGACY_DEFAULT;
 import static org.opensearch.security.setting.DeprecatedSettings.checkForDeprecatedSetting;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER;
@@ -2324,11 +2325,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     JsonNode pluginPermissions = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
                     System.out.println("pluginPermissions: " + pluginPermissions);
                     RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
-                    System.out.println("role: " + role);
                     if (pluginToRoleMap == null) {
                         pluginToRoleMap = new HashMap<>();
                     }
-                    pluginToRoleMap.put(extension.getPluginCanonicalClassname(), role);
+                    pluginToRoleMap.put(getPluginPrincipalName(extension.getPluginCanonicalClassname()), role);
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

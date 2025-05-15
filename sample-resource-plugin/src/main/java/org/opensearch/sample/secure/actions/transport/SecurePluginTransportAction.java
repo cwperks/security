@@ -16,7 +16,9 @@ import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
+import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.sample.secure.actions.rest.create.SecurePluginAction;
 import org.opensearch.sample.secure.actions.rest.create.SecurePluginRequest;
 import org.opensearch.sample.secure.actions.rest.create.SecurePluginResponse;
@@ -53,7 +55,11 @@ public class SecurePluginTransportAction extends HandledTransportAction<SecurePl
                 ClusterHealthAction.INSTANCE,
                 new ClusterHealthRequest(),
                 ActionListener.wrap(
-                    clusterHealthResponse -> listener.onResponse(new SecurePluginResponse(clusterHealthResponse.toString())),
+                    clusterHealthResponse -> listener.onResponse(
+                        new SecurePluginResponse(
+                            String.valueOf(clusterHealthResponse.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        )
+                    ),
                     listener::onFailure
                 )
             );

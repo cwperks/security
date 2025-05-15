@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
-import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,7 +23,6 @@ import org.opensearch.painless.PainlessModulePlugin;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.sample.SampleResourcePlugin;
 import org.opensearch.security.OpenSearchSecurityPlugin;
-import org.opensearch.security.systemindex.sampleplugin.SystemIndexPlugin1;
 import org.opensearch.test.framework.TestSecurityConfig.AuthcDomain;
 import org.opensearch.test.framework.cluster.ClusterManager;
 import org.opensearch.test.framework.cluster.LocalCluster;
@@ -32,7 +30,9 @@ import org.opensearch.test.framework.cluster.TestRestClient;
 import org.opensearch.test.framework.cluster.TestRestClient.HttpResponse;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.opensearch.sample.utils.Constants.SAMPLE_PLUGIN_PREFIX;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY;
 import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
@@ -49,7 +49,7 @@ public class SecurePluginTests {
         .anonymousAuth(false)
         .authc(AUTHC_DOMAIN)
         .users(USER_ADMIN)
-        .plugin(SystemIndexPlugin1.class, PainlessModulePlugin.class)
+        .plugin(PainlessModulePlugin.class)
         .plugin(
             new PluginInfo(
                 SampleResourcePlugin.class.getName(),
@@ -73,37 +73,17 @@ public class SecurePluginTests {
         )
         .build();
 
-    @Before
-    public void setup() {
-        try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
-            client.delete(".system-index1");
-        }
-    }
-
     @Test
-    public void adminShouldNotBeAbleToDeleteSecurityIndex() {
+    public void testRunClusterHealthWithPluginSubject() {
         try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
-            HttpResponse response = client.delete(".opendistro_security");
+            HttpResponse response = client.postJson(SAMPLE_PLUGIN_PREFIX + "/run_action", """
+                {
+                    "action": "cluster:monitor/health"
+                }
+                """);
 
-            assertThat(response.getStatusCode(), equalTo(RestStatus.FORBIDDEN.getStatus()));
-
-            // Create regular index
-            client.put("test-index");
-
-            // regular user can delete non-system index
-            HttpResponse response2 = client.delete("test-index");
-
-            assertThat(response2.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
-
-            // regular use can create system index
-            HttpResponse response3 = client.put(".system-index1");
-
-            assertThat(response3.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
-
-            // regular user cannot delete system index
-            HttpResponse response4 = client.delete(".system-index1");
-
-            assertThat(response4.getStatusCode(), equalTo(RestStatus.FORBIDDEN.getStatus()));
+            assertThat(response.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
+            assertThat(response.getBody(), containsString("number_of_nodes"));
         }
     }
 }

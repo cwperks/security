@@ -56,6 +56,9 @@ import org.opensearch.sample.resource.actions.transport.GetResourceTransportActi
 import org.opensearch.sample.resource.actions.transport.RevokeResourceAccessTransportAction;
 import org.opensearch.sample.resource.actions.transport.ShareResourceTransportAction;
 import org.opensearch.sample.resource.actions.transport.UpdateResourceTransportAction;
+import org.opensearch.sample.secure.actions.rest.create.SecurePluginAction;
+import org.opensearch.sample.secure.actions.rest.create.SecurePluginRestAction;
+import org.opensearch.sample.secure.actions.transport.SecurePluginTransportAction;
 import org.opensearch.sample.utils.RunAsSubjectClient;
 import org.opensearch.script.ScriptService;
 import org.opensearch.threadpool.ThreadPool;
@@ -114,6 +117,7 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
         handlers.add(new CreateResourceRestAction());
         handlers.add(new GetResourceRestAction());
         handlers.add(new DeleteResourceRestAction());
+        handlers.add(new SecurePluginRestAction());
 
         if (isResourceSharingEnabled) {
             handlers.add(new ShareResourceRestAction());
@@ -131,6 +135,7 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
         actions.add(new ActionHandler<>(DeleteResourceAction.INSTANCE, DeleteResourceTransportAction.class));
         actions.add(new ActionHandler<>(ShareResourceAction.INSTANCE, ShareResourceTransportAction.class));
         actions.add(new ActionHandler<>(RevokeResourceAccessAction.INSTANCE, RevokeResourceAccessTransportAction.class));
+        actions.add(new ActionHandler<>(SecurePluginAction.INSTANCE, SecurePluginTransportAction.class));
         return actions;
     }
 
