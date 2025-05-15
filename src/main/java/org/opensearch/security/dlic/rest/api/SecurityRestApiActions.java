@@ -24,8 +24,6 @@ import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.hasher.PasswordHasher;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
-import org.opensearch.security.rest.resource.ShareWithRestAction;
-import org.opensearch.security.spi.ResourceSharingExtension;
 import org.opensearch.security.ssl.SslSettingsManager;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.user.UserService;
@@ -51,8 +49,7 @@ public class SecurityRestApiActions {
         final SslSettingsManager sslSettingsManager,
         final UserService userService,
         final boolean certificatesReloadEnabled,
-        final PasswordHasher passwordHasher,
-        final List<ResourceSharingExtension> resourceSharingExtensions
+        final PasswordHasher passwordHasher
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,
@@ -66,8 +63,7 @@ public class SecurityRestApiActions {
                 settings.getAsBoolean(SECURITY_RESTAPI_ADMIN_ENABLED, false)
             ),
             auditLog,
-            settings,
-            resourceSharingExtensions
+            settings
         );
         return List.of(
             new InternalUsersApiAction(clusterService, threadPool, userService, securityApiDependencies, passwordHasher),
@@ -106,8 +102,7 @@ public class SecurityRestApiActions {
                 certificatesReloadEnabled,
                 securityApiDependencies
             ),
-            new CertificatesApiAction(clusterService, threadPool, securityApiDependencies),
-            new ShareWithRestAction(resourceSharingExtensions)
+            new CertificatesApiAction(clusterService, threadPool, securityApiDependencies)
         );
     }
 

@@ -204,6 +204,7 @@ import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
+import org.opensearch.security.spi.SecurePluginExtension;
 import org.opensearch.security.spi.resources.FeatureConfigConstants;
 import org.opensearch.security.spi.resources.ResourceProvider;
 import org.opensearch.security.spi.resources.ResourceSharingExtension;
@@ -264,8 +265,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         IdentityPlugin,
         // CS-SUPPRESS-SINGLE: RegexpSingleline get Extensions Settings
         ExtensiblePlugin,
-        ExtensionAwarePlugin,
-        ExtensiblePlugin
+        ExtensionAwarePlugin
 // CS-ENFORCE-SINGLE
 
 {
@@ -691,8 +691,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         sslSettingsManager,
                         Objects.requireNonNull(userService),
                         sslCertReloadEnabled,
-                        passwordHasher,
-                        resourceSharingExtensions
+                        passwordHasher
                     )
                 );
 
@@ -1111,14 +1110,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         if (client || disabled) {
             return components;
         }
-
-        ResourceSharingListener.getInstance().initialize(threadPool, localClient);
-        // CS-SUPPRESS-SINGLE: RegexpSingleline SPI Extensions are unrelated to OpenSearch extensions
-        for (ResourceSharingExtension extension : resourceSharingExtensions) {
-            ResourceSharingService resourceSharingService = new SecurityResourceSharingService(localClient, extension.getResourceIndex());
-            extension.assignResourceSharingService(resourceSharingService);
-        }
-        // CS-ENFORCE-SINGLE
 
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
@@ -2302,12 +2293,14 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     @Override
     public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
         System.out.println("loadExtensions");
-        for (ResourceSharingExtension extension : loader.loadExtensions(ResourceSharingExtension.class)) {
-            String resourceIndexName = extension.getResourceIndex();
-            System.out.println("localClient: " + localClient);
-            this.indicesToListen.add(resourceIndexName);
-            resourceSharingExtensions.add(extension);
-            log.info("Loaded resource, index: {}", resourceIndexName);
+        if (settings != null
+            && settings.getAsBoolean(
+                FeatureConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED,
+                FeatureConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT
+            )) {
+            // load all resource-sharing extensions
+            Set<ResourceSharingExtension> resourceSharingExtensions = new HashSet<>(loader.loadExtensions(ResourceSharingExtension.class));
+            resourcePluginInfo.setResourceSharingExtensions(resourceSharingExtensions);
         }
 
         for (SecurePluginExtension extension : loader.loadExtensions(SecurePluginExtension.class)) {
@@ -2368,22 +2361,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             return null;
         });
     }
-
-    // CS-SUPPRESS-SINGLE: RegexpSingleline get Resource Sharing Extensions
-    @Override
-    public void loadExtensions(ExtensiblePlugin.ExtensionLoader loader) {
-
-        if (settings != null
-            && settings.getAsBoolean(
-                FeatureConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED,
-                FeatureConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT
-            )) {
-            // load all resource-sharing extensions
-            Set<ResourceSharingExtension> resourceSharingExtensions = new HashSet<>(loader.loadExtensions(ResourceSharingExtension.class));
-            resourcePluginInfo.setResourceSharingExtensions(resourceSharingExtensions);
-        }
-    }
-    // CS-ENFORCE-SINGLE
 
     public static class GuiceHolder implements LifecycleComponent {
 

@@ -78,8 +78,7 @@ public abstract class AbstractApiActionValidationTest {
             null,
             restApiAdminPrivilegesEvaluator,
             null,
-            Settings.EMPTY,
-            List.of()
+            Settings.EMPTY
         );
 
         passwordHasher = PasswordHasherFactory.createPasswordHasher(
