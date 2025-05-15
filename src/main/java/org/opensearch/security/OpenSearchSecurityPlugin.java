@@ -297,6 +297,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
     private volatile PasswordHasher passwordHasher;
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
+    private volatile Map<String, RoleV7> pluginToRoleMap;
     private ResourceSharingIndexHandler rsIndexHandler;
     private final ResourcePluginInfo resourcePluginInfo = new ResourcePluginInfo();
 
@@ -2266,7 +2267,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         Set<String> clusterActions = new HashSet<>();
         clusterActions.add(BulkAction.NAME);
         PluginSubject subject = new ContextProvidingPluginSubject(threadPool, settings, plugin);
-        sf.updatePluginToClusterActions(subject.getPrincipal().getName(), clusterActions);
+        String pluginPrincipal = subject.getPrincipal().getName();
+        if (pluginToRoleMap != null && pluginToRoleMap.containsKey(pluginPrincipal)) {
+            clusterActions.addAll(pluginToRoleMap.get(pluginPrincipal).getCluster_permissions());
+        }
+        sf.updatePluginToClusterActions(pluginPrincipal, clusterActions);
         return subject;
     }
 
@@ -2320,6 +2325,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     System.out.println("pluginPermissions: " + pluginPermissions);
                     RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
                     System.out.println("role: " + role);
+                    if (pluginToRoleMap == null) {
+                        pluginToRoleMap = new HashMap<>();
+                    }
+                    pluginToRoleMap.put(extension.getPluginCanonicalClassname(), role);
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);

@@ -55,7 +55,6 @@ import org.opensearch.sample.resource.actions.transport.RevokeResourceAccessTran
 import org.opensearch.sample.resource.actions.transport.ShareResourceTransportAction;
 import org.opensearch.sample.resource.actions.transport.UpdateResourceTransportAction;
 import org.opensearch.script.ScriptService;
-import org.opensearch.security.spi.SecurePluginExtension;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -69,7 +68,7 @@ import static org.opensearch.security.spi.resources.FeatureConfigConstants.OPENS
  * It uses ".sample_resource_sharing_plugin" index to manage its resources, and exposes few REST APIs that manage CRUD operations on sample resources.
  *
  */
-public class SampleResourcePlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, SecurePluginExtension {
+public class SampleResourcePlugin extends Plugin implements ActionPlugin, SystemIndexPlugin {
     private static final Logger log = LogManager.getLogger(SampleResourcePlugin.class);
 
     public SampleResourcePlugin() {}
