@@ -112,7 +112,7 @@ public class SampleResourcePluginLimitedPermissionsTests {
             // Since test framework doesn't yet allow loading ex tensions we need to create a resource sharing entry manually
             String json = """
                 {
-                  "source_idx": ".sample_resource_sharing_plugin",
+                  "source_idx": ".sample_resource",
                   "resource_id": "%s",
                   "created_by": {
                     "user": "admin"
