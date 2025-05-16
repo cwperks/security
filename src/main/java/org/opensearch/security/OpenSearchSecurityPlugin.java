@@ -28,7 +28,6 @@ package org.opensearch.security;
 
 // CS-SUPPRESS-SINGLE: RegexpSingleline Extensions manager used to allow/disallow TLS connections to extensions
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -2302,6 +2301,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         }
 
         for (SecurePluginExtension extension : loader.loadExtensions(SecurePluginExtension.class)) {
+            System.out.println("extension: " + extension.getPluginCanonicalClassname());
             try {
                 // TODO Parse plugin-permissions.yml file (available as resource on classpath) into RoleV7 object
                 /**
@@ -2316,20 +2316,23 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                  *       - "indices:data/write/index*"
                  */
                 URL resource = extension.getClass().getClassLoader().getResource("plugin-permissions.yml");
+                if (pluginToRoleMap == null) {
+                    pluginToRoleMap = new HashMap<>();
+                }
+                RoleV7 pluginPermissions;
                 if (resource == null) {
-                    throw new FileNotFoundException("plugin-permissions.yml not found on classpath");
-                }
-                try (InputStream in = resource.openStream(); Reader yamlReader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-                    JsonNode pluginPermissions = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
-                    System.out.println("pluginPermissions: " + pluginPermissions);
-                    RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
-                    System.out.println("roleV7: " + role);
-                    role.getCluster_permissions().add(BulkAction.NAME);
-                    if (pluginToRoleMap == null) {
-                        pluginToRoleMap = new HashMap<>();
+                    log.warn("plugin-permissions.yml not found on classpath");
+                    pluginPermissions = new RoleV7();
+                    pluginPermissions.setCluster_permissions(new ArrayList<>());
+                } else {
+                    try (InputStream in = resource.openStream(); Reader yamlReader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                        JsonNode roleJson = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
+                        System.out.println("pluginPermissions: " + roleJson);
+                        pluginPermissions = RoleV7.fromJsonNode(roleJson);
                     }
-                    pluginToRoleMap.put(getPluginPrincipalName(extension.getPluginCanonicalClassname()), role);
                 }
+                pluginPermissions.getCluster_permissions().add(BulkAction.NAME);
+                pluginToRoleMap.put(getPluginPrincipalName(extension.getPluginCanonicalClassname()), pluginPermissions);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
