@@ -13,6 +13,8 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.action.admin.cluster.health.ClusterHealthAction;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.opensearch.action.admin.indices.create.CreateIndexAction;
+import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.support.ActionFilters;
 import org.opensearch.action.support.HandledTransportAction;
 import org.opensearch.common.inject.Inject;
@@ -58,6 +60,21 @@ public class SecurePluginTransportAction extends HandledTransportAction<SecurePl
                     clusterHealthResponse -> listener.onResponse(
                         new SecurePluginResponse(
                             String.valueOf(clusterHealthResponse.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                        )
+                    ),
+                    listener::onFailure
+                )
+            );
+            return;
+        } else if (CreateIndexAction.NAME.equals(action)) {
+            String index = request.getIndex();
+            pluginClient.execute(
+                CreateIndexAction.INSTANCE,
+                new CreateIndexRequest(index),
+                ActionListener.wrap(
+                    createIndexResponse -> listener.onResponse(
+                        new SecurePluginResponse(
+                            String.valueOf(createIndexResponse.toXContent(XContentFactory.jsonBuilder(), ToXContent.EMPTY_PARAMS))
                         )
                     ),
                     listener::onFailure

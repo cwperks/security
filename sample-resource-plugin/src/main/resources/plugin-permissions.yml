@@ -2,6 +2,7 @@ cluster_permissions:
   - "cluster:monitor/health"
 index_permissions:
   - index_patterns:
-      - "security-auditlog*"
+      - "test-index*"
     allowed_actions:
       - "indices:data/write/index*"
+      - "indices:admin/create"

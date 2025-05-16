@@ -68,10 +68,10 @@ public class SecurePluginRestAction extends BaseRestHandler {
         }
     }
 
-    private RestChannelConsumer runAction(Map<String, Object> source, NodeClient client) throws IOException {
+    private RestChannelConsumer runAction(Map<String, Object> source, NodeClient client) {
         String action = (String) source.get("action");
-        List<String> indices = source.containsKey("indices") ? (List<String>) source.get("indices") : null;
-        final SecurePluginRequest createSampleResourceRequest = new SecurePluginRequest(action, indices);
+        String index = source.containsKey("index") ? (String) source.get("index") : null;
+        final SecurePluginRequest createSampleResourceRequest = new SecurePluginRequest(action, index);
         return channel -> client.executeLocally(
             SecurePluginAction.INSTANCE,
             createSampleResourceRequest,

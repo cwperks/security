@@ -63,7 +63,6 @@ public class RoleV7 implements Hideable, StaticDefinable {
             clusterPermissions.add(elt.asText());
         }
         role.cluster_permissions = clusterPermissions;
-        System.out.println("role.cluster_permissions: " + role.cluster_permissions);
         role.index_permissions = new ArrayList<>();
         if (node.get("index_permissions") != null) {
             for (Iterator<JsonNode> it = node.get("index_permissions").elements(); it.hasNext();) {
@@ -75,12 +74,12 @@ public class RoleV7 implements Hideable, StaticDefinable {
                     allowedActions.add(elt.asText());
                 }
                 indexPerm.allowed_actions = allowedActions;
-                ArrayNode indexPatternsArray = node.withArray("index_patterns");
-                List<String> indexPermissions = new ArrayList<>(indexPatternsArray.size());
+                ArrayNode indexPatternsArray = indexNode.withArray("index_patterns");
+                List<String> indexPatterns = new ArrayList<>(indexPatternsArray.size());
                 for (JsonNode elt : indexPatternsArray) {
-                    indexPermissions.add(elt.asText());
+                    indexPatterns.add(elt.asText());
                 }
-                indexPerm.index_patterns = indexPermissions;
+                indexPerm.index_patterns = indexPatterns;
                 role.index_permissions.add(indexPerm);
             }
         }

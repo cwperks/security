@@ -86,4 +86,20 @@ public class SecurePluginTests {
             assertThat(response.getBody(), containsString("number_of_nodes"));
         }
     }
+
+    @Test
+    public void testRunCreateIndexWithPluginSubject() {
+        try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+            HttpResponse response = client.postJson(SAMPLE_PLUGIN_PREFIX + "/run_action", """
+                {
+                    "action": "indices:admin/create",
+                    "index": "test-index"
+                }
+                """);
+
+            System.out.println("body: " + response.getBody());
+
+            assertThat(response.getStatusCode(), equalTo(RestStatus.OK.getStatus()));
+        }
+    }
 }

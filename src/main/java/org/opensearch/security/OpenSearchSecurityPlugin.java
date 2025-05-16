@@ -2265,14 +2265,12 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public PluginSubject getPluginSubject(Plugin plugin) {
-        Set<String> clusterActions = new HashSet<>();
-        clusterActions.add(BulkAction.NAME);
         PluginSubject subject = new ContextProvidingPluginSubject(threadPool, settings, plugin);
         String pluginPrincipal = subject.getPrincipal().getName();
         if (pluginToRoleMap != null && pluginToRoleMap.containsKey(pluginPrincipal)) {
-            clusterActions.addAll(pluginToRoleMap.get(pluginPrincipal).getCluster_permissions());
+            sf.updatePluginToPermissions(pluginPrincipal, pluginToRoleMap.get(pluginPrincipal));
+
         }
-        sf.updatePluginToClusterActions(pluginPrincipal, clusterActions);
         return subject;
     }
 
@@ -2325,6 +2323,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     JsonNode pluginPermissions = DefaultObjectMapper.YAML_MAPPER.readTree(yamlReader);
                     System.out.println("pluginPermissions: " + pluginPermissions);
                     RoleV7 role = RoleV7.fromJsonNode(pluginPermissions);
+                    System.out.println("roleV7: " + role);
+                    role.getCluster_permissions().add(BulkAction.NAME);
                     if (pluginToRoleMap == null) {
                         pluginToRoleMap = new HashMap<>();
                     }

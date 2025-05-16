@@ -9,7 +9,6 @@
 package org.opensearch.sample.secure.actions.rest.create;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
@@ -22,25 +21,25 @@ import org.opensearch.core.common.io.stream.StreamOutput;
 public class SecurePluginRequest extends ActionRequest {
 
     private final String action;
-    private final List<String> indices;
+    private final String index;
 
     /**
      * Default constructor
      */
-    public SecurePluginRequest(String action, List<String> indices) {
+    public SecurePluginRequest(String action, String index) {
         this.action = action;
-        this.indices = indices;
+        this.index = index;
     }
 
     public SecurePluginRequest(StreamInput in) throws IOException {
         this.action = in.readString();
-        this.indices = in.readList(StreamInput::readString);
+        this.index = in.readString();
     }
 
     @Override
     public void writeTo(final StreamOutput out) throws IOException {
         out.writeString(action);
-        out.writeStringCollection(indices);
+        out.writeString(index);
     }
 
     @Override
@@ -52,7 +51,7 @@ public class SecurePluginRequest extends ActionRequest {
         return this.action;
     }
 
-    public List<String> getIndices() {
-        return this.indices;
+    public String getIndex() {
+        return this.index;
     }
 }
