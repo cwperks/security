@@ -135,7 +135,8 @@ public class ActionPrivilegesTest {
                 FlattenedActionGroups.EMPTY,
                 null,
                 Settings.EMPTY,
-                Map.of("plugin:org.opensearch.sample.SamplePlugin", Set.of("*"))
+                Map.of("plugin:org.opensearch.sample.SamplePlugin", Set.of("*")),
+                Map.of()
             );
 
             assertThat(
@@ -478,6 +479,7 @@ public class ActionPrivilegesTest {
                     WellKnownActions.CLUSTER_ACTIONS,
                     WellKnownActions.INDEX_ACTIONS,
                     WellKnownActions.INDEX_ACTIONS,
+                    Map.of(),
                     Map.of()
                 );
 
@@ -1071,7 +1073,11 @@ public class ActionPrivilegesTest {
     }
 
     static PrivilegesEvaluationContext ctx(String... roles) {
-        User user = new User("test_user");
+        return ctxWithUserName("test-user", roles);
+    }
+
+    static PrivilegesEvaluationContext ctxWithUserName(String userName, String... roles) {
+        User user = new User(userName);
         user.addAttributes(ImmutableMap.of("attrs.dept_no", "a11"));
         return new PrivilegesEvaluationContext(
             user,
