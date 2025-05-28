@@ -87,6 +87,7 @@ import org.opensearch.core.common.transport.TransportAddress;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.index.reindex.ReindexAction;
 import org.opensearch.script.mustache.RenderSearchTemplateAction;
+import org.opensearch.security.action.apitokens.ApiTokenRepository;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.ClusterInfoHolder;
 import org.opensearch.security.configuration.ConfigurationRepository;
@@ -158,6 +159,7 @@ public class PrivilegesEvaluator {
     private final Map<String, Set<String>> pluginToClusterActions;
     private final AtomicReference<ActionPrivileges> actionPrivileges = new AtomicReference<>();
     private final AtomicReference<TenantPrivileges> tenantPrivileges = new AtomicReference<>();
+    private ApiTokenRepository apiTokenRepository;
 
     public PrivilegesEvaluator(
         final ClusterService clusterService,
@@ -171,7 +173,8 @@ public class PrivilegesEvaluator {
         final PrivilegesInterceptor privilegesInterceptor,
         final ClusterInfoHolder clusterInfoHolder,
         final IndexResolverReplacer irr,
-        NamedXContentRegistry namedXContentRegistry
+        NamedXContentRegistry namedXContentRegistry,
+        ApiTokenRepository apiTokenRepository
     ) {
 
         super();
@@ -211,6 +214,18 @@ public class PrivilegesEvaluator {
             });
         }
 
+        if (apiTokenRepository != null) {
+            apiTokenRepository.subscribeOnChange(() -> {
+                SecurityDynamicConfiguration<ActionGroupsV7> actionGroupsConfiguration = configurationRepository.getConfiguration(
+                    CType.ACTIONGROUPS
+                );
+                SecurityDynamicConfiguration<RoleV7> rolesConfiguration = configurationRepository.getConfiguration(CType.ROLES);
+                SecurityDynamicConfiguration<TenantV7> tenantConfiguration = configurationRepository.getConfiguration(CType.TENANTS);
+
+                this.updateConfiguration(actionGroupsConfiguration, rolesConfiguration, tenantConfiguration);
+            });
+        }
+
         if (clusterService != null) {
             clusterService.addListener(event -> {
                 ActionPrivileges actionPrivileges = PrivilegesEvaluator.this.actionPrivileges.get();
@@ -219,6 +234,8 @@ public class PrivilegesEvaluator {
                 }
             });
         }
+
+        this.apiTokenRepository = apiTokenRepository;
 
     }
 
@@ -236,7 +253,8 @@ public class PrivilegesEvaluator {
                 flattenedActionGroups,
                 () -> clusterStateSupplier.get().metadata().getIndicesLookup(),
                 settings,
-                pluginToClusterActions
+                pluginToClusterActions,
+                apiTokenRepository.getJtis()
             );
             Metadata metadata = clusterStateSupplier.get().metadata();
             actionPrivileges.updateStatefulIndexPrivileges(metadata.getIndicesLookup(), metadata.version());
