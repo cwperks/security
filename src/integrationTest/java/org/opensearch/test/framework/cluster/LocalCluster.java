@@ -495,6 +495,31 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
             return this;
         }
 
+        public Builder grpc(TestCertificates testCertificates) {
+            final String PRIVATE_KEY_GRPC_PASSWORD = "aWVV63OJ4qzZyPrBwl2MFny4ZV8lQRZchjL";
+            nodeOverrideSettingsBuilder.put("aux.transport.types", "experimental-secure-transport-grpc");
+            nodeOverrideSettingsBuilder.put("aux.transport.experimental-secure-transport-grpc.port", "9400-9500");
+            nodeOverrideSettingsBuilder.put("plugins.security.ssl.aux.experimental-secure-transport-grpc.enabled", true);
+            nodeOverrideSettingsBuilder.put(
+                "plugins.security.ssl.aux.experimental-secure-transport-grpc.pemcert_filepath",
+                testCertificates.getNodeCertificate(0).getAbsolutePath()
+            );
+            nodeOverrideSettingsBuilder.put(
+                "plugins.security.ssl.aux.experimental-secure-transport-grpc.pemkey_filepath",
+                testCertificates.getNodeKey(0, null).getAbsolutePath()
+            );
+            // nodeOverrideSettingsBuilder.put(
+            // "plugins.security.ssl.aux.experimental-secure-transport-grpc.pemkey_password",
+            // PRIVATE_KEY_GRPC_PASSWORD
+            // );
+            nodeOverrideSettingsBuilder.put("plugins.security.ssl.aux.experimental-secure-transport-grpc.clientauth_mode", "OPTIONAL");
+            nodeOverrideSettingsBuilder.put(
+                "plugins.security.ssl.aux.experimental-secure-transport-grpc.pemtrustedcas_filepath",
+                testCertificates.getRootCertificate().getAbsolutePath()
+            );
+            return this;
+        }
+
         public Builder internalAudit(AuditConfiguration auditConfiguration) {
             if (auditConfiguration != null) {
                 testSecurityConfig.audit(auditConfiguration);

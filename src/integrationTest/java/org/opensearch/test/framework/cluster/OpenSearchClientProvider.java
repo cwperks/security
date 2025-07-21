@@ -232,6 +232,10 @@ public interface OpenSearchClientProvider {
         return createGenericClientRestClient(headers, useCertificateData, null);
     }
 
+    default TestGrpcClient getGrpcClient(TestCertificates testCertificates) {
+        return createGenericClientGrpcClient(testCertificates);
+    }
+
     default TestRestClient getSecurityDisabledRestClient() {
         return new TestRestClient(getHttpAddress(), List.of(), getSSLContext(null), null, false, false);
     }
@@ -242,6 +246,10 @@ public interface OpenSearchClientProvider {
         InetAddress sourceInetAddress
     ) {
         return new TestRestClient(getHttpAddress(), headers, getSSLContext(useCertificateData), sourceInetAddress, true, false);
+    }
+
+    default TestGrpcClient createGenericClientGrpcClient(TestCertificates testCertificates) {
+        return new TestGrpcClient(getHttpAddress(), "", getSSLContext(), testCertificates);
     }
 
     default TestRestClient createGenericClientRestClient(TestRestClientConfiguration configuration) {
