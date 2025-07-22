@@ -26,7 +26,6 @@
 
 package org.opensearch.security.privileges;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -302,7 +301,7 @@ public class PrivilegesEvaluator {
             }
 
             if (this.isUserAttributeSerializationEnabled()) {
-                joiner.add(Base64Helper.serializeObject((Serializable) user.getCustomAttributesMap()));
+                joiner.add(Base64Helper.serializeObject(user.getCustomAttributesMap()));
             }
 
             threadContext.putTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT, joiner.toString());

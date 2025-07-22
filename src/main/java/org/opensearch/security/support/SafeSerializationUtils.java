@@ -16,7 +16,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,7 +63,11 @@ public final class SafeSerializationUtils {
         ImmutableMap.class
     );
 
-    private static final Set<String> SAFE_CLASS_NAMES = Collections.singleton("org.ldaptive.LdapAttribute$LdapAttributeValues");
+    private static final Set<String> SAFE_CLASS_NAMES = Set.of(
+        "org.ldaptive.LdapAttribute$LdapAttributeValues",
+        "com.google.common.collect.ImmutableBiMap$SerializedForm",
+        "com.google.common.collect.ImmutableMap$SerializedForm"
+    );
     static final Map<Class<?>, Boolean> safeClassCache = new ConcurrentHashMap<>();
 
     static boolean isSafeClass(Class<?> cls) {
