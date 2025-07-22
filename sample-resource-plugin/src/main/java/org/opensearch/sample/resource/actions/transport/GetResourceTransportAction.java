@@ -34,10 +34,10 @@ import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.sample.SampleResource;
+import org.opensearch.sample.SampleResourceExtension;
 import org.opensearch.sample.resource.actions.rest.get.GetResourceAction;
 import org.opensearch.sample.resource.actions.rest.get.GetResourceRequest;
 import org.opensearch.sample.resource.actions.rest.get.GetResourceResponse;
-import org.opensearch.sample.resource.client.ResourceSharingClientAccessor;
 import org.opensearch.search.SearchHit;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.security.spi.resources.client.ResourceSharingClient;
@@ -55,17 +55,24 @@ public class GetResourceTransportAction extends HandledTransportAction<GetResour
 
     private final TransportService transportService;
     private final NodeClient nodeClient;
+    private SampleResourceExtension resourceExtension;
 
     @Inject
-    public GetResourceTransportAction(TransportService transportService, ActionFilters actionFilters, NodeClient nodeClient) {
+    public GetResourceTransportAction(
+        TransportService transportService,
+        ActionFilters actionFilters,
+        NodeClient nodeClient,
+        SampleResourceExtension resourceExtension
+    ) {
         super(GetResourceAction.NAME, transportService, actionFilters, GetResourceRequest::new);
         this.transportService = transportService;
         this.nodeClient = nodeClient;
+        this.resourceExtension = resourceExtension;
     }
 
     @Override
     protected void doExecute(Task task, GetResourceRequest request, ActionListener<GetResourceResponse> listener) {
-        ResourceSharingClient client = ResourceSharingClientAccessor.getInstance().getResourceSharingClient();
+        ResourceSharingClient client = resourceExtension.getResourceSharingClientAccessor().getResourceSharingClient();
         String resourceId = request.getResourceId();
 
         if (Strings.isNullOrEmpty(resourceId)) {

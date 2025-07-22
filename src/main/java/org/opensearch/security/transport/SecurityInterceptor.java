@@ -160,6 +160,11 @@ public class SecurityInterceptor {
             ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER
         );
 
+        if (authUserSubj != null) {
+            System.out.println("SecurityInterceptor.sendRequestDecorate");
+            System.out.println("authUserSubj: " + authUserSubj.getUser());
+        }
+
         final boolean isDebugEnabled = log.isDebugEnabled();
 
         final boolean isSameNodeRequest = localNode != null && localNode.equals(connection.getNode());
@@ -322,6 +327,7 @@ public class SecurityInterceptor {
             // put user as userSubject, we'll recreate it in messageReceivedDecorate
             String authSubjectHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER_HEADER);
             if (authSubjectHeader == null && authSubject != null) {
+                System.out.println("serializing authSubject");
                 getThreadContext().putHeader(
                     ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER_HEADER,
                     authSubject.getUser().toSerializedBase64()

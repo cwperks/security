@@ -291,6 +291,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile DlsFlsBaseContext dlsFlsBaseContext;
     private ResourceSharingIndexHandler rsIndexHandler;
     private final ResourcePluginInfo resourcePluginInfo = new ResourcePluginInfo();
+    private final List<ResourceSharingExtension> extensions = new ArrayList<>();
 
     public static boolean isActionTraceEnabled() {
 
@@ -1258,11 +1259,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             FeatureConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT
         )) {
 
-            ResourceAccessHandler resourceAccessHandler = new ResourceAccessHandler(
-                threadPool.getThreadContext(),
-                rsIndexHandler,
-                adminDns
-            );
+            ResourceAccessHandler resourceAccessHandler = new ResourceAccessHandler(threadPool, rsIndexHandler, adminDns);
 
             // CS-SUPPRESS-SINGLE: RegexpSingleline get Resource Sharing Extensions
             // Assign resource sharing client to each extension
@@ -1274,6 +1271,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             // CS-ENFORCE-SINGLE
             components.add(resourcePluginInfo);
             components.add(resourceAccessHandler);
+            System.out.println("extensions: " + extensions);
+            components.addAll(extensions);
         }
 
         components.add(sslSettingsManager);
@@ -2408,6 +2407,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             // load all resource-sharing extensions
             Set<ResourceSharingExtension> resourceSharingExtensions = new HashSet<>(loader.loadExtensions(ResourceSharingExtension.class));
             resourcePluginInfo.setResourceSharingExtensions(resourceSharingExtensions);
+            extensions.addAll(resourceSharingExtensions);
         }
     }
     // CS-ENFORCE-SINGLE

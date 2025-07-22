@@ -24,6 +24,12 @@ import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_NAME;
  * Responsible for parsing the XContent into a SampleResource object.
  */
 public class SampleResourceExtension implements ResourceSharingExtension {
+    private ResourceSharingClientAccessor accessor;
+
+    public ResourceSharingClientAccessor getResourceSharingClientAccessor() {
+        return this.accessor;
+    }
+
     @Override
     public Set<ResourceProvider> getResourceProviders() {
         return Set.of(new ResourceProvider(SampleResource.class.getCanonicalName(), RESOURCE_INDEX_NAME));
@@ -31,6 +37,10 @@ public class SampleResourceExtension implements ResourceSharingExtension {
 
     @Override
     public void assignResourceSharingClient(ResourceSharingClient resourceSharingClient) {
-        ResourceSharingClientAccessor.getInstance().setResourceSharingClient(resourceSharingClient);
+        System.out.println("assignResourceSharingClient");
+        if (accessor == null) {
+            accessor = new ResourceSharingClientAccessor();
+        }
+        accessor.setResourceSharingClient(resourceSharingClient);
     }
 }

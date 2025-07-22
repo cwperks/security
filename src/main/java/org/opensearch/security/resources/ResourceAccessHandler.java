@@ -21,7 +21,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.OpenSearchStatusException;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -32,6 +31,7 @@ import org.opensearch.security.spi.resources.sharing.ResourceSharing;
 import org.opensearch.security.spi.resources.sharing.ShareWith;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
+import org.opensearch.threadpool.ThreadPool;
 
 import reactor.util.annotation.NonNull;
 
@@ -45,16 +45,16 @@ import reactor.util.annotation.NonNull;
 public class ResourceAccessHandler {
     private static final Logger LOGGER = LogManager.getLogger(ResourceAccessHandler.class);
 
-    private final ThreadContext threadContext;
+    private final ThreadPool threadPool;
     private final ResourceSharingIndexHandler resourceSharingIndexHandler;
     private final AdminDNs adminDNs;
 
     public ResourceAccessHandler(
-        final ThreadContext threadContext,
+        final ThreadPool threadPool,
         final ResourceSharingIndexHandler resourceSharingIndexHandler,
         AdminDNs adminDns
     ) {
-        this.threadContext = threadContext;
+        this.threadPool = threadPool;
         this.resourceSharingIndexHandler = resourceSharingIndexHandler;
         this.adminDNs = adminDns;
     }
@@ -66,7 +66,9 @@ public class ResourceAccessHandler {
      * @param listener      The listener to be notified with the set of accessible resource IDs.
      */
     public void getOwnAndSharedResourceIdsForCurrentUser(@NonNull String resourceIndex, ActionListener<Set<String>> listener) {
-        UserSubjectImpl userSub = (UserSubjectImpl) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        System.out.println("getOwnAndSharedResourceIdsForCurrentUser");
+        UserSubjectImpl userSub = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
         User user = userSub == null ? null : userSub.getUser();
 
         if (user == null) {
@@ -126,9 +128,14 @@ public class ResourceAccessHandler {
         @NonNull ShareWith target,
         ActionListener<ResourceSharing> listener
     ) {
-        final UserSubjectImpl userSubject = (UserSubjectImpl) threadContext.getPersistent(
-            ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER
-        );
+        System.out.println("share");
+        System.out.println("current Thread share: " + Thread.currentThread());
+
+        final UserSubjectImpl userSubject = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        System.out.println("userSubject in share: " + userSubject);
+        System.out.println("threadPool after: " + threadPool.info());
+        System.out.println("threadPool.getThreadContext() after: " + threadPool.getThreadContext());
         final User user = (userSubject == null) ? null : userSubject.getUser();
 
         if (user == null) {
@@ -167,9 +174,8 @@ public class ResourceAccessHandler {
         @NonNull ShareWith target,
         ActionListener<ResourceSharing> listener
     ) {
-        final UserSubjectImpl userSubject = (UserSubjectImpl) threadContext.getPersistent(
-            ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER
-        );
+        final UserSubjectImpl userSubject = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
         final User user = (userSubject == null) ? null : userSubject.getUser();
 
         if (user == null) {

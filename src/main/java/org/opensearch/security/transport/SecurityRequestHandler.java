@@ -119,6 +119,8 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
         if (getThreadContext().getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER) == null && userHdr != null) {
             User user = this.userFactory.fromSerializedBase64(userHdr);
 
+            System.out.println("received user: " + user);
+
             getThreadContext().putPersistent(
                 ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER,
                 new UserSubjectImpl(getThreadPool(), user)

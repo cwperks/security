@@ -106,6 +106,7 @@ public class ResourceAccessEvaluator {
             ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER
         );
         final User user = userSubject.getUser();
+        System.out.println("userSubject in resourceAuthz: " + user);
 
         // If user is a plugin or api-token
         // TODO Check if user.isPluginUser() can be used here
@@ -131,6 +132,7 @@ public class ResourceAccessEvaluator {
 
         // Fetch the ResourceSharing document and evaluate access
         this.resourceSharingIndexHandler.fetchSharingInfo(req.index(), req.id(), ActionListener.wrap(document -> {
+            System.out.println("sharingInfo: " + document);
             // Document may be null when cluster has enabled resource-sharing protection for that index, but have not migrated any records.
             if (document == null) {
                 // TODO check whether we should mark response as not allowed. At present, it just returns incomplete response and hence is
@@ -195,6 +197,8 @@ public class ResourceAccessEvaluator {
         } catch (InterruptedException ie) {
             log.error("Interrupted while evaluating resource {} access for user {}", req.id(), user.getName(), ie);
         }
+        System.out.println("finished evaluating access: " + shouldMarkAsComplete.get());
+        System.out.println("current Thread resource authz: " + Thread.currentThread());
 
         return shouldMarkAsComplete.get() ? presponse.markComplete() : presponse;
     }

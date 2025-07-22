@@ -441,6 +441,9 @@ public class BackendRegistry {
         if (authenticated) {
             final User impersonatedUser = impersonate(request, authenticatedUser);
             final User effectiveUser = impersonatedUser == null ? authenticatedUser : impersonatedUser;
+            System.out.println("request: " + request.path());
+            System.out.println("request params: " + request.params());
+            System.out.println("authenticated effective user: " + effectiveUser);
             threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, effectiveUser);
             threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INITIATING_USER, authenticatedUser.getName());
 

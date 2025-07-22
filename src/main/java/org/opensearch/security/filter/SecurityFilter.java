@@ -164,10 +164,20 @@ public class SecurityFilter implements ActionFilter {
         ActionListener<Response> listener,
         ActionFilterChain<Request, Response> chain
     ) {
+        final UserSubjectImpl authUserSubj = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+
+        if (authUserSubj != null) {
+            System.out.println("SecurityFilter.apply");
+            System.out.println("action: " + action);
+            System.out.println("authUserSubj: " + authUserSubj.getUser());
+        }
         try (StoredContext ctx = threadPool.getThreadContext().newStoredContext(true)) {
             org.apache.logging.log4j.ThreadContext.clearAll();
             apply0(task, action, request, listener, chain);
         }
+        final UserSubjectImpl userSubject2 = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
     }
 
     private static Set<String> alias2Name(Set<Alias> aliases) {

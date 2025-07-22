@@ -616,7 +616,10 @@ public class ResourceSharingIndexHandler {
                         resourceIndex
                     );
                     listener.onResponse(sharingInfo);
-                }, (failResponse) -> { LOGGER.error(failResponse.getMessage()); });
+                }, (failResponse) -> {
+                    LOGGER.error(failResponse.getMessage());
+                    listener.onFailure(failResponse);
+                });
                 client.index(ir, irListener);
             }
         }, listener::onFailure);
