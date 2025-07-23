@@ -103,6 +103,7 @@ import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ActionGroupsV7;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.securityconf.impl.v7.TenantV7;
+import org.opensearch.security.support.Base64Helper;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -113,6 +114,8 @@ import org.greenrobot.eventbus.Subscribe;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.traceAction;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT;
+import static org.opensearch.security.support.ConfigConstants.USER_ATTRIBUTE_SERIALIZATION_ENABLED;
+import static org.opensearch.security.support.ConfigConstants.USER_ATTRIBUTE_SERIALIZATION_ENABLED_DEFAULT;
 import static org.opensearch.security.support.SecurityUtils.escapePipe;
 
 public class PrivilegesEvaluator {
@@ -278,6 +281,10 @@ public class PrivilegesEvaluator {
         return configModel != null && dcm != null && actionPrivileges.get() != null;
     }
 
+    private boolean isUserAttributeSerializationEnabled() {
+        return this.settings.getAsBoolean(USER_ATTRIBUTE_SERIALIZATION_ENABLED, USER_ATTRIBUTE_SERIALIZATION_ENABLED_DEFAULT);
+    }
+
     private void setUserInfoInThreadContext(User user, Set<String> mappedRoles) {
         if (threadContext.getTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT) == null) {
             StringJoiner joiner = new StringJoiner("|");
@@ -289,7 +296,14 @@ public class PrivilegesEvaluator {
             String requestedTenant = user.getRequestedTenant();
             if (!Strings.isNullOrEmpty(requestedTenant)) {
                 joiner.add(escapePipe(requestedTenant));
+            } else {
+                joiner.add("null");
             }
+
+            if (this.isUserAttributeSerializationEnabled()) {
+                joiner.add(Base64Helper.serializeObject(user.getCustomAttributesMap()));
+            }
+
             threadContext.putTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT, joiner.toString());
         }
     }
