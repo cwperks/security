@@ -22,7 +22,6 @@ import org.opensearch.Version;
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.xcontent.ToXContent;
 import org.opensearch.core.xcontent.XContentBuilder;
-import org.opensearch.painless.PainlessModulePlugin;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.sample.SampleResourcePlugin;
 import org.opensearch.security.OpenSearchSecurityPlugin;
@@ -112,7 +111,6 @@ public final class TestUtils {
                     false
                 )
             )
-            .plugin(PainlessModulePlugin.class)
             .anonymousAuth(true)
             .authc(AUTHC_HTTPBASIC_INTERNAL)
             .users(USER_ADMIN, FULL_ACCESS_USER, LIMITED_ACCESS_USER, NO_ACCESS_USER)
@@ -461,12 +459,20 @@ public final class TestUtils {
         ) {
             try (TestRestClient client = cluster.getRestClient(user)) {
                 TestRestClient.HttpResponse response = client.postJson(endpoint, searchPayload);
+                System.out.println("User: " + user);
+                System.out.println("Search response: " + response.getBody());
                 response.assertStatusCode(status);
                 if (status == HttpStatus.SC_OK) {
                     Map<String, Object> hits = (Map<String, Object>) response.bodyAsMap().get("hits");
                     assertThat(((List<String>) hits.get("hits")).size(), is(equalTo(expectedHits)));
                     assertThat(response.getBody(), containsString(expectedResourceName));
                 }
+            }
+
+            try (TestRestClient client = cluster.getRestClient(cluster.getAdminCertificate())) {
+                TestRestClient.HttpResponse response = client.postJson(endpoint, searchPayload);
+                System.out.println("SuperAdmin: " + user);
+                System.out.println("Search response: " + response.getBody());
             }
         }
 

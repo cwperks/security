@@ -67,6 +67,7 @@ import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.query.QuerySearchResult;
 import org.opensearch.security.OpenSearchSecurityPlugin;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
@@ -102,6 +103,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     private final AtomicReference<DlsFlsProcessedConfig> dlsFlsProcessedConfig = new AtomicReference<>();
     private final FieldMasking.Config fieldMaskingConfig;
     private final Settings settings;
+    private final AdminDNs adminDNs;
+    private boolean isResourceSharingFeatureEnabled = false;
 
     public DlsFlsValveImpl(
         Settings settings,
@@ -110,7 +113,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         IndexNameExpressionResolver resolver,
         NamedXContentRegistry namedXContentRegistry,
         ThreadPool threadPool,
-        DlsFlsBaseContext dlsFlsBaseContext
+        DlsFlsBaseContext dlsFlsBaseContext,
+        AdminDNs adminDNs
     ) {
         super();
         this.nodeClient = nodeClient;
@@ -122,6 +126,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         this.fieldMaskingConfig = FieldMasking.Config.fromSettings(settings);
         this.dlsFlsBaseContext = dlsFlsBaseContext;
         this.settings = settings;
+        this.adminDNs = adminDNs;
 
         clusterService.addListener(event -> {
             DlsFlsProcessedConfig config = dlsFlsProcessedConfig.get();
@@ -130,6 +135,11 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                 config.updateClusterStateMetadataAsync(clusterService, threadPool);
             }
         });
+        boolean isResourceSharingFeatureEnabled = settings.getAsBoolean(
+            ConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED,
+            ConfigConstants.OPENSEARCH_RESOURCE_SHARING_ENABLED_DEFAULT
+        );
+        this.isResourceSharingFeatureEnabled = isResourceSharingFeatureEnabled;
     }
 
     /**
@@ -139,12 +149,39 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
      */
     @Override
     public boolean invoke(PrivilegesEvaluationContext context, final ActionListener<?> listener) {
-        if (HeaderHelper.isInternalOrPluginRequest(threadContext)
-            || (isClusterPerm(context.getAction()) && !MultiGetAction.NAME.equals(context.getAction()))) {
+        UserSubjectImpl userSubject = (UserSubjectImpl) threadContext.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        if (isClusterPerm(context.getAction()) && !MultiGetAction.NAME.equals(context.getAction())) {
             return true;
         }
-        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+        if (userSubject != null && adminDNs.isAdmin(userSubject.getUser())) {
+            return true;
+        }
         ActionRequest request = context.getRequest();
+        if (HeaderHelper.isInternalOrPluginRequest(threadContext)) {
+            if (isResourceSharingFeatureEnabled && request instanceof SearchRequest) {
+                IndexResolverReplacer.Resolved resolved = context.getResolvedRequest();
+
+                IndexToRuleMap<DlsRestriction> sharedResourceMap = IndexToRuleMap.resourceRestrictions(
+                    namedXContentRegistry,
+                    resolved,
+                    userSubject.getUser()
+                );
+
+                return DlsFilterLevelActionHandler.handle(
+                    context,
+                    sharedResourceMap,
+                    listener,
+                    nodeClient,
+                    clusterService,
+                    OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
+                    resolver,
+                    threadContext
+                );
+            } else {
+                return true;
+            }
+        }
+        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
         IndexResolverReplacer.Resolved resolved = context.getResolvedRequest();
 
         try {
