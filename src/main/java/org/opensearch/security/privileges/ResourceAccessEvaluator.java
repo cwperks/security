@@ -117,7 +117,7 @@ public class ResourceAccessEvaluator {
          *   in a {@code _bulk} request.
          */
         if (request instanceof GetRequest) return false;
-        if (request instanceof DocWriteRequest<?>) return false;
+        // if (request instanceof DocWriteRequest<?>) return false;
         if (Strings.isNullOrEmpty(docRequest.id())) {
             log.debug("Request id is blank or null, request is of type {}", docRequest.getClass().getName());
             return false;
