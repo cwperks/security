@@ -10,7 +10,7 @@
 
 package org.opensearch.security.privileges;
 
-import java.util.Set;
+import java.util.Collection;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,11 +40,11 @@ import org.opensearch.security.support.ConfigConstants;
 public class ResourceAccessEvaluator {
     private static final Logger log = LogManager.getLogger(ResourceAccessEvaluator.class);
 
-    private final Set<String> resourceIndices;
+    private final Collection<String> resourceIndices;
     private final Settings settings;
     private final ResourceAccessHandler resourceAccessHandler;
 
-    public ResourceAccessEvaluator(Set<String> resourceIndices, Settings settings, ResourceAccessHandler resourceAccessHandler) {
+    public ResourceAccessEvaluator(Collection<String> resourceIndices, Settings settings, ResourceAccessHandler resourceAccessHandler) {
         this.resourceIndices = resourceIndices;
         this.settings = settings;
         this.resourceAccessHandler = resourceAccessHandler;
@@ -78,7 +78,7 @@ public class ResourceAccessEvaluator {
         // if it reached this evaluator, it is safe to assume that the request if of DocRequest type
         DocRequest req = (DocRequest) request;
 
-        resourceAccessHandler.hasPermission(req.id(), req.index(), action, context, ActionListener.wrap(hasAccess -> {
+        resourceAccessHandler.hasPermission(req.id(), req.type(), action, context, ActionListener.wrap(hasAccess -> {
             if (hasAccess) {
                 pResponse.allowed = true;
                 pResponseListener.onResponse(pResponse.markComplete());
