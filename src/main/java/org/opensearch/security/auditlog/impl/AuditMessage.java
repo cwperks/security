@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -56,21 +57,18 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
-import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
-
 public final class AuditMessage {
 
     private static final Logger log = LogManager.getLogger(AuditMessage.class);
 
     // clustername and cluster uuid
     private static final WildcardMatcher AUTHORIZATION_HEADER = WildcardMatcher.from("Authorization").ignoreCase();
-    private static final String SENSITIVE_KEY = "password";
+    private static final Set<String> SENSITIVE_KEYS = Set.of("password", "openai_key");
     private static final String SENSITIVE_REPLACEMENT_VALUE = "__SENSITIVE__";
 
-    private static final Pattern SENSITIVE_PATHS = Pattern.compile(
-        "/(" + LEGACY_OPENDISTRO_PREFIX + "|" + PLUGINS_PREFIX + ")/api/(account.*|internalusers.*|user.*)"
-    );
+    private static boolean containsSensitiveKey(String requestBody) {
+        return SENSITIVE_KEYS.stream().anyMatch(requestBody::contains);
+    }
 
     @VisibleForTesting
     public static final String BCRYPT_REGEX = "\\$2[ayb]\\$.{56}";
@@ -417,10 +415,7 @@ public final class AuditMessage {
                 try {
                     final Tuple<MediaType, BytesReference> xContentTuple = restRequest.contentOrSourceParam();
                     final String requestBody = XContentHelper.convertToJson(xContentTuple.v2(), false, xContentTuple.v1());
-                    if (path != null
-                        && requestBody != null
-                        && SENSITIVE_PATHS.matcher(path).matches()
-                        && requestBody.contains(SENSITIVE_KEY)) {
+                    if (requestBody != null && containsSensitiveKey(requestBody)) {
                         auditInfo.put(REQUEST_BODY, SENSITIVE_REPLACEMENT_VALUE);
                     } else {
                         auditInfo.put(REQUEST_BODY, requestBody);
