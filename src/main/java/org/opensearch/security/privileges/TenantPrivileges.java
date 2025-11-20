@@ -50,7 +50,8 @@ public class TenantPrivileges {
      */
     public enum ActionType {
         READ,
-        WRITE;
+        WRITE,
+        ADMIN;
     }
 
     public static final TenantPrivileges EMPTY = new TenantPrivileges(
@@ -61,6 +62,7 @@ public class TenantPrivileges {
 
     private static final List<ActionType> READ = ImmutableList.of(ActionType.READ);
     private static final List<ActionType> READ_WRITE = ImmutableList.of(ActionType.READ, ActionType.WRITE);
+    private static final List<ActionType> READ_WRITE_ADMIN = ImmutableList.of(ActionType.READ, ActionType.WRITE, ActionType.ADMIN);
 
     private static final Logger log = LogManager.getLogger(TenantPrivileges.class);
 
@@ -245,7 +247,9 @@ public class TenantPrivileges {
 
     static List<ActionType> resolveActionType(Collection<String> allowedActions, FlattenedActionGroups actionGroups) {
         ImmutableSet<String> permissions = actionGroups.resolve(allowedActions);
-        if (permissions.contains("kibana:saved_objects/*/write")) {
+        if (permissions.contains("osd:admin/advanced_settings")) {
+            return READ_WRITE_ADMIN;
+        } else if (permissions.contains("kibana:saved_objects/*/write")) {
             return READ_WRITE;
         } else {
             return READ;

@@ -32,6 +32,7 @@ import org.opensearch.action.admin.indices.mapping.get.GetFieldMappingsRequest;
 import org.opensearch.action.admin.indices.refresh.RefreshRequest;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.delete.DeleteRequest;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.get.MultiGetRequest;
 import org.opensearch.action.get.MultiGetRequest.Item;
 import org.opensearch.action.index.IndexRequest;
@@ -141,11 +142,17 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
             && resolveToDashboardsIndexOrAlias(requestedResolved, dashboardsIndexName);
         final boolean isTraceEnabled = log.isTraceEnabled();
 
+
         TenantPrivileges.ActionType actionType = getActionTypeForAction(action);
 
         if (requestedTenant == null || requestedTenant.length() == 0) {
             if (isTraceEnabled) {
                 log.trace("No tenant, will resolve to " + dashboardsIndexName);
+            }
+
+            // Intercept when request is dashboards user and request is to get advanced settings. No replacement.
+            if ("osd:admin/advanced_settings".equals(action)) {
+                return ACCESS_GRANTED_REPLACE_RESULT;
             }
 
             if (dashboardsIndexOnly && !tenantPrivileges.hasTenantPrivilege(context, "global_tenant", actionType)) {
@@ -199,6 +206,20 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
 
             final String tenantIndexName = toUserIndexName(dashboardsIndexName, requestedTenant);
 
+            System.out.println("tenantIndexName: " + tenantIndexName);
+            System.out.println("user: " + user);
+            System.out.println("action: " + action);
+            System.out.println("requestResolved: " + requestedResolved.getAllIndices());
+            if (request instanceof GetRequest gr) {
+                System.out.println("GetRequest: " + gr.id());
+            } else if (request instanceof SearchRequest sr) {
+                System.out.println("SearchRequest: " + sr.source().toString());
+            }
+            // Intercept when request is dashboards user and request is to get advanced settings
+            if ("osd:admin/advanced_settings".equals(action)) {
+                return newAccessGrantedReplaceResult(replaceIndex(request, dashboardsIndexName, tenantIndexName, action));
+            }
+
             // The new DLS/FLS implementation defaults to a "deny all" pattern in case no roles are configured
             // for an index. As the PrivilegeInterceptor grants access to indices bypassing index privileges,
             // we need to allow-list these indices.
@@ -233,7 +254,9 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
     }
 
     static TenantPrivileges.ActionType getActionTypeForAction(String action) {
-        if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
+        if ("osd:admin/advanced_settings".equals(action)) {
+            return TenantPrivileges.ActionType.ADMIN;
+        } else if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
             return TenantPrivileges.ActionType.READ;
         } else {
             return TenantPrivileges.ActionType.WRITE;
