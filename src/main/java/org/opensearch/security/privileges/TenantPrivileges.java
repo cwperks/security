@@ -120,6 +120,9 @@ public class TenantPrivileges {
                             // tenant names in advance
                             for (String tenant : WildcardMatcher.from(tenantPattern).iterateMatching(this.allTenantNames)) {
                                 for (ActionType actionType : actionTypes) {
+                                    System.out.println("role: " + roleName);
+                                    System.out.println("actionType: " + actionType);
+                                    System.out.println("tenant: " + tenant);
                                     tenantToActionTypeToRoles.computeIfAbsent(tenant, (k) -> new EnumMap<>(ActionType.class))
                                         .computeIfAbsent(actionType, (k) -> roleSetBuilder.createSubSetBuilder())
                                         .add(roleName);
@@ -247,7 +250,7 @@ public class TenantPrivileges {
 
     static List<ActionType> resolveActionType(Collection<String> allowedActions, FlattenedActionGroups actionGroups) {
         ImmutableSet<String> permissions = actionGroups.resolve(allowedActions);
-        if (permissions.contains("osd:admin/advanced_settings")) {
+        if (permissions.contains("osd:admin/advanced_settings/write")) {
             return READ_WRITE_ADMIN;
         } else if (permissions.contains("kibana:saved_objects/*/write")) {
             return READ_WRITE;
