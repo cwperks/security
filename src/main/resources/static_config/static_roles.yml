@@ -116,11 +116,6 @@ kibana_server:
         - "*"
       allowed_actions:
         - "indices:admin/aliases*"
-  tenant_permissions:
-    - tenant_patterns:
-        - "*"
-      allowed_actions:
-        - "kibana_all_write"
 
 logstash:
   reserved: true

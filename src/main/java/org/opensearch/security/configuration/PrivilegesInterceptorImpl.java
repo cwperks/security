@@ -204,7 +204,6 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
             // for an index. As the PrivilegeInterceptor grants access to indices bypassing index privileges,
             // we need to allow-list these indices.
             applyDocumentAllowList(tenantIndexName);
-
             return newAccessGrantedReplaceResult(replaceIndex(request, dashboardsIndexName, tenantIndexName, action));
 
         } else if (!user.getName().equals(dashboardsServerUsername)) {
