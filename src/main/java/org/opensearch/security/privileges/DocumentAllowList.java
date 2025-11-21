@@ -64,7 +64,7 @@ public class DocumentAllowList {
     }
 
     public void applyTo(ThreadContext threadContext) {
-        if (!isEmpty()) {
+        if (!isEmpty() && threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_DOC_ALLOWLIST_HEADER) != null) {
             threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_DOC_ALLOWLIST_HEADER, toString());
         }
     }
