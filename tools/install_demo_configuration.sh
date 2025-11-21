@@ -61,4 +61,4 @@ if [ ! -x "$JAVA" ]; then
     exit 1
 fi
 
-"$JAVA" -Dorg.apache.logging.log4j.simplelog.StatusLogger.level=OFF -cp "$DIR/../*:$DIR/../../../lib/*:$DIR/../deps/*" org.opensearch.security.tools.democonfig.Installer "$DIR" "$@" 2>/dev/null
+"$JAVA" -Dorg.apache.logging.log4j.simplelog.StatusLogger.level=OFF -cp "$DIR/../*:$OPENSEARCH_HOME/lib/*:$OPENSEARCH_HOME/modules/opensearch-dashboards/*" org.opensearch.security.tools.democonfig.Installer "$DIR" "$@" 2>/dev/null

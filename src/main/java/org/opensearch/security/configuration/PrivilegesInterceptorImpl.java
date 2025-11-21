@@ -46,6 +46,7 @@ import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.dashboards.action.WriteAdvancedSettingsRequest;
 import org.opensearch.security.privileges.DashboardsMultiTenancyConfiguration;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
@@ -141,7 +142,7 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
             && resolveToDashboardsIndexOrAlias(requestedResolved, dashboardsIndexName);
         final boolean isTraceEnabled = log.isTraceEnabled();
 
-        TenantPrivileges.ActionType actionType = getActionTypeForAction(action);
+        TenantPrivileges.ActionType actionType = getActionTypeForAction(action, request);
 
         if (requestedTenant == null || requestedTenant.length() == 0) {
             if (isTraceEnabled) {
@@ -232,7 +233,14 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
         documentAllowList.applyTo(threadPool.getThreadContext());
     }
 
-    static TenantPrivileges.ActionType getActionTypeForAction(String action) {
+    static TenantPrivileges.ActionType getActionTypeForAction(String action, ActionRequest request) {
+        if (request instanceof WriteAdvancedSettingsRequest wasa) {
+            if (wasa.isCreateOperation()) {
+                return TenantPrivileges.ActionType.READ;
+            } else {
+                return TenantPrivileges.ActionType.ADMIN;
+            }
+        }
         if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
             return TenantPrivileges.ActionType.READ;
         } else {
