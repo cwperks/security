@@ -189,6 +189,18 @@ public class WebhookSink extends AuditLogSink {
     }
 
     /**
+     * Transforms an {@link AuditMessage} to JSON Array. By default, all fields are
+     * included in the JSON string. This method can be overridden by subclasses
+     * if a specific JSON format is needed.
+     *
+     * @param msg the AuditMessage to transform
+     * @return the JSON string
+     */
+    protected String formatJsonArray(final AuditMessage msg) {
+        return "[" + msg.toJson() + "]";
+    }
+
+    /**
      * Transforms an {@link AuditMessage} to plain text. This method can be overridden
      * by subclasses if a specific text format is needed.
      *
@@ -279,6 +291,9 @@ public class WebhookSink extends AuditLogSink {
         switch (webhookFormat) {
             case JSON:
                 payload = formatJson(msg);
+                break;
+            case JSON_ARRAY:
+                payload = formatJsonArray(msg);
                 break;
             case TEXT:
                 payload = formatText(msg);
@@ -432,6 +447,7 @@ public class WebhookSink extends AuditLogSink {
         URL_PARAMETER_POST(HttpMethod.POST, ContentType.TEXT_PLAIN),
         TEXT(HttpMethod.POST, ContentType.TEXT_PLAIN),
         JSON(HttpMethod.POST, ContentType.APPLICATION_JSON),
+        JSON_ARRAY(HttpMethod.POST, ContentType.APPLICATION_JSON),
         SLACK(HttpMethod.POST, ContentType.APPLICATION_JSON);
 
         private HttpMethod method;
