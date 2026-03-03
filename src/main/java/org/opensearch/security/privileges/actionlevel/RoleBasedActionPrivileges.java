@@ -651,6 +651,11 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             ByteSizeValue statefulIndexMaxHeapSize
         ) {
             long startTime = System.currentTimeMillis();
+            long matchingTime = 0;
+            long innerLoopTime = 0;
+            long aliasTime = 0;
+            int aliasHits = 0;
+            int totalIterations = 0;
 
             Map<
                 String,
@@ -672,7 +677,7 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             // and m is the number of matched indices. This formula does not take the loop through matchedActions in
             // account, as this is bound by a constant number and thus does not need to be considered in the O() notation.
 
-            top: for (Map.Entry<String, RoleV7> entry : roles.getCEntries().entrySet()) {
+            for (Map.Entry<String, RoleV7> entry : roles.getCEntries().entrySet()) {
                 try {
                     String roleName = entry.getKey();
                     RoleV7 role = entry.getValue();
@@ -688,6 +693,7 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                             continue;
                         }
 
+                        long t0 = System.nanoTime();
                         WildcardMatcher indexMatcher = IndexPattern.from(indexPermissions.getIndex_patterns()).getStaticPattern();
 
                         if (indexMatcher == WildcardMatcher.NONE) {
@@ -697,9 +703,28 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                         }
 
                         List<IndexAbstraction> matchingIndices = indexMatcher.matching(indices.values(), IndexAbstraction::getName);
+                        matchingTime += System.nanoTime() - t0;
                         if (matchingIndices.isEmpty()) {
                             continue;
                         }
+
+                        // Collect all index names upfront (including alias sub-indices) to avoid
+                        // repeated alias expansion for each action
+                        long t3 = System.nanoTime();
+                        List<String> allIndexNames = new ArrayList<>(matchingIndices.size() * 2);
+                        for (IndexAbstraction index : matchingIndices) {
+                            allIndexNames.add(index.getName());
+                            if (index instanceof IndexAbstraction.Alias) {
+                                for (IndexMetadata subIndex : index.getIndices()) {
+                                    aliasHits++;
+                                    String subIndexName = subIndex.getIndex().getName();
+                                    if (indices.containsKey(subIndexName)) {
+                                        allIndexNames.add(subIndexName);
+                                    }
+                                }
+                            }
+                        }
+                        aliasTime += System.nanoTime() - t3;
 
                         for (String permission : permissions) {
                             WildcardMatcher actionMatcher = WildcardMatcher.from(permission);
@@ -708,51 +733,31 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                                 Collectors.toList()
                             );
 
-                            for (IndexAbstraction index : matchingIndices) {
-                                for (String action : matchedActions) {
-                                    CompactMapGroupBuilder.MapBuilder<
-                                        String,
-                                        DeduplicatingCompactSubSetBuilder.SubSetBuilder<String>> indexToRoles = actionToIndexToRoles
-                                            .computeIfAbsent(action, k -> indexMapBuilder.createMapBuilder());
+                            long t2 = System.nanoTime();
+                            for (String action : matchedActions) {
+                                CompactMapGroupBuilder.MapBuilder<
+                                    String,
+                                    DeduplicatingCompactSubSetBuilder.SubSetBuilder<String>> indexToRoles = actionToIndexToRoles
+                                        .computeIfAbsent(action, k -> indexMapBuilder.createMapBuilder());
 
-                                    indexToRoles.get(index.getName()).add(roleName);
-
-                                    if (index instanceof IndexAbstraction.Alias) {
-                                        // For aliases we additionally add the sub-indices to the privilege map
-                                        for (IndexMetadata subIndex : index.getIndices()) {
-                                            String subIndexName = subIndex.getIndex().getName();
-                                            // We need to check whether the subIndex is part of the global indices
-                                            // metadata map because that map has been filtered by relevantOnly().
-                                            // This method removes all closed indices and data stream backing indices
-                                            // because these indices get a separate treatment. However, these indices
-                                            // might still appear as member indices of aliases. Trying to add these
-                                            // to the SubSetBuilder indexToRoles would result in an IllegalArgumentException
-                                            // because the subIndex will not be part of the super set.
-                                            if (indices.containsKey(subIndexName)) {
-                                                indexToRoles.get(subIndexName).add(roleName);
-                                            } else {
-                                                log.debug(
-                                                    "Ignoring member index {} of alias {}. This is usually the case because the index is closed or a data stream backing index.",
-                                                    subIndexName,
-                                                    index.getName()
-                                                );
-                                            }
-                                        }
-                                    }
-
-                                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder
-                                        .getEstimatedByteSize() > statefulIndexMaxHeapSize.getBytes()) {
-                                        log.info(
-                                            "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
-                                                + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
-                                            statefulIndexMaxHeapSize,
-                                            PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
-                                        );
-                                        break top;
-                                    }
+                                for (String indexName : allIndexNames) {
+                                    totalIterations++;
+                                    indexToRoles.get(indexName).add(roleName);
                                 }
                             }
+                            innerLoopTime += System.nanoTime() - t2;
                         }
+                    }
+
+                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder
+                        .getEstimatedByteSize() > statefulIndexMaxHeapSize.getBytes()) {
+                        log.info(
+                            "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
+                                + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
+                            statefulIndexMaxHeapSize,
+                            PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
+                        );
+                        break;
                     }
                 } catch (Exception e) {
                     log.error("Unexpected exception while processing role: {}\nIgnoring role.", entry.getKey(), e);
@@ -777,6 +782,16 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             this.metadataVersion = metadataVersion;
 
             long duration = System.currentTimeMillis() - startTime;
+
+            log.warn(
+                "StatefulIndexPrivileges timing breakdown: total={}ms, matching={}ms, innerLoop={}ms, alias={}ms, aliasHits={}, iterations={}",
+                duration,
+                matchingTime / 1_000_000,
+                innerLoopTime / 1_000_000,
+                aliasTime / 1_000_000,
+                aliasHits,
+                totalIterations
+            );
 
             if (duration > 30000) {
                 log.warn("Creation of StatefulIndexPrivileges took {} ms", duration);
