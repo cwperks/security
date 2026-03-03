@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -37,12 +38,15 @@ import org.opensearch.cluster.metadata.Metadata;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.unit.ByteSizeUnit;
 import org.opensearch.core.common.unit.ByteSizeValue;
+import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.resolver.IndexResolverReplacer;
+import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.securityconf.impl.v7.ActionGroupsV7;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.user.User;
 import org.opensearch.security.util.MockIndexMetadataBuilder;
@@ -277,6 +281,118 @@ public class RoleBasedActionPrivilegesTest {
                 subject.hasAnyClusterPrivilege(ctx().roles("other_role").get(), ImmutableSet.of("cluster:whatever")),
                 isForbidden(missingPrivileges("cluster:whatever"))
             );
+        }
+
+        /**
+         * Tests that ClusterPrivileges construction is optimized when many roles share the same permission patterns.
+         * The pattern cache should ensure each unique pattern is only processed once.
+         * <p>
+         * This test simulates a realistic scenario with:
+         * - 1000 roles, each with a unique index pattern + shared patterns
+         * - DLS queries using user attribute substitution (${attr.internal.should_hide})
+         * - 100 actual indices to test against
+         */
+        @Test
+        public void constructionPerformance_sharedPatterns() throws Exception {
+            // Shared cluster permission patterns - 3 are wildcards that should be cached
+            List<String> sharedClusterPatterns = Arrays.asList(
+                "cluster:admin/tasks/cancel",
+                "cluster:monitor/task",
+                "cluster:monitor/task/get",
+                "indices:admin/aliases/get",
+                "indices:admin/exists",
+                "indices:admin/get",
+                "indices:admin/mappings/get",
+                "indices:admin/mapping/put",
+                "indices:admin/refresh*",  // wildcard pattern 1
+                "indices:data*",            // wildcard pattern 2
+                "indices:admin/flush*",     // wildcard pattern 3
+                "indices:admin/forcemerge",
+                "indices:monitor/stats"
+            );
+
+            // Shared index patterns that all roles have
+            List<String> sharedIndexPatterns = Arrays.asList("logs-*", "metrics-*");
+
+            // DLS query with user attribute substitution
+            String dlsQuery = "{\"bool\": {\"must\": {\"match\": {\"should_hide\": \"${attr.internal.should_hide}\"}}}}";
+
+            // Create 1000 roles, each with:
+            // - shared cluster permissions
+            // - unique index pattern (role_N_index_*) + shared index patterns
+            // - DLS query with user attribute substitution
+            // - First 100 roles also have alias-* pattern to test alias expansion
+            Map<String, Object> rolesMap = new HashMap<>();
+            for (int i = 0; i < 1000; i++) {
+                List<String> indexPatterns = new ArrayList<>(sharedIndexPatterns);
+                indexPatterns.add("role_" + i + "_index_*");  // unique pattern per role
+                if (i < 100) {
+                    indexPatterns.add("alias-*");  // test alias expansion for first 100 roles
+                }
+
+                Map<String, Object> indexPermission = new HashMap<>();
+                indexPermission.put("index_patterns", indexPatterns);
+                indexPermission.put("dls", dlsQuery);
+                indexPermission.put("allowed_actions", Arrays.asList("indices_all"));
+
+                rolesMap.put(
+                    "role_" + i,
+                    ImmutableMap.of("cluster_permissions", sharedClusterPatterns, "index_permissions", Arrays.asList(indexPermission))
+                );
+            }
+
+            SecurityDynamicConfiguration<RoleV7> roles = SecurityDynamicConfiguration.fromMap(rolesMap, CType.ROLES);
+
+            // Create 100 actual indices and 1000 aliases
+            String[] indexNames = new String[10000];
+            for (int i = 0; i < 10000; i++) {
+                indexNames[i] = "logs-" + i;
+            }
+            MockIndexMetadataBuilder builder = indices(indexNames);
+            // Create 1000 aliases, each pointing to a subset of indices
+            for (int i = 0; i < 5000; i++) {
+                builder.alias("alias-" + i).of("logs-" + i);
+            }
+            Metadata indexMetadata = builder.build();
+
+            // Load static action groups (includes indices_all -> indices:*)
+            JsonNode staticActionGroupsJsonNode = DefaultObjectMapper.YAML_MAPPER.readTree(
+                DynamicConfigFactory.class.getResourceAsStream("/static_config/static_action_groups.yml")
+            );
+            SecurityDynamicConfiguration<ActionGroupsV7> actionGroupsConfig = SecurityDynamicConfiguration.fromNode(
+                staticActionGroupsJsonNode,
+                CType.ACTIONGROUPS,
+                2,
+                0,
+                0
+            );
+            FlattenedActionGroups actionGroups = new FlattenedActionGroups(actionGroupsConfig);
+
+            // Build RoleBasedActionPrivileges and measure construction time
+            long start = System.nanoTime();
+            RoleBasedActionPrivileges subject = new RoleBasedActionPrivileges(roles, actionGroups, Settings.EMPTY);
+            long constructionMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+            long startStateful = System.nanoTime();
+            subject.updateStatefulIndexPrivileges(indexMetadata.getIndicesLookup(), 1);
+            long statefulMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startStateful);
+
+            System.out.println("[constructionPerformance_sharedPatterns] RoleBasedActionPrivileges construction: " + constructionMs + "ms");
+            System.out.println("[constructionPerformance_sharedPatterns] StatefulIndexPrivileges update: " + statefulMs + "ms");
+            System.out.println("[constructionPerformance_sharedPatterns] Total: " + (constructionMs + statefulMs) + "ms");
+
+            // Verify correctness - cluster privileges
+            assertThat(subject.hasClusterPrivilege(ctx().roles("role_0").get(), "cluster:monitor/task/get"), isAllowed());
+            assertThat(subject.hasClusterPrivilege(ctx().roles("role_999").get(), "cluster:monitor/task/get"), isAllowed());
+            assertThat(subject.hasClusterPrivilege(ctx().roles("role_500").get(), "indices:data/read/search"), isAllowed());
+
+            // Verify correctness - index privileges with user attributes
+            PrivilegesEvaluatorResponse result = subject.hasIndexPrivilege(
+                ctx().roles("role_0").attr("attr.internal.should_hide", "false").indexMetadata(indexMetadata).get(),
+                ImmutableSet.of("indices:data/read/search"),
+                IndexResolverReplacer.Resolved.ofIndex("logs-0")
+            );
+            assertThat(result, isAllowed());
         }
 
     }
