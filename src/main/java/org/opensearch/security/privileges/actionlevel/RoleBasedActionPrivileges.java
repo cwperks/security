@@ -12,6 +12,7 @@
 package org.opensearch.security.privileges.actionlevel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -667,6 +668,10 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             CompactMapGroupBuilder<String, DeduplicatingCompactSubSetBuilder.SubSetBuilder<String>> indexMapBuilder =
                 new CompactMapGroupBuilder<>(indices.keySet(), (k2) -> roleSetBuilder.createSubSetBuilder());
 
+            // Pre-sort index names once for efficient prefix matching
+            String[] sortedIndexNames = indices.keySet().toArray(new String[0]);
+            Arrays.sort(sortedIndexNames);
+
             // We iterate here through the present RoleV7 instances and nested through their "index_permissions" sections.
             // During the loop, the actionToIndexToRoles map is being built.
             // For that, action patterns from the role will be matched against the "well-known actions" to build
@@ -694,15 +699,8 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                         }
 
                         long t0 = System.nanoTime();
-                        WildcardMatcher indexMatcher = IndexPattern.from(indexPermissions.getIndex_patterns()).getStaticPattern();
-
-                        if (indexMatcher == WildcardMatcher.NONE) {
-                            // The pattern is likely blank because there are only templated patterns.
-                            // Index patterns with templates are not handled here, but in the static IndexPermissions object
-                            continue;
-                        }
-
-                        List<IndexAbstraction> matchingIndices = indexMatcher.matching(indices.values(), IndexAbstraction::getName);
+                        List<String> indexPatterns = indexPermissions.getIndex_patterns();
+                        List<IndexAbstraction> matchingIndices = matchIndicesOptimized(indexPatterns, indices, sortedIndexNames);
                         matchingTime += System.nanoTime() - t0;
                         if (matchingIndices.isEmpty()) {
                             continue;
@@ -756,13 +754,13 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                             innerLoopTime += System.nanoTime() - t1;
                         }
                     }
-                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder
-                            .getEstimatedByteSize() > statefulIndexMaxHeapSize.getBytes()) {
+                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder.getEstimatedByteSize() > statefulIndexMaxHeapSize
+                        .getBytes()) {
                         log.info(
-                                "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
-                                        + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
-                                statefulIndexMaxHeapSize,
-                                PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
+                            "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
+                                + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
+                            statefulIndexMaxHeapSize,
+                            PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
                         );
                         break;
                     }
@@ -787,24 +785,58 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
 
             this.indices = ImmutableMap.copyOf(indices);
             this.metadataVersion = metadataVersion;
+        }
 
-            long duration = System.currentTimeMillis() - startTime;
+        /**
+         * Optimized index matching using pattern categorization:
+         * - Exact matches: O(1) map lookup
+         * - Prefix patterns (ending with *): O(log n) binary search + linear scan of matches
+         * - Complex patterns: O(n) linear scan fallback
+         */
+        private static List<IndexAbstraction> matchIndicesOptimized(
+            List<String> patterns,
+            Map<String, IndexAbstraction> indices,
+            String[] sortedIndexNames
+        ) {
+            List<IndexAbstraction> result = new ArrayList<>();
+            List<String> complexPatterns = new ArrayList<>();
 
-            log.warn(
-                "StatefulIndexPrivileges timing breakdown: total={}ms, matching={}ms, innerLoop={}ms, alias={}ms, aliasHits={}, iterations={}",
-                duration,
-                matchingTime / 1_000_000,
-                innerLoopTime / 1_000_000,
-                aliasTime / 1_000_000,
-                aliasHits,
-                totalIterations
-            );
-
-            if (duration > 30000) {
-                log.warn("Creation of StatefulIndexPrivileges took {} ms", duration);
-            } else {
-                log.debug("Creation of StatefulIndexPrivileges took {} ms", duration);
+            for (String pattern : patterns) {
+                if (pattern.contains("${")) {
+                    // Templated pattern - skip, handled by static IndexPermissions
+                    continue;
+                }
+                if (!pattern.contains("*") && !pattern.contains("?")) {
+                    // Exact match - O(1)
+                    IndexAbstraction idx = indices.get(pattern);
+                    if (idx != null) {
+                        result.add(idx);
+                    }
+                } else if (pattern.endsWith("*") && !pattern.substring(0, pattern.length() - 1).contains("*") && !pattern.contains("?")) {
+                    // Simple prefix pattern like "role_123*" - use binary search on pre-sorted array
+                    String prefix = pattern.substring(0, pattern.length() - 1);
+                    int idx = Arrays.binarySearch(sortedIndexNames, prefix);
+                    int start = idx >= 0 ? idx : -(idx + 1);
+                    for (int i = start; i < sortedIndexNames.length && sortedIndexNames[i].startsWith(prefix); i++) {
+                        result.add(indices.get(sortedIndexNames[i]));
+                    }
+                } else {
+                    // Complex pattern - collect for batch processing
+                    complexPatterns.add(pattern);
+                }
             }
+
+            // Process complex patterns with linear scan
+            if (!complexPatterns.isEmpty()) {
+                WildcardMatcher matcher = WildcardMatcher.from(complexPatterns);
+                for (IndexAbstraction idx : indices.values()) {
+                    if (matcher.test(idx.getName()) && !result.contains(idx)) {
+                        result.add(idx);
+                    }
+                }
+            }
+
+            return result;
         }
 
         /**
