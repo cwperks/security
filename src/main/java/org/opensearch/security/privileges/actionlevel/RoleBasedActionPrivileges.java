@@ -12,6 +12,7 @@
 package org.opensearch.security.privileges.actionlevel;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -651,6 +652,11 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             ByteSizeValue statefulIndexMaxHeapSize
         ) {
             long startTime = System.currentTimeMillis();
+            long matchingTime = 0;
+            long innerLoopTime = 0;
+            long aliasTime = 0;
+            int aliasHits = 0;
+            int totalIterations = 0;
 
             Map<
                 String,
@@ -662,6 +668,10 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             CompactMapGroupBuilder<String, DeduplicatingCompactSubSetBuilder.SubSetBuilder<String>> indexMapBuilder =
                 new CompactMapGroupBuilder<>(indices.keySet(), (k2) -> roleSetBuilder.createSubSetBuilder());
 
+            // Pre-sort index names once for efficient prefix matching
+            String[] sortedIndexNames = indices.keySet().toArray(new String[0]);
+            Arrays.sort(sortedIndexNames);
+
             // We iterate here through the present RoleV7 instances and nested through their "index_permissions" sections.
             // During the loop, the actionToIndexToRoles map is being built.
             // For that, action patterns from the role will be matched against the "well-known actions" to build
@@ -672,7 +682,7 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
             // and m is the number of matched indices. This formula does not take the loop through matchedActions in
             // account, as this is bound by a constant number and thus does not need to be considered in the O() notation.
 
-            top: for (Map.Entry<String, RoleV7> entry : roles.getCEntries().entrySet()) {
+            for (Map.Entry<String, RoleV7> entry : roles.getCEntries().entrySet()) {
                 try {
                     String roleName = entry.getKey();
                     RoleV7 role = entry.getValue();
@@ -688,15 +698,10 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                             continue;
                         }
 
-                        WildcardMatcher indexMatcher = IndexPattern.from(indexPermissions.getIndex_patterns()).getStaticPattern();
-
-                        if (indexMatcher == WildcardMatcher.NONE) {
-                            // The pattern is likely blank because there are only templated patterns.
-                            // Index patterns with templates are not handled here, but in the static IndexPermissions object
-                            continue;
-                        }
-
-                        List<IndexAbstraction> matchingIndices = indexMatcher.matching(indices.values(), IndexAbstraction::getName);
+                        long t0 = System.nanoTime();
+                        List<String> indexPatterns = indexPermissions.getIndex_patterns();
+                        List<IndexAbstraction> matchingIndices = matchIndicesOptimized(indexPatterns, indices, sortedIndexNames);
+                        matchingTime += System.nanoTime() - t0;
                         if (matchingIndices.isEmpty()) {
                             continue;
                         }
@@ -708,8 +713,10 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                                 Collectors.toList()
                             );
 
+                            long t1 = System.nanoTime();
                             for (IndexAbstraction index : matchingIndices) {
                                 for (String action : matchedActions) {
+                                    totalIterations++;
                                     CompactMapGroupBuilder.MapBuilder<
                                         String,
                                         DeduplicatingCompactSubSetBuilder.SubSetBuilder<String>> indexToRoles = actionToIndexToRoles
@@ -718,8 +725,10 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                                     indexToRoles.get(index.getName()).add(roleName);
 
                                     if (index instanceof IndexAbstraction.Alias) {
+                                        long t2 = System.nanoTime();
                                         // For aliases we additionally add the sub-indices to the privilege map
                                         for (IndexMetadata subIndex : index.getIndices()) {
+                                            aliasHits++;
                                             String subIndexName = subIndex.getIndex().getName();
                                             // We need to check whether the subIndex is part of the global indices
                                             // metadata map because that map has been filtered by relevantOnly().
@@ -738,21 +747,22 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
                                                 );
                                             }
                                         }
-                                    }
-
-                                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder
-                                        .getEstimatedByteSize() > statefulIndexMaxHeapSize.getBytes()) {
-                                        log.info(
-                                            "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
-                                                + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
-                                            statefulIndexMaxHeapSize,
-                                            PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
-                                        );
-                                        break top;
+                                        aliasTime += System.nanoTime() - t2;
                                     }
                                 }
                             }
+                            innerLoopTime += System.nanoTime() - t1;
                         }
+                    }
+                    if (roleSetBuilder.getEstimatedByteSize() + indexMapBuilder.getEstimatedByteSize() > statefulIndexMaxHeapSize
+                        .getBytes()) {
+                        log.info(
+                            "Size of precomputed index privileges exceeds configured limit ({}). Using capped data structure."
+                                + "This might lead to slightly lower performance during privilege evaluation. Consider raising {}.",
+                            statefulIndexMaxHeapSize,
+                            PRECOMPUTED_PRIVILEGES_MAX_HEAP_SIZE.getKey()
+                        );
+                        break;
                     }
                 } catch (Exception e) {
                     log.error("Unexpected exception while processing role: {}\nIgnoring role.", entry.getKey(), e);
@@ -775,14 +785,58 @@ public class RoleBasedActionPrivileges extends RuntimeOptimizedActionPrivileges 
 
             this.indices = ImmutableMap.copyOf(indices);
             this.metadataVersion = metadataVersion;
+        }
 
-            long duration = System.currentTimeMillis() - startTime;
+        /**
+         * Optimized index matching using pattern categorization:
+         * - Exact matches: O(1) map lookup
+         * - Prefix patterns (ending with *): O(log n) binary search + linear scan of matches
+         * - Complex patterns: O(n) linear scan fallback
+         */
+        private static List<IndexAbstraction> matchIndicesOptimized(
+            List<String> patterns,
+            Map<String, IndexAbstraction> indices,
+            String[] sortedIndexNames
+        ) {
+            List<IndexAbstraction> result = new ArrayList<>();
+            List<String> complexPatterns = new ArrayList<>();
 
-            if (duration > 30000) {
-                log.warn("Creation of StatefulIndexPrivileges took {} ms", duration);
-            } else {
-                log.debug("Creation of StatefulIndexPrivileges took {} ms", duration);
+            for (String pattern : patterns) {
+                if (pattern.contains("${")) {
+                    // Templated pattern - skip, handled by static IndexPermissions
+                    continue;
+                }
+                if (!pattern.contains("*") && !pattern.contains("?")) {
+                    // Exact match - O(1)
+                    IndexAbstraction idx = indices.get(pattern);
+                    if (idx != null) {
+                        result.add(idx);
+                    }
+                } else if (pattern.endsWith("*") && !pattern.substring(0, pattern.length() - 1).contains("*") && !pattern.contains("?")) {
+                    // Simple prefix pattern like "role_123*" - use binary search on pre-sorted array
+                    String prefix = pattern.substring(0, pattern.length() - 1);
+                    int idx = Arrays.binarySearch(sortedIndexNames, prefix);
+                    int start = idx >= 0 ? idx : -(idx + 1);
+                    for (int i = start; i < sortedIndexNames.length && sortedIndexNames[i].startsWith(prefix); i++) {
+                        result.add(indices.get(sortedIndexNames[i]));
+                    }
+                } else {
+                    // Complex pattern - collect for batch processing
+                    complexPatterns.add(pattern);
+                }
             }
+
+            // Process complex patterns with linear scan
+            if (!complexPatterns.isEmpty()) {
+                WildcardMatcher matcher = WildcardMatcher.from(complexPatterns);
+                for (IndexAbstraction idx : indices.values()) {
+                    if (matcher.test(idx.getName()) && !result.contains(idx)) {
+                        result.add(idx);
+                    }
+                }
+            }
+
+            return result;
         }
 
         /**
