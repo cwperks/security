@@ -67,6 +67,12 @@ public interface PrivilegesEvaluator {
         ConfigV7 generalConfiguration
     );
 
+    /**
+     * Updates only the general configuration settings (like dnfof, filtered alias mode) without
+     * rebuilding ActionPrivileges. Use this when roles and action groups haven't changed.
+     */
+    void updateGeneralConfiguration(ConfigV7 generalConfiguration);
+
     void updateClusterStateMetadata(ClusterService clusterService);
 
     /**
@@ -126,6 +132,11 @@ public interface PrivilegesEvaluator {
             SecurityDynamicConfiguration<RoleV7> rolesConfiguration,
             ConfigV7 generalConfiguration
         ) {
+
+        }
+
+        @Override
+        public void updateGeneralConfiguration(ConfigV7 generalConfiguration) {
 
         }
 

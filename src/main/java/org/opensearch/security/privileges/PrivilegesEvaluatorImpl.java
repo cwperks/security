@@ -213,9 +213,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
         SecurityDynamicConfiguration<RoleV7> rolesConfiguration,
         ConfigV7 generalConfiguration
     ) {
-        this.dnfofEnabled = isDnfofEnabled(generalConfiguration);
-        this.dnfofForEmptyResultsEnabled = isDnfofEmptyEnabled(generalConfiguration);
-        this.filteredAliasMode = getFilteredAliasMode(generalConfiguration);
+        updateGeneralConfiguration(generalConfiguration);
 
         try {
             RoleBasedActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(rolesConfiguration, flattenedActionGroups, settings);
@@ -230,6 +228,13 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             log.error("Error while updating ActionPrivileges", e);
         }
 
+    }
+
+    @Override
+    public void updateGeneralConfiguration(ConfigV7 generalConfiguration) {
+        this.dnfofEnabled = isDnfofEnabled(generalConfiguration);
+        this.dnfofForEmptyResultsEnabled = isDnfofEmptyEnabled(generalConfiguration);
+        this.filteredAliasMode = getFilteredAliasMode(generalConfiguration);
     }
 
     @Override
