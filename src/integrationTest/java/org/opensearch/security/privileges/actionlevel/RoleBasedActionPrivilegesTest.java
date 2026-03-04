@@ -299,7 +299,6 @@ public class RoleBasedActionPrivilegesTest {
             final int NUM_ALIASES = 9000;
             final int INDICES_PER_ROLE = 3;  // Each role_N* pattern matches ~3 indices
 
-            // Cluster permissions matching production role config
             List<String> clusterPatterns = Arrays.asList(
                 "cluster:admin/tasks/cancel",
                 "cluster:monitor/task",
@@ -318,7 +317,7 @@ public class RoleBasedActionPrivilegesTest {
                 "indices:monitor/stats"
             );
 
-            // DLS query with user attribute substitution (like production)
+            // DLS query with user attribute substitution
             String dlsQuery = "{\"bool\": {\"must\": {\"match\": {\"should_hide\": \"${attr.internal.should_hide}\"}}}}";
 
             // Create roles: each has pattern "role_N*" + shared "test-index"
@@ -390,7 +389,7 @@ public class RoleBasedActionPrivilegesTest {
             long statefulMs = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startStateful);
 
             System.out.println(
-                "[constructionPerformance_productionScenario] Configuration: "
+                "[constructionPerformance_sharedPatterns] Configuration: "
                     + NUM_ROLES
                     + " roles, "
                     + NUM_INDICES
@@ -399,10 +398,10 @@ public class RoleBasedActionPrivilegesTest {
                     + " aliases"
             );
             System.out.println(
-                "[constructionPerformance_productionScenario] RoleBasedActionPrivileges construction: " + constructionMs + "ms"
+                "[constructionPerformance_sharedPatterns] RoleBasedActionPrivileges construction: " + constructionMs + "ms"
             );
-            System.out.println("[constructionPerformance_productionScenario] StatefulIndexPrivileges update: " + statefulMs + "ms");
-            System.out.println("[constructionPerformance_productionScenario] Total: " + (constructionMs + statefulMs) + "ms");
+            System.out.println("[constructionPerformance_sharedPatterns] StatefulIndexPrivileges update: " + statefulMs + "ms");
+            System.out.println("[constructionPerformance_sharedPatterns] Total: " + (constructionMs + statefulMs) + "ms");
 
             // Verify correctness
             assertThat(subject.hasClusterPrivilege(ctx().roles("role_0_user").get(), "cluster:monitor/task/get"), isAllowed());
