@@ -178,6 +178,11 @@ public class RestLayerPrivilegesEvaluatorTest {
             }
 
             @Override
+            public void updateGeneralConfiguration(ConfigV7 generalConfiguration) {
+
+            }
+
+            @Override
             public void updateClusterStateMetadata(ClusterService clusterService) {
 
             }

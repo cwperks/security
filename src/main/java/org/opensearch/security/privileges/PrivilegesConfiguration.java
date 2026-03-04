@@ -66,6 +66,13 @@ public class PrivilegesConfiguration {
     private final PrivilegesInterceptorImpl privilegesInterceptor;
 
     /**
+     * Tracks the sequence numbers of roles and action groups configurations to detect changes.
+     * Only rebuild ActionPrivileges when these actually change.
+     */
+    private volatile long lastRolesSeqNo = -1;
+    private volatile long lastActionGroupsSeqNo = -1;
+
+    /**
      * The pure static action groups should be ONLY used by action privileges for plugins; only those cannot and should
      * not have knowledge of any action groups defined in the dynamic configuration. All other functionality should
      * use the action groups derived from the dynamic configuration (which is always computed on the fly on
@@ -109,6 +116,12 @@ public class PrivilegesConfiguration {
                     .withStaticConfig();
                 ConfigV7 generalConfiguration = configurationRepository.getConfiguration(CType.CONFIG).getCEntry(CType.CONFIG.name());
 
+                // Check if roles or action groups actually changed
+                long currentRolesSeqNo = rolesConfiguration.getSeqNo();
+                long currentActionGroupsSeqNo = actionGroupsConfiguration.getSeqNo();
+                boolean rolesOrActionGroupsChanged = currentRolesSeqNo != lastRolesSeqNo
+                    || currentActionGroupsSeqNo != lastActionGroupsSeqNo;
+
                 FlattenedActionGroups flattenedActionGroups = new FlattenedActionGroups(actionGroupsConfiguration.withStaticConfig());
                 this.actionGroups.set(flattenedActionGroups);
 
@@ -142,8 +155,28 @@ public class PrivilegesConfiguration {
                     if (oldInstance != null) {
                         oldInstance.shutdown();
                     }
-                } else {
+                    lastRolesSeqNo = currentRolesSeqNo;
+                    lastActionGroupsSeqNo = currentActionGroupsSeqNo;
+                } else if (rolesOrActionGroupsChanged) {
+                    // Only rebuild ActionPrivileges when roles or action groups changed
+                    log.debug(
+                        "Roles or action groups changed (roles seqNo: {} -> {}, actionGroups seqNo: {} -> {}), rebuilding ActionPrivileges",
+                        lastRolesSeqNo,
+                        currentRolesSeqNo,
+                        lastActionGroupsSeqNo,
+                        currentActionGroupsSeqNo
+                    );
                     privilegesEvaluator.get().updateConfiguration(flattenedActionGroups, rolesConfiguration, generalConfiguration);
+                    lastRolesSeqNo = currentRolesSeqNo;
+                    lastActionGroupsSeqNo = currentActionGroupsSeqNo;
+                } else {
+                    // Only update general configuration settings (dnfof, filtered alias mode) without rebuilding ActionPrivileges
+                    log.debug(
+                        "Roles and action groups unchanged (seqNo: roles={}, actionGroups={}), skipping ActionPrivileges rebuild",
+                        currentRolesSeqNo,
+                        currentActionGroupsSeqNo
+                    );
+                    privilegesEvaluator.get().updateGeneralConfiguration(generalConfiguration);
                 }
 
                 try {
