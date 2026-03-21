@@ -113,6 +113,10 @@ public class ResourceSharing implements ToXContentFragment, NamedWriteable {
         return shareWith;
     }
 
+    public String getResourceType() {
+        return resourceType;
+    }
+
     public String getParentType() {
         return parentType;
     }
