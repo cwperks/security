@@ -705,8 +705,15 @@ public class ResourceSharingIndexHandler {
         // build update script
         sharingInfoListener.whenComplete(sharingInfo -> {
             if (sharingInfo == null) {
-                LOGGER.debug("No sharing record found for resource {}", resourceId);
-                listener.onResponse(null);
+                LOGGER.warn("No sharing record found for resource {} in index {}", resourceId, resourceIndex);
+                listener.onFailure(
+                    new OpenSearchStatusException(
+                        "No sharing record found for resource ["
+                            + resourceId
+                            + "]. The resource may not exist or sharing has not been initialized yet.",
+                        RestStatus.NOT_FOUND
+                    )
+                );
                 return;
             }
             for (String accessLevel : shareWith.accessLevels()) {
@@ -780,6 +787,18 @@ public class ResourceSharingIndexHandler {
 
         // Apply patch and update the document
         sharingInfoListener.whenComplete(sharingInfo -> {
+            if (sharingInfo == null) {
+                LOGGER.warn("No sharing record found for resource {} in index {}", resourceId, resourceIndex);
+                listener.onFailure(
+                    new OpenSearchStatusException(
+                        "No sharing record found for resource ["
+                            + resourceId
+                            + "]. The resource may not exist or sharing has not been initialized yet.",
+                        RestStatus.NOT_FOUND
+                    )
+                );
+                return;
+            }
             if (add != null) {
                 sharingInfo.getShareWith().add(add);
             }
