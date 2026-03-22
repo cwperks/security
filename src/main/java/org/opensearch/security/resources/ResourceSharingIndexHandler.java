@@ -397,6 +397,26 @@ public class ResourceSharingIndexHandler {
      * </ul>
      */
     public void fetchAccessibleResourceIds(String resourceIndex, Set<String> entities, ActionListener<Set<String>> listener) {
+        fetchAccessibleResourceIds(resourceIndex, null, entities, listener);
+    }
+
+    /**
+     * Fetches accessible resource IDs from the resource index, optionally filtered by resource type.
+     * Queries the {@code all_shared_principals} denormalized field and, when {@code resourceType} is
+     * provided, also filters on the {@code resource_type} field so that only IDs belonging to that
+     * type are returned (important when multiple types share the same index).
+     *
+     * @param resourceIndex the resource index to search
+     * @param resourceType  optional resource type filter; pass {@code null} to return all types
+     * @param entities      flat principals to match against {@code all_shared_principals}
+     * @param listener      listener to receive the set of matching resource IDs
+     */
+    public void fetchAccessibleResourceIds(
+        String resourceIndex,
+        String resourceType,
+        Set<String> entities,
+        ActionListener<Set<String>> listener
+    ) {
         final Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
 
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
@@ -407,6 +427,9 @@ public class ResourceSharingIndexHandler {
             // We match any doc whose "principals" contains at least one of the entities
             // e.g., "user:alice", "role:admin", "backend:ops"
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery().filter(QueryBuilders.termsQuery("all_shared_principals", entities));
+            if (resourceType != null) {
+                boolQuery.filter(QueryBuilders.termQuery("resource_type", resourceType));
+            }
 
             executeIdCollectingSearchRequest(scroll, searchRequest, boolQuery, ActionListener.wrap(resourceIds -> {
                 ctx.restore();
@@ -419,6 +442,45 @@ public class ResourceSharingIndexHandler {
                     return;
                 }
                 LOGGER.error("Search failed for resourceIndex={}, entities={}", resourceIndex, entities, exception);
+                listener.onFailure(exception);
+            }));
+        }
+    }
+
+    /**
+     * Fetches child resource IDs from the sharing index whose {@code parent_id} field matches any of the given parent IDs.
+     * Used to resolve parent-inherited access: if a user has access to a parent resource, they implicitly have access
+     * to all child resources that reference that parent.
+     *
+     * @param resourceIndex the child resource index (sharing index is derived from this)
+     * @param parentIds     the set of accessible parent resource IDs
+     * @param listener      listener to receive the set of child resource IDs
+     */
+    public void fetchResourceIdsByParentIds(String resourceIndex, Set<String> parentIds, ActionListener<Set<String>> listener) {
+        if (parentIds == null || parentIds.isEmpty()) {
+            listener.onResponse(Collections.emptySet());
+            return;
+        }
+        final String resourceSharingIndex = getSharingIndex(resourceIndex);
+        final Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
+
+        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
+            SearchRequest searchRequest = new SearchRequest(resourceSharingIndex);
+            searchRequest.scroll(scroll);
+
+            BoolQueryBuilder query = QueryBuilders.boolQuery().filter(QueryBuilders.termsQuery("parent_id.keyword", parentIds));
+
+            executeSearchRequest(scroll, searchRequest, query, ActionListener.wrap(resourceIds -> {
+                ctx.restore();
+                LOGGER.debug("Found {} child resources in {} with parent_ids {}", resourceIds.size(), resourceSharingIndex, parentIds);
+                listener.onResponse(resourceIds);
+            }, exception -> {
+                if (exception instanceof IndexNotFoundException) {
+                    LOGGER.debug("Sharing index {} not found, returning empty set", resourceSharingIndex);
+                    listener.onResponse(Collections.emptySet());
+                    return;
+                }
+                LOGGER.error("Search failed for child resources in {}, parentIds={}", resourceSharingIndex, parentIds, exception);
                 listener.onFailure(exception);
             }));
         }
@@ -643,8 +705,15 @@ public class ResourceSharingIndexHandler {
         // build update script
         sharingInfoListener.whenComplete(sharingInfo -> {
             if (sharingInfo == null) {
-                LOGGER.debug("No sharing record found for resource {}", resourceId);
-                listener.onResponse(null);
+                LOGGER.warn("No sharing record found for resource {} in index {}", resourceId, resourceIndex);
+                listener.onFailure(
+                    new OpenSearchStatusException(
+                        "No sharing record found for resource ["
+                            + resourceId
+                            + "]. The resource may not exist or sharing has not been initialized yet.",
+                        RestStatus.NOT_FOUND
+                    )
+                );
                 return;
             }
             for (String accessLevel : shareWith.accessLevels()) {
@@ -718,6 +787,18 @@ public class ResourceSharingIndexHandler {
 
         // Apply patch and update the document
         sharingInfoListener.whenComplete(sharingInfo -> {
+            if (sharingInfo == null) {
+                LOGGER.warn("No sharing record found for resource {} in index {}", resourceId, resourceIndex);
+                listener.onFailure(
+                    new OpenSearchStatusException(
+                        "No sharing record found for resource ["
+                            + resourceId
+                            + "]. The resource may not exist or sharing has not been initialized yet.",
+                        RestStatus.NOT_FOUND
+                    )
+                );
+                return;
+            }
             if (add != null) {
                 sharingInfo.getShareWith().add(add);
             }
@@ -923,6 +1004,91 @@ public class ResourceSharingIndexHandler {
     }
 
     /**
+     * Fetches resource-sharing records for a given set of resource IDs (pre-resolved).
+     * Used when the caller has already resolved the full set of accessible IDs (e.g. after parent-hierarchy union).
+     *
+     * @param resourceIndex the resource index
+     * @param resourceType  the resource type
+     * @param user          the requesting user (used for can_share check)
+     * @param resourceIds   the pre-resolved set of accessible resource IDs
+     * @param listener      listener to collect and return the sharing records
+     */
+    public void fetchResourceSharingRecordsByIds(
+        String resourceIndex,
+        String resourceType,
+        User user,
+        Set<String> resourceIds,
+        ActionListener<Set<SharingRecord>> listener
+    ) {
+        if (resourceIds == null || resourceIds.isEmpty()) {
+            listener.onResponse(Collections.emptySet());
+            return;
+        }
+
+        final String resourceSharingIndex = getSharingIndex(resourceIndex);
+        final ThreadContext.StoredContext stored = this.threadPool.getThreadContext().stashContext();
+
+        final List<String> idList = new ArrayList<>(resourceIds);
+        final int BATCH = 1000;
+        final Set<SharingRecord> out = ConcurrentHashMap.newKeySet();
+        final AtomicInteger cursor = new AtomicInteger(0);
+        final String[] includes = { "resource_id", "resource_type", "created_by", "share_with" };
+
+        final AtomicReference<Runnable> submitNextRef = new AtomicReference<>();
+        submitNextRef.set(() -> {
+            int start = cursor.getAndAdd(BATCH);
+            if (start >= idList.size()) {
+                stored.restore();
+                listener.onResponse(out);
+                return;
+            }
+            int end = Math.min(start + BATCH, idList.size());
+
+            final MultiGetRequest mget = new MultiGetRequest();
+            final FetchSourceContext fsc = new FetchSourceContext(true, includes, Strings.EMPTY_ARRAY);
+            for (int i = start; i < end; i++) {
+                mget.add(new MultiGetRequest.Item(resourceSharingIndex, idList.get(i)).fetchSourceContext(fsc));
+            }
+
+            client.multiGet(mget, ActionListener.wrap(mres -> {
+                for (MultiGetItemResponse item : mres.getResponses()) {
+                    if (item == null || item.isFailed()) continue;
+                    final GetResponse gr = item.getResponse();
+                    if (gr == null || !gr.isExists()) continue;
+
+                    try (
+                        XContentParser p = XContentHelper.createParser(
+                            NamedXContentRegistry.EMPTY,
+                            THROW_UNSUPPORTED_OPERATION,
+                            gr.getSourceAsBytesRef(),
+                            XContentType.JSON
+                        )
+                    ) {
+                        p.nextToken();
+                        ResourceSharing rs = ResourceSharing.fromXContent(p);
+                        // skip records belonging to a different resource type (can happen when multiple
+                        // types share the same resource index)
+                        if (!resourceType.equals(rs.getResourceType())) continue;
+                        boolean canShare = canUserShare(user, /* isAdmin */ false, rs, resourceType);
+                        out.add(new SharingRecord(rs, canShare));
+                    } catch (Exception ex) {
+                        LOGGER.warn("Failed to parse resource-sharing doc id={}", gr.getId(), ex);
+                    }
+                }
+                submitNextRef.get().run();
+            }, e -> {
+                try {
+                    listener.onFailure(e);
+                } finally {
+                    stored.restore();
+                }
+            }));
+        });
+
+        submitNextRef.get().run();
+    }
+
+    /**
      * Fetches resource-sharing records for this user for a given resource-index.
      * Executes in 2 steps:
      * Step-1:
@@ -958,7 +1124,7 @@ public class ResourceSharingIndexHandler {
             final int BATCH = 1000; // tune if docs are large
             final Set<SharingRecord> out = ConcurrentHashMap.newKeySet();
             final AtomicInteger cursor = new AtomicInteger(0);
-            final String[] includes = { "resource_id", "created_by", "share_with" };
+            final String[] includes = { "resource_id", "resource_type", "created_by", "share_with" };
 
             // self-referencing lambda for batch run
             final AtomicReference<Runnable> submitNextRef = new AtomicReference<>();
@@ -996,6 +1162,8 @@ public class ResourceSharingIndexHandler {
                         ) {
                             p.nextToken();
                             ResourceSharing rs = ResourceSharing.fromXContent(p);
+                            // skip records belonging to a different resource type
+                            if (!resourceType.equals(rs.getResourceType())) continue;
                             boolean canShare = canUserShare(user, /* isAdmin */ false, rs, resourceType);
                             out.add(new SharingRecord(rs, canShare));
                         } catch (Exception ex) {

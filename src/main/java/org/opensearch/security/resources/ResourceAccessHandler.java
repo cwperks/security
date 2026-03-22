@@ -90,8 +90,31 @@ public class ResourceAccessHandler {
         }
         Set<String> flatPrincipals = getFlatPrincipals(user);
 
-        // 3) Fetch all accessible resource IDs
-        resourceSharingIndexHandler.fetchAccessibleResourceIds(resourceIndex, flatPrincipals, listener);
+        // Phase 1: directly accessible resource IDs (via all_shared_principals on the resource index)
+        resourceSharingIndexHandler.fetchAccessibleResourceIds(resourceIndex, flatPrincipals, ActionListener.wrap(directIds -> {
+            String parentType = resourcePluginInfo.getParentType(resourceType);
+            if (parentType == null) {
+                // No parent hierarchy — return direct results as-is
+                listener.onResponse(directIds);
+                return;
+            }
+
+            // Phase 2: resolve parent-inherited access
+            // 2a) get accessible parent resource IDs
+            String parentIndex = resourcePluginInfo.indexByType(parentType);
+            resourceSharingIndexHandler.fetchAccessibleResourceIds(parentIndex, flatPrincipals, ActionListener.wrap(parentIds -> {
+                if (parentIds.isEmpty()) {
+                    listener.onResponse(directIds);
+                    return;
+                }
+                // 2b) find child sharing records whose parent_id is in the accessible parent set
+                resourceSharingIndexHandler.fetchResourceIdsByParentIds(resourceIndex, parentIds, ActionListener.wrap(inheritedIds -> {
+                    Set<String> union = new HashSet<>(directIds);
+                    union.addAll(inheritedIds);
+                    listener.onResponse(union);
+                }, listener::onFailure));
+            }, listener::onFailure));
+        }, listener::onFailure));
     }
 
     /**
@@ -119,8 +142,29 @@ public class ResourceAccessHandler {
 
         String resourceIndex = resourcePluginInfo.indexByType(resourceType);
 
-        // 3) Fetch all accessible resource sharing records
-        resourceSharingIndexHandler.fetchAccessibleResourceSharingRecords(resourceIndex, resourceType, user, flatPrincipals, listener);
+        // Phase 1: directly accessible resource IDs
+        resourceSharingIndexHandler.fetchAccessibleResourceIds(resourceIndex, flatPrincipals, ActionListener.wrap(directIds -> {
+            String parentType = resourcePluginInfo.getParentType(resourceType);
+            if (parentType == null) {
+                // No parent hierarchy — fetch sharing records for direct IDs only
+                resourceSharingIndexHandler.fetchResourceSharingRecordsByIds(resourceIndex, resourceType, user, directIds, listener);
+                return;
+            }
+
+            // Phase 2: resolve parent-inherited access
+            String parentIndex = resourcePluginInfo.indexByType(parentType);
+            resourceSharingIndexHandler.fetchAccessibleResourceIds(parentIndex, flatPrincipals, ActionListener.wrap(parentIds -> {
+                if (parentIds.isEmpty()) {
+                    resourceSharingIndexHandler.fetchResourceSharingRecordsByIds(resourceIndex, resourceType, user, directIds, listener);
+                    return;
+                }
+                resourceSharingIndexHandler.fetchResourceIdsByParentIds(resourceIndex, parentIds, ActionListener.wrap(inheritedIds -> {
+                    Set<String> union = new HashSet<>(directIds);
+                    union.addAll(inheritedIds);
+                    resourceSharingIndexHandler.fetchResourceSharingRecordsByIds(resourceIndex, resourceType, user, union, listener);
+                }, listener::onFailure));
+            }, listener::onFailure));
+        }, listener::onFailure));
     }
 
     /**
@@ -180,8 +224,13 @@ public class ResourceAccessHandler {
 
             Set<String> accessLevels = sharingInfo.getAccessLevelsForUser(user);
 
+            // no matching access level, either recurse up or fail fast
             if (accessLevels.isEmpty()) {
-                listener.onResponse(false);
+                if (sharingInfo.getParentId() != null) {
+                    hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
+                } else {
+                    listener.onResponse(false);
+                }
                 return;
             }
 
@@ -190,7 +239,16 @@ public class ResourceAccessHandler {
             final Set<String> allowedActions = agForType.resolve(accessLevels);
             final WildcardMatcher matcher = WildcardMatcher.from(allowedActions);
 
-            listener.onResponse(matcher.test(action));
+            if (matcher.test(action)) {
+                listener.onResponse(true);
+                return;
+            }
+
+            if (sharingInfo.getParentId() != null) {
+                hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
+            } else {
+                listener.onResponse(false);
+            }
         }, e -> {
             LOGGER.error("Error while checking permission for user {} on resource {}: {}", user.getName(), resourceId, e.getMessage());
             listener.onFailure(e);
