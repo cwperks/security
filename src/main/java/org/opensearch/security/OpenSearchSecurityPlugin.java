@@ -193,6 +193,7 @@ import org.opensearch.security.resources.api.share.ShareRestAction;
 import org.opensearch.security.resources.api.share.ShareTransportAction;
 import org.opensearch.security.resources.settings.ResourceSharingFeatureFlagSetting;
 import org.opensearch.security.resources.settings.ResourceSharingProtectedResourcesSetting;
+import org.opensearch.security.rest.ApplicationPermissionsInfoAction;
 import org.opensearch.security.rest.DashboardsInfoAction;
 import org.opensearch.security.rest.SecurityConfigUpdateAction;
 import org.opensearch.security.rest.SecurityHealthAction;
@@ -651,6 +652,13 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         Objects.requireNonNull(cr),
                         Objects.requireNonNull(threadPool),
                         resourceSharingEnabledSetting
+                    )
+                );
+                handlers.add(
+                    new ApplicationPermissionsInfoAction(
+                        Objects.requireNonNull(privilegesConfiguration).privilegesEvaluator(),
+                        Objects.requireNonNull(cr),
+                        Objects.requireNonNull(threadPool)
                     )
                 );
                 handlers.add(

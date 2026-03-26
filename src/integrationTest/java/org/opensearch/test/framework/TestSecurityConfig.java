@@ -684,6 +684,7 @@ public class TestSecurityConfig {
         private Boolean hidden;
         private Boolean reserved;
         private String description;
+        private String applicationId;
 
         /**
          * If this is true, the role is expected to be defined in static_roles.yml. Thus, it is not necessary to include it
@@ -732,6 +733,11 @@ public class TestSecurityConfig {
             return this;
         }
 
+        public Role applicationId(String applicationId) {
+            this.applicationId = applicationId;
+            return this;
+        }
+
         /**
          * If this is true, the role is expected to be defined in static_roles.yml. Thus, it is not necessary to include it
          * in the written role config.
@@ -769,6 +775,7 @@ public class TestSecurityConfig {
                 xContentBuilder.field("reserved", reserved);
             }
             if (!Strings.isNullOrEmpty(description)) xContentBuilder.field("description", description);
+            if (!Strings.isNullOrEmpty(applicationId)) xContentBuilder.field("application_id", applicationId);
             return xContentBuilder.endObject();
         }
 

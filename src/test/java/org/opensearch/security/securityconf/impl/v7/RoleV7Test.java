@@ -116,4 +116,24 @@ public class RoleV7Test {
         assertTrue(role.getCluster_permissions().contains("cluster:monitor/health"));
         assertTrue(role.getIndex_permissions().isEmpty());
     }
+
+    @Test
+    public void testFromYmlFileWithApplicationId() throws Exception {
+        URL yamlUrl = RoleV7Test.class.getResource("/test-role-with-application-id.yml");
+
+        RoleV7 role = RoleV7.fromPluginPermissionsFile(yamlUrl);
+
+        assertNotNull(role);
+        assertEquals("sample-resource-plugin", role.getApplication_id());
+        assertEquals(1, role.getCluster_permissions().size());
+        assertTrue(role.getCluster_permissions().contains("cluster:admin/sample-resource-plugin/*"));
+    }
+
+    @Test
+    public void testApplicationIdIsNullWhenNotSet() throws Exception {
+        RoleV7 role = RoleV7.fromPluginPermissionsFile(testYamlUrl);
+
+        assertNotNull(role);
+        assertEquals(null, role.getApplication_id());
+    }
 }
