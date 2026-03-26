@@ -752,6 +752,7 @@ public class TestSecurityConfig {
             role.clusterPermissions.addAll(this.clusterPermissions);
             role.indexPermissions.addAll(this.indexPermissions);
             role.tenantPermissions.addAll(this.tenantPermissions);
+            role.applicationId = this.applicationId;
             return role;
         }
 

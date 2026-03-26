@@ -32,6 +32,9 @@ public class ApplicationPermissionsInfoTest extends AbstractApiIntegrationTest {
 
     private static final String ENDPOINT = PLUGINS_PREFIX + "/applicationpermissions";
 
+    // Use predefined all_access from static_roles.yml so the role name is exactly "all_access"
+    static final Role ALL_ACCESS = new Role("all_access").isPredefined(true);
+
     static final Role ISM_READ_ROLE = new Role("ism_read_access").applicationId("index-management")
         .clusterPermissions("cluster:admin/opendistro/ism/get");
 
@@ -43,6 +46,9 @@ public class ApplicationPermissionsInfoTest extends AbstractApiIntegrationTest {
 
     static final Role NO_APP_ROLE = new Role("custom_role_no_app").clusterPermissions("cluster:monitor/health");
 
+    // all_access user mapped to the predefined all_access role
+    static final TestSecurityConfig.User ALL_ACCESS_USER = new TestSecurityConfig.User("all_access_user").roles(ALL_ACCESS);
+
     static final TestSecurityConfig.User ISM_USER = new TestSecurityConfig.User("ism_user").roles(ISM_READ_ROLE);
 
     static final TestSecurityConfig.User MULTI_APP_USER = new TestSecurityConfig.User("multi_app_user").roles(
@@ -53,13 +59,11 @@ public class ApplicationPermissionsInfoTest extends AbstractApiIntegrationTest {
     static final TestSecurityConfig.User NO_APP_USER = new TestSecurityConfig.User("no_app_user").roles(NO_APP_ROLE);
 
     @ClassRule
-    public static LocalCluster localCluster = clusterBuilder().users(ISM_USER, MULTI_APP_USER, NO_APP_USER)
-        .roles(ISM_READ_ROLE, ISM_FULL_ROLE, ALERTING_READ_ROLE, NO_APP_ROLE)
-        .build();
+    public static LocalCluster localCluster = clusterBuilder().users(ALL_ACCESS_USER, ISM_USER, MULTI_APP_USER, NO_APP_USER).build();
 
     @Test
     public void allAccessUserGetsWildcard() throws Exception {
-        try (TestRestClient client = localCluster.getRestClient(ADMIN_USER)) {
+        try (TestRestClient client = localCluster.getRestClient(ALL_ACCESS_USER)) {
             TestRestClient.HttpResponse response = client.get(ENDPOINT);
             assertThat(response, isOk());
 

@@ -656,7 +656,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 );
                 handlers.add(
                     new ApplicationPermissionsInfoAction(
-                        Objects.requireNonNull(privilegesConfiguration).privilegesEvaluator(),
+                        Objects.requireNonNull(privilegesConfiguration),
                         Objects.requireNonNull(cr),
                         Objects.requireNonNull(threadPool)
                     )

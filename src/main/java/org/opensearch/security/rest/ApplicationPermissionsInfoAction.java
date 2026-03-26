@@ -26,10 +26,12 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
+import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
+import org.opensearch.security.privileges.PrivilegesConfiguration;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
@@ -57,19 +59,19 @@ public class ApplicationPermissionsInfoAction extends BaseRestHandler {
     );
 
     private final Logger log = LogManager.getLogger(this.getClass());
-    private final PrivilegesEvaluator privilegesEvaluator;
+    private final PrivilegesConfiguration privilegesConfiguration;
     private final ConfigurationRepository configurationRepository;
     private final ThreadContext threadContext;
 
     private static final String ALL_ACCESS_ROLE = "all_access";
 
     public ApplicationPermissionsInfoAction(
-        final PrivilegesEvaluator privilegesEvaluator,
+        final PrivilegesConfiguration privilegesConfiguration,
         final ConfigurationRepository configurationRepository,
         final ThreadPool threadPool
     ) {
         super();
-        this.privilegesEvaluator = privilegesEvaluator;
+        this.privilegesConfiguration = privilegesConfiguration;
         this.configurationRepository = configurationRepository;
         this.threadContext = threadPool.getThreadContext();
     }
@@ -99,6 +101,7 @@ public class ApplicationPermissionsInfoAction extends BaseRestHandler {
                     builder.endObject();
                     response = new BytesRestResponse(RestStatus.FORBIDDEN, builder);
                 } else {
+                    PrivilegesEvaluator privilegesEvaluator = privilegesConfiguration.privilegesEvaluator();
                     PrivilegesEvaluationContext context = privilegesEvaluator.createContext(user, "dummy:action");
                     Set<String> mappedRoles = context.getMappedRoles();
 
