@@ -685,6 +685,7 @@ public class TestSecurityConfig {
         private Boolean reserved;
         private String description;
         private String applicationId;
+        private Boolean _static;
 
         /**
          * If this is true, the role is expected to be defined in static_roles.yml. Thus, it is not necessary to include it
@@ -738,6 +739,11 @@ public class TestSecurityConfig {
             return this;
         }
 
+        public Role _static(boolean _static) {
+            this._static = _static;
+            return this;
+        }
+
         /**
          * If this is true, the role is expected to be defined in static_roles.yml. Thus, it is not necessary to include it
          * in the written role config.
@@ -753,6 +759,7 @@ public class TestSecurityConfig {
             role.indexPermissions.addAll(this.indexPermissions);
             role.tenantPermissions.addAll(this.tenantPermissions);
             role.applicationId = this.applicationId;
+            role._static = this._static;
             return role;
         }
 
@@ -777,6 +784,7 @@ public class TestSecurityConfig {
             }
             if (!Strings.isNullOrEmpty(description)) xContentBuilder.field("description", description);
             if (!Strings.isNullOrEmpty(applicationId)) xContentBuilder.field("application_id", applicationId);
+            if (_static != null) xContentBuilder.field("static", _static);
             return xContentBuilder.endObject();
         }
 

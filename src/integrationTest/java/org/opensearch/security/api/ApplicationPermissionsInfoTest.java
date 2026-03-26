@@ -36,12 +36,15 @@ public class ApplicationPermissionsInfoTest extends AbstractApiIntegrationTest {
     static final Role ALL_ACCESS = new Role("all_access").isPredefined(true);
 
     static final Role ISM_READ_ROLE = new Role("ism_read_access").applicationId("index-management")
+        ._static(true)
         .clusterPermissions("cluster:admin/opendistro/ism/get");
 
     static final Role ISM_FULL_ROLE = new Role("ism_full_access").applicationId("index-management")
+        ._static(true)
         .clusterPermissions("cluster:admin/opendistro/ism/*");
 
     static final Role ALERTING_READ_ROLE = new Role("alerting_read_access").applicationId("alerting")
+        ._static(true)
         .clusterPermissions("cluster:admin/opendistro/alerting/get");
 
     static final Role NO_APP_ROLE = new Role("custom_role_no_app").clusterPermissions("cluster:monitor/health");

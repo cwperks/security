@@ -26,12 +26,11 @@ import org.opensearch.core.rest.RestStatus;
 import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
-import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.configuration.ConfigurationRepository;
+import org.opensearch.security.privileges.PrivilegesConfiguration;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
-import org.opensearch.security.privileges.PrivilegesConfiguration;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
@@ -115,10 +114,15 @@ public class ApplicationPermissionsInfoAction extends BaseRestHandler {
 
                         applicationIds = new HashSet<>();
                         for (Map.Entry<String, RoleV7> entry : rolesConfig.getCEntries().entrySet()) {
+                            RoleV7 role = entry.getValue();
                             if (!mappedRoles.contains(entry.getKey())) {
                                 continue;
                             }
-                            String appId = entry.getValue().getApplication_id();
+                            // Only honour application_id on static (default) roles
+                            if (!role.isStatic()) {
+                                continue;
+                            }
+                            String appId = role.getApplication_id();
                             if (appId != null && !appId.isEmpty()) {
                                 applicationIds.add(appId);
                             }

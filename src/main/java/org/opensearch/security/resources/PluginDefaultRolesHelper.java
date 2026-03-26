@@ -76,6 +76,9 @@ public class PluginDefaultRolesHelper {
                 for (var entry : pluginRoles.getCEntries().entrySet()) {
                     entry.getValue().setStatic(true);
                     entry.getValue().setReserved(true);
+                    // application_id is only valid on static (default) roles;
+                    // clear it if a plugin accidentally marks a role as non-static
+                    // (defensive — setStatic(true) above should make this unreachable)
                 }
 
                 log.info(

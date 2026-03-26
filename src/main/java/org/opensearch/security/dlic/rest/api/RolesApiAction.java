@@ -188,7 +188,6 @@ public class RolesApiAction extends AbstractApiAction {
                             .put("tenant_permissions", DataType.ARRAY)
                             .put("index_permissions", DataType.ARRAY)
                             .put("description", DataType.STRING)
-                            .put("application_id", DataType.STRING)
                             .build();
                     }
                 });
