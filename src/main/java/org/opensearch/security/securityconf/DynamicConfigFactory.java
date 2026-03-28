@@ -74,6 +74,7 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
 
     public static final EventBusBuilder EVENT_BUS_BUILDER = EventBus.builder();
     private static SecurityDynamicConfiguration<RoleV7> staticRoles = SecurityDynamicConfiguration.empty(CType.ROLES);
+    private static SecurityDynamicConfiguration<RoleV7> pluginDefaultRoles = SecurityDynamicConfiguration.empty(CType.ROLES);
     private static SecurityDynamicConfiguration<ActionGroupsV7> staticActionGroups = SecurityDynamicConfiguration.empty(CType.ACTIONGROUPS);
     private static SecurityDynamicConfiguration<TenantV7> staticTenants = SecurityDynamicConfiguration.empty(CType.TENANTS);
     private static final AllowlistingSettings defaultAllowlistingSettings = new AllowlistingSettings();
@@ -81,6 +82,7 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
 
     static void resetStatics() {
         staticRoles = SecurityDynamicConfiguration.empty(CType.ROLES);
+        pluginDefaultRoles = SecurityDynamicConfiguration.empty(CType.ROLES);
         staticActionGroups = SecurityDynamicConfiguration.empty(CType.ACTIONGROUPS);
         staticTenants = SecurityDynamicConfiguration.empty(CType.TENANTS);
     }
@@ -102,13 +104,29 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
         staticTenants = SecurityDynamicConfiguration.fromNode(staticTenantsJsonNode, CType.TENANTS, 2, 0, 0);
     }
 
+    /**
+     * Sets plugin-provided default roles. These take precedence over static_roles.yml entries.
+     * Called from {@link org.opensearch.security.OpenSearchSecurityPlugin#loadExtensions} after
+     * discovering {@link org.opensearch.security.spi.SecurityConfigExtension} implementations.
+     */
+    public static void setPluginDefaultRoles(SecurityDynamicConfiguration<RoleV7> roles) {
+        pluginDefaultRoles = roles;
+    }
+
+    @SuppressWarnings("unchecked")
     public final static <T> SecurityDynamicConfiguration<T> addStatics(SecurityDynamicConfiguration<T> original) {
         if (original.getCType() == CType.ACTIONGROUPS && !staticActionGroups.getCEntries().isEmpty()) {
             original.add(staticActionGroups.deepClone());
         }
 
-        if (original.getCType() == CType.ROLES && !staticRoles.getCEntries().isEmpty()) {
-            original.add(staticRoles.deepClone());
+        if (original.getCType() == CType.ROLES) {
+            if (!staticRoles.getCEntries().isEmpty()) {
+                original.add(staticRoles.deepClone());
+            }
+            // Plugin default roles override static_roles.yml entries (putAll semantics)
+            if (!pluginDefaultRoles.getCEntries().isEmpty()) {
+                original.add((SecurityDynamicConfiguration<T>) pluginDefaultRoles.deepClone());
+            }
         }
 
         if (original.getCType() == CType.TENANTS && !staticTenants.getCEntries().isEmpty()) {
@@ -240,32 +258,12 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
         final AllowlistingSettings allowlist = cr.getConfiguration(CType.ALLOWLIST).getCEntry("config");
         final AuditConfig audit = cr.getConfiguration(CType.AUDIT).getCEntry("config");
 
-        if (roles.containsAny(staticRoles)) {
-            throw new StaticResourceException("Cannot override static roles");
-        }
-        if (!roles.add(staticRoles) && !staticRoles.getCEntries().isEmpty()) {
-            throw new StaticResourceException("Unable to load static roles");
-        }
+        mergeStaticConfigWithWarning("roles", roles, staticRoles, log);
+        mergeStaticConfigWithWarning("action groups", actionGroups, staticActionGroups, log);
+        mergeStaticConfigWithWarning("tenants", tenants, staticTenants, log);
 
-        log.debug("Static roles loaded ({})", staticRoles.getCEntries().size());
-
-        if (actionGroups.containsAny(staticActionGroups)) {
-            throw new StaticResourceException("Cannot override static action groups");
-        }
-        if (!actionGroups.add(staticActionGroups) && !staticActionGroups.getCEntries().isEmpty()) {
-            throw new StaticResourceException("Unable to load static action groups");
-        }
-
-        log.debug("Static action groups loaded ({})", staticActionGroups.getCEntries().size());
-
-        if (tenants.containsAny(staticTenants)) {
-            throw new StaticResourceException("Cannot override static tenants");
-        }
-        if (!tenants.add(staticTenants) && !staticTenants.getCEntries().isEmpty()) {
-            throw new StaticResourceException("Unable to load static tenants");
-        }
-
-        log.debug("Static tenants loaded ({})", staticTenants.getCEntries().size());
+        // Plugin-provided default roles override both dynamic and static_roles.yml entries
+        mergeStaticConfigWithWarning("plugin default roles", roles, pluginDefaultRoles, log);
 
         log.debug(
             "Static configuration loaded (total roles: {}/total action groups: {}/total tenants: {})",
@@ -290,6 +288,44 @@ public class DynamicConfigFactory implements Initializable, ConfigurationChangeL
         log.debug("Dispatched config update notification to different subscribers");
 
         initialized.set(true);
+    }
+
+    private static <T> void mergeStaticConfigWithWarning(
+        String typeName,
+        SecurityDynamicConfiguration<T> dynamicConfig,
+        SecurityDynamicConfiguration<T> staticConfig,
+        Logger log
+    ) {
+        if (staticConfig == null || staticConfig.isEmpty()) {
+            return;
+        }
+
+        // Find overlapping keys between dynamic and static configs
+        final Map<String, T> dynamicEntries = dynamicConfig.getCEntries();
+        final Map<String, T> staticEntries = staticConfig.getCEntries();
+
+        final java.util.List<String> overlaps = dynamicEntries.keySet().stream().filter(staticEntries::containsKey).sorted().toList();
+
+        if (!overlaps.isEmpty()) {
+            // Remove overlaps from the dynamic config so static definitions win
+            dynamicConfig.remove(overlaps);
+
+            log.warn(
+                "Detected overlap between dynamic {} configuration and static resources for entries: {}. "
+                    + "Dynamic definitions have been removed in favor of static configuration.",
+                typeName,
+                overlaps
+            );
+        }
+
+        // Now add static entries; if this fails, it's a real structural problem (version/type)
+        if (!dynamicConfig.add(staticConfig) && !staticConfig.getCEntries().isEmpty()) {
+            throw new StaticResourceException("Unable to load static " + typeName);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Static {} loaded ({} entries)", typeName, staticConfig.getCEntries().size());
+        }
     }
 
     private static ConfigV7 getConfigV7(SecurityDynamicConfiguration<?> sdc) {

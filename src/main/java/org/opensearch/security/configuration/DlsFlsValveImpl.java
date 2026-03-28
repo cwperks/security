@@ -16,7 +16,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
@@ -79,17 +78,17 @@ import org.opensearch.security.privileges.dlsfls.IndexToRuleMap;
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resources.ResourcePluginInfo;
 import org.opensearch.security.resources.ResourceSharingDlsUtils;
-import org.opensearch.security.securityconf.DynamicConfigFactory;
-import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
-import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
+import org.opensearch.security.support.SecuritySettings;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
 import static org.opensearch.security.privileges.PrivilegesEvaluatorImpl.isClusterPerm;
+import static org.opensearch.security.support.ConfigConstants.SECURITY_DLS_WRITE_BLOCKED;
+import static org.opensearch.security.support.ConfigConstants.SECURITY_DLS_WRITE_BLOCKED_ENABLED_DEFAULT;
 
 public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
@@ -103,12 +102,12 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     private final IndexNameExpressionResolver resolver;
     private final NamedXContentRegistry namedXContentRegistry;
     private final DlsFlsBaseContext dlsFlsBaseContext;
-    private final AtomicReference<DlsFlsProcessedConfig> dlsFlsProcessedConfig = new AtomicReference<>();
     private final FieldMasking.Config fieldMaskingConfig;
     private final Settings settings;
     private final AdminDNs adminDNs;
     private final OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting;
     private final ResourcePluginInfo resourcePluginInfo;
+    private volatile boolean dlsWriteBlockedEnabled;
 
     public DlsFlsValveImpl(
         Settings settings,
@@ -136,12 +135,27 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         this.resourcePluginInfo = resourcePluginInfo;
 
         clusterService.addListener(event -> {
-            DlsFlsProcessedConfig config = dlsFlsProcessedConfig.get();
+            DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
 
             if (config != null) {
                 config.updateClusterStateMetadataAsync(clusterService, threadPool);
             }
         });
+        this.dlsWriteBlockedEnabled = settings.getAsBoolean(SECURITY_DLS_WRITE_BLOCKED, SECURITY_DLS_WRITE_BLOCKED_ENABLED_DEFAULT);
+        if (clusterService.getClusterSettings() != null) {
+            clusterService.getClusterSettings().addSettingsUpdateConsumer(SecuritySettings.DLS_WRITE_BLOCKED, newDlsWriteBlockedEnabled -> {
+                dlsWriteBlockedEnabled = newDlsWriteBlockedEnabled;
+            });
+            clusterService.getClusterSettings()
+                .addSettingsUpdateConsumer(SecuritySettings.DFM_EMPTY_OVERRIDES_ALL_SETTING, newDfmEmptyOverridesAll -> {
+                    DlsFlsProcessedConfig config = dlsFlsBaseContext.config();
+                    if (config != null) {
+                        config.getDocumentPrivileges().setDfmEmptyOverridesAll(newDfmEmptyOverridesAll);
+                        config.getFieldPrivileges().setDfmEmptyOverridesAll(newDfmEmptyOverridesAll);
+                        config.getFieldMasking().setDfmEmptyOverridesAll(newDfmEmptyOverridesAll);
+                    }
+                });
+        }
         this.resourceSharingEnabledSetting = resourceSharingEnabledSetting;
     }
 
@@ -186,7 +200,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             }
             return true;
         }
-        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+        DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
         IndexResolverReplacer.Resolved resolved = context.getResolvedRequest();
 
         DocumentAllowList documentAllowList = DocumentAllowList.get(threadContext);
@@ -333,11 +347,21 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
             if (request instanceof BulkShardRequest) {
                 for (BulkItemRequest inner : ((BulkShardRequest) request).items()) {
-                    if (inner.request() instanceof UpdateRequest) {
+                    if (dlsWriteBlockedEnabled) {
                         listener.onFailure(
-                            new OpenSearchSecurityException("Update is not supported when FLS or DLS or Fieldmasking is activated")
+                            new OpenSearchSecurityException(
+                                inner.request().getClass().getSimpleName()
+                                    + " is not supported when FLS or DLS or Fieldmasking is activated"
+                            )
                         );
                         return false;
+                    } else {
+                        if (inner.request() instanceof UpdateRequest) {
+                            listener.onFailure(
+                                new OpenSearchSecurityException("Update is not supported when FLS or DLS or Fieldmasking is activated")
+                            );
+                            return false;
+                        }
                     }
                 }
             }
@@ -407,7 +431,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     }
 
     @Override
-    public void handleSearchContext(SearchContext searchContext, ThreadPool threadPool, NamedXContentRegistry namedXContentRegistry) {
+    public void handleSearchContext(SearchContext searchContext, ThreadPool threadPool) {
         try {
             String index = searchContext.indexShard().indexSettings().getIndex().getName();
 
@@ -439,7 +463,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             if (privilegesEvaluationContext == null) {
                 return;
             }
-            DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+            DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
 
             DlsRestriction dlsRestriction = config.getDocumentPrivileges().getRestriction(privilegesEvaluationContext, index);
 
@@ -513,18 +537,13 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     }
 
     @Override
-    public DlsFlsProcessedConfig getCurrentConfig() {
-        return dlsFlsProcessedConfig.get();
-    }
-
-    @Override
     public boolean hasFlsOrFieldMasking(String index) throws PrivilegesEvaluationException {
         PrivilegesEvaluationContext privilegesEvaluationContext = this.dlsFlsBaseContext.getPrivilegesEvaluationContext();
         if (privilegesEvaluationContext == null) {
             return false;
         }
 
-        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+        DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
         return !config.getFieldPrivileges().isUnrestricted(privilegesEvaluationContext, index)
             || !config.getFieldMasking().isUnrestricted(privilegesEvaluationContext, index);
     }
@@ -536,7 +555,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             return false;
         }
 
-        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+        DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
         return !config.getFieldMasking().isUnrestricted(privilegesEvaluationContext, index);
     }
 
@@ -546,8 +565,17 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             return true;
         }
 
-        DlsFlsProcessedConfig config = this.dlsFlsProcessedConfig.get();
+        DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
         return config.getFieldPrivileges().getRestriction(ctx, index).isAllowedRecursive(field);
+    }
+
+    @Override
+    public boolean indexHasFlsRestrictions(String index, PrivilegesEvaluationContext ctx) throws PrivilegesEvaluationException {
+        if (ctx == null) {
+            return false;
+        }
+        DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
+        return !config.getFieldPrivileges().getRestriction(ctx, index).isUnrestricted();
     }
 
     private static InternalAggregation aggregateBuckets(InternalAggregation aggregation) {
@@ -740,28 +768,6 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             } else {
                 return Mode.ADAPTIVE;
             }
-        }
-    }
-
-    public void updateConfiguration(SecurityDynamicConfiguration<RoleV7> rolesConfiguration) {
-        try {
-            if (rolesConfiguration != null) {
-                DlsFlsProcessedConfig oldConfig = this.dlsFlsProcessedConfig.getAndSet(
-                    new DlsFlsProcessedConfig(
-                        DynamicConfigFactory.addStatics(rolesConfiguration.clone()),
-                        clusterService.state().metadata().getIndicesLookup(),
-                        namedXContentRegistry,
-                        settings,
-                        fieldMaskingConfig
-                    )
-                );
-
-                if (oldConfig != null) {
-                    oldConfig.shutdown();
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error while updating DLS/FLS configuration with {}", rolesConfiguration, e);
         }
     }
 }

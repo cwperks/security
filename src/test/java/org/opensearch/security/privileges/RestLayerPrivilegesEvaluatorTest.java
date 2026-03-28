@@ -27,7 +27,9 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.support.ActionRequestMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
+import org.opensearch.security.privileges.dlsfls.FieldMasking;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
@@ -101,7 +103,7 @@ public class RestLayerPrivilegesEvaluatorTest {
         PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
         RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
         PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
-        assertThat(response.allowed, equalTo(true));
+        assertThat(response.isAllowed(), equalTo(true));
     }
 
     @Test
@@ -113,7 +115,7 @@ public class RestLayerPrivilegesEvaluatorTest {
         PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
         RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
         PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
-        assertThat(response.allowed, equalTo(true));
+        assertThat(response.isAllowed(), equalTo(true));
     }
 
     @Test
@@ -125,7 +127,7 @@ public class RestLayerPrivilegesEvaluatorTest {
         PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
         RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
         PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
-        assertThat(response.allowed, equalTo(false));
+        assertThat(response.isAllowed(), equalTo(false));
     }
 
     PrivilegesConfiguration createPrivilegesConfiguration(SecurityDynamicConfiguration<RoleV7> roles) {
@@ -133,7 +135,10 @@ public class RestLayerPrivilegesEvaluatorTest {
     }
 
     PrivilegesEvaluator createPrivilegesEvaluator(SecurityDynamicConfiguration<RoleV7> roles) {
-        ActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(roles, FlattenedActionGroups.EMPTY, Settings.EMPTY);
+        ActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(
+            new CompiledRoles(roles, FlattenedActionGroups.EMPTY, NamedXContentRegistry.EMPTY, FieldMasking.Config.DEFAULT),
+            Settings.EMPTY
+        );
 
         return new PrivilegesEvaluator() {
 
@@ -171,7 +176,7 @@ public class RestLayerPrivilegesEvaluatorTest {
             @Override
             public void updateConfiguration(
                 FlattenedActionGroups actionGroups,
-                SecurityDynamicConfiguration<RoleV7> rolesConfiguration,
+                CompiledRoles rolesConfiguration,
                 ConfigV7 generalConfiguration
             ) {
 

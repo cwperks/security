@@ -91,7 +91,6 @@ import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileg
 import org.opensearch.security.resolver.IndexResolverReplacer;
 import org.opensearch.security.resolver.IndexResolverReplacer.Resolved;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
-import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.support.ConfigConstants;
@@ -166,7 +165,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
         final IndexResolverReplacer irr,
         FlattenedActionGroups actionGroups,
         FlattenedActionGroups staticActionGroups,
-        SecurityDynamicConfiguration<RoleV7> rolesConfiguration,
+        CompiledRoles rolesConfiguration,
         ConfigV7 generalConfiguration,
         Map<String, RoleV7> pluginIdToRolePrivileges
     ) {
@@ -208,17 +207,13 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
     }
 
     @Override
-    public void updateConfiguration(
-        FlattenedActionGroups flattenedActionGroups,
-        SecurityDynamicConfiguration<RoleV7> rolesConfiguration,
-        ConfigV7 generalConfiguration
-    ) {
+    public void updateConfiguration(FlattenedActionGroups flattenedActionGroups, CompiledRoles roles, ConfigV7 generalConfiguration) {
         this.dnfofEnabled = isDnfofEnabled(generalConfiguration);
         this.dnfofForEmptyResultsEnabled = isDnfofEmptyEnabled(generalConfiguration);
         this.filteredAliasMode = getFilteredAliasMode(generalConfiguration);
 
         try {
-            RoleBasedActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(rolesConfiguration, flattenedActionGroups, settings);
+            RoleBasedActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(roles, settings);
             Metadata metadata = clusterStateSupplier.get().metadata();
             actionPrivileges.updateStatefulIndexPrivileges(metadata.getIndicesLookup(), metadata.version());
             RoleBasedActionPrivileges oldInstance = this.actionPrivileges.getAndSet(actionPrivileges);
@@ -307,7 +302,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             action0 = PutMappingAction.NAME;
         }
 
-        PrivilegesEvaluatorResponse presponse = new PrivilegesEvaluatorResponse();
+        PrivilegesEvaluatorResponse presponse;
 
         final boolean isDebugEnabled = log.isDebugEnabled();
         if (isDebugEnabled) {
@@ -328,7 +323,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
 
             presponse = actionPrivileges.hasClusterPrivilege(context, action0);
 
-            if (!presponse.allowed) {
+            if (!presponse.isAllowed()) {
                 log.info(
                     "No cluster-level perm match for {} [Action [{}]] [RolesChecked {}]. No permissions for {}",
                     user,
@@ -347,23 +342,26 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
         // check snapshot/restore requests
         // NOTE: Has to go first as restore request could be for protected and/or system indices and the request may
         // fail with 403 if system index or protected index evaluators are triggered first
-        if (snapshotRestoreEvaluator.evaluate(request, task, action0, presponse).isComplete()) {
+        presponse = snapshotRestoreEvaluator.evaluate(request, task, action0);
+        if (presponse != null) {
             return presponse;
         }
 
         // System index access
-        if (systemIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, context, actionPrivileges, user)
-            .isComplete()) {
+        presponse = systemIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, context, actionPrivileges, user);
+        if (presponse != null) {
             return presponse;
         }
 
         // Protected index access
-        if (protectedIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, presponse, mappedRoles).isComplete()) {
+        presponse = protectedIndexAccessEvaluator.evaluate(request, task, action0, requestedResolved, mappedRoles);
+        if (presponse != null) {
             return presponse;
         }
 
         // check access for point in time requests
-        if (pitPrivilegesEvaluator.evaluate(request, context, actionPrivileges, action0, presponse, irr).isComplete()) {
+        presponse = pitPrivilegesEvaluator.evaluate(request, context, actionPrivileges, action0, irr);
+        if (presponse != null) {
             return presponse;
         }
 
@@ -380,7 +378,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
 
             presponse = actionPrivileges.hasClusterPrivilege(context, action0);
 
-            if (!presponse.allowed) {
+            if (!presponse.isAllowed()) {
                 log.info(
                     "No cluster-level perm match for {} {} [Action [{}]] [RolesChecked {}]. No permissions for {}",
                     user,
@@ -412,28 +410,25 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
                             if (replaceResult.accessDenied) {
                                 auditLog.logMissingPrivileges(action0, request, task);
                             } else {
-                                presponse.allowed = true;
-                                presponse.createIndexRequestBuilder = replaceResult.createIndexRequestBuilder;
+                                return PrivilegesEvaluatorResponse.ok().with(replaceResult.createIndexRequestBuilder);
                             }
-                            return presponse;
                         }
                     }
 
                     log.debug("Allowed because we have cluster permissions for {}", action0);
 
-                    presponse.allowed = true;
-                    return presponse;
+                    return PrivilegesEvaluatorResponse.ok();
                 }
             }
         }
 
         if (checkDocAllowListHeader(user, action0, request)) {
-            presponse.allowed = true;
-            return presponse;
+            return PrivilegesEvaluatorResponse.ok();
         }
 
         // term aggregations
-        if (termsAggregationEvaluator.evaluate(requestedResolved, request, context, actionPrivileges, presponse).isComplete()) {
+        presponse = termsAggregationEvaluator.evaluate(requestedResolved, request, context, actionPrivileges);
+        if (presponse != null) {
             return presponse;
         }
 
@@ -462,9 +457,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
                     auditLog.logMissingPrivileges(action0, request, task);
                     return PrivilegesEvaluatorResponse.insufficient(action0);
                 } else {
-                    presponse.allowed = true;
-                    presponse.createIndexRequestBuilder = replaceResult.createIndexRequestBuilder;
-                    return presponse;
+                    return PrivilegesEvaluatorResponse.ok().with(replaceResult.createIndexRequestBuilder);
                 }
             }
         }
@@ -497,8 +490,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
 
         if (presponse.isAllowed()) {
             if (checkFilteredAliases(requestedResolved, action0, isDebugEnabled)) {
-                presponse.allowed = false;
-                return presponse;
+                return PrivilegesEvaluatorResponse.insufficient(action0);
             }
 
             log.debug("Allowed because we have all indices permissions for {}", action0);
@@ -607,7 +599,8 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             || (action0.startsWith(MultiSearchAction.NAME))
             || (action0.equals(MultiTermVectorsAction.NAME))
             || (action0.equals(ReindexAction.NAME))
-            || (action0.equals(RenderSearchTemplateAction.NAME)));
+            || (action0.equals(RenderSearchTemplateAction.NAME))
+            || !action0.startsWith("indices:"));
     }
 
     private boolean checkFilteredAliases(Resolved requestedResolved, String action, boolean isDebugEnabled) {

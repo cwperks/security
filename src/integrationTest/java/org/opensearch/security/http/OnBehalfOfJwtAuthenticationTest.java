@@ -20,7 +20,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.crypto.SecretKey;
 
-import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.message.BasicHeader;
 import org.apache.http.HttpStatus;
@@ -53,15 +52,15 @@ import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_R
 import static org.opensearch.test.framework.TestSecurityConfig.AuthcDomain.AUTHC_HTTPBASIC_INTERNAL;
 import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
 
-@RunWith(com.carrotsearch.randomizedtesting.RandomizedRunner.class)
-@ThreadLeakScope(ThreadLeakScope.Scope.NONE)
+@RunWith(org.junit.runners.JUnit4.class)
 public class OnBehalfOfJwtAuthenticationTest {
 
     public static final String POINTER_USERNAME = "/user_name";
 
     static final TestSecurityConfig.User ADMIN_USER = new TestSecurityConfig.User("admin").roles(ALL_ACCESS);
 
-    private static final String CREATE_OBO_TOKEN_PATH = "_plugins/_security/api/generateonbehalfoftoken";
+    private static final String CREATE_OBO_TOKEN_PATH = "_plugins/_security/api/obo/token";
+    private static final String DEPRECATED_OBO_TOKEN_PATH = "_plugins/_security/api/generateonbehalfoftoken";
     private static final String signingKey = Base64.getEncoder()
         .encodeToString(
             "jwt signing key for an on behalf of token authentication backend for testing of OBO authentication".getBytes(
@@ -80,7 +79,7 @@ public class OnBehalfOfJwtAuthenticationTest {
     public static final String DEFAULT_PASSWORD = "secret";
     public static final String NEW_PASSWORD = "testPassword123!!";
     public static final String OBO_TOKEN_REASON = "{\"description\":\"Test generation\"}";
-    public static final String OBO_ENDPOINT_PREFIX = "_plugins/_security/api/generateonbehalfoftoken";
+    public static final String OBO_ENDPOINT_PREFIX = "_plugins/_security/api/obo/token";
     public static final String OBO_DESCRIPTION = "{\"description\":\"Testing\", \"service\":\"self-issued\"}";
 
     public static final String OBO_DESCRIPTION_WITH_INVALID_DURATIONSECONDS =
@@ -191,6 +190,32 @@ public class OnBehalfOfJwtAuthenticationTest {
     }
 
     @Test
+    public void nonAdminUserWithOboPermissionCanCreateTokenViaNewRoute() {
+        try (TestRestClient client = cluster.getRestClient(OBO_USER)) {
+            TestRestClient.HttpResponse response = client.postJson(CREATE_OBO_TOKEN_PATH, OBO_TOKEN_REASON);
+            response.assertStatusCode(HttpStatus.SC_OK);
+            assertThat(response.getTextFromJsonBody("/authenticationToken"), notNullValue());
+        }
+    }
+
+    @Test
+    public void nonAdminUserWithOboPermissionCanCreateTokenViaDeprecatedRoute() {
+        try (TestRestClient client = cluster.getRestClient(OBO_USER)) {
+            TestRestClient.HttpResponse response = client.postJson(DEPRECATED_OBO_TOKEN_PATH, OBO_TOKEN_REASON);
+            response.assertStatusCode(HttpStatus.SC_OK);
+            assertThat(response.getTextFromJsonBody("/authenticationToken"), notNullValue());
+        }
+    }
+
+    @Test
+    public void nonAdminUserWithoutOboPermissionIsRejectedOnDeprecatedRoute() {
+        try (TestRestClient client = cluster.getRestClient(OBO_USER_NO_PERM)) {
+            TestRestClient.HttpResponse response = client.postJson(DEPRECATED_OBO_TOKEN_PATH, OBO_TOKEN_REASON);
+            response.assertStatusCode(HttpStatus.SC_UNAUTHORIZED);
+        }
+    }
+
+    @Test
     public void shouldNotAuthenticateForNonAdminUserWithoutOBOPermission() {
         try (TestRestClient client = cluster.getRestClient(OBO_USER_NO_PERM)) {
             assertThat(client.post(OBO_ENDPOINT_PREFIX).getStatusCode(), equalTo(HttpStatus.SC_UNAUTHORIZED));
@@ -205,7 +230,7 @@ public class OnBehalfOfJwtAuthenticationTest {
 
         Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(oboToken).getPayload();
 
-        Object er = claims.get("er");
+        Object er = claims.get("encrypted_roles");
         EncryptionDecryptionUtil encryptionDecryptionUtil = new EncryptionDecryptionUtil(encryptionKey);
         String rolesClaim = encryptionDecryptionUtil.decrypt(er.toString());
         Set<String> roles = Arrays.stream(rolesClaim.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
