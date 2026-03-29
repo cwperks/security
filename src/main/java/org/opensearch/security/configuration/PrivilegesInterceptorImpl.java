@@ -74,7 +74,8 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
         "indices:data/read/search",
         "indices:data/read/msearch",
         "indices:data/read/mget",
-        "indices:data/read/mget[shard]"
+        "indices:data/read/mget[shard]",
+        "osd:admin/advanced_settings/get"
     );
 
     protected final Logger log = LogManager.getLogger(this.getClass());
@@ -234,10 +235,19 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
     }
 
     static TenantPrivileges.ActionType getActionTypeForAction(String action, ActionRequest request) {
-        if (request instanceof WriteAdvancedSettingsRequest wasa) {
-            if (wasa.isCreateOperation()) {
-                return TenantPrivileges.ActionType.READ;
-            } else {
+        if ("osd:admin/advanced_settings/write".equals(action)) {
+            if (request instanceof WriteAdvancedSettingsRequest wasa) {
+                return wasa.getOperationType() == WriteAdvancedSettingsRequest.OperationType.CREATE
+                    ? TenantPrivileges.ActionType.READ
+                    : TenantPrivileges.ActionType.ADMIN;
+            }
+
+            try {
+                Object operationType = request.getClass().getMethod("getOperationType").invoke(request);
+                return "CREATE".equals(String.valueOf(operationType))
+                    ? TenantPrivileges.ActionType.READ
+                    : TenantPrivileges.ActionType.ADMIN;
+            } catch (ReflectiveOperationException e) {
                 return TenantPrivileges.ActionType.ADMIN;
             }
         }
