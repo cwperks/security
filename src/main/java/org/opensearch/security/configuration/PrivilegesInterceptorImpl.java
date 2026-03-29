@@ -237,16 +237,12 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
     static TenantPrivileges.ActionType getActionTypeForAction(String action, ActionRequest request) {
         if ("osd:admin/advanced_settings/write".equals(action)) {
             if (request instanceof WriteAdvancedSettingsRequest wasa) {
-                return wasa.getOperationType() == WriteAdvancedSettingsRequest.OperationType.CREATE
-                    ? TenantPrivileges.ActionType.READ
-                    : TenantPrivileges.ActionType.ADMIN;
+                return TenantPrivileges.ActionType.ADMIN;
             }
 
             try {
-                Object operationType = request.getClass().getMethod("getOperationType").invoke(request);
-                return "CREATE".equals(String.valueOf(operationType))
-                    ? TenantPrivileges.ActionType.READ
-                    : TenantPrivileges.ActionType.ADMIN;
+                request.getClass().getMethod("getOperationType").invoke(request);
+                return TenantPrivileges.ActionType.ADMIN;
             } catch (ReflectiveOperationException e) {
                 return TenantPrivileges.ActionType.ADMIN;
             }

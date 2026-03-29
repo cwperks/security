@@ -33,7 +33,7 @@ public class PrivilegesInterceptorImplTest {
     }
 
     @Test
-    public void shouldTreatAdvancedSettingsCreateAsRead() {
+    public void shouldTreatAdvancedSettingsCreateAsAdmin() {
         WriteAdvancedSettingsRequest request = new WriteAdvancedSettingsRequest(
             ".kibana_1",
             "config:3.0.0",
@@ -46,7 +46,7 @@ public class PrivilegesInterceptorImplTest {
             request
         );
 
-        assertThat(actionType, is(TenantPrivileges.ActionType.READ));
+        assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
     }
 
     @Test
