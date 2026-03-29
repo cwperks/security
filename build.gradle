@@ -696,7 +696,6 @@ dependencies {
     implementation "com.github.seancfoley:ipaddress:5.6.2"
     compileOnly "org.opensearch.plugin:workload-management-wlm-spi:${opensearch_version}"
     compileOnly "org.opensearch.plugin:autotagging-commons-spi:${opensearch_version}"
-    implementation "org.opensearch.plugin:opensearch-dashboards:${opensearch_version}"
     compileOnly "org.opensearch.plugin:transport-grpc-spi:${opensearch_version}"
     compileOnly "io.grpc:grpc-api:${versions.grpc}"
 

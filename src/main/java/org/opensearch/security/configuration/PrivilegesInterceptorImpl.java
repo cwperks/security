@@ -46,7 +46,6 @@ import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.IndexNameExpressionResolver;
 import org.opensearch.cluster.service.ClusterService;
-import org.opensearch.dashboards.action.WriteAdvancedSettingsRequest;
 import org.opensearch.security.privileges.DashboardsMultiTenancyConfiguration;
 import org.opensearch.security.privileges.DocumentAllowList;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
@@ -236,16 +235,7 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
 
     static TenantPrivileges.ActionType getActionTypeForAction(String action, ActionRequest request) {
         if ("osd:admin/advanced_settings/write".equals(action)) {
-            if (request instanceof WriteAdvancedSettingsRequest wasa) {
-                return TenantPrivileges.ActionType.ADMIN;
-            }
-
-            try {
-                request.getClass().getMethod("getOperationType").invoke(request);
-                return TenantPrivileges.ActionType.ADMIN;
-            } catch (ReflectiveOperationException e) {
-                return TenantPrivileges.ActionType.ADMIN;
-            }
+            return TenantPrivileges.ActionType.ADMIN;
         }
         if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
             return TenantPrivileges.ActionType.READ;

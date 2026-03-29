@@ -8,12 +8,9 @@
 
 package org.opensearch.security.configuration;
 
-import java.util.Map;
-
 import org.junit.Test;
 
 import org.opensearch.action.ActionRequest;
-import org.opensearch.dashboards.action.WriteAdvancedSettingsRequest;
 import org.opensearch.security.privileges.TenantPrivileges;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -34,12 +31,7 @@ public class PrivilegesInterceptorImplTest {
 
     @Test
     public void shouldTreatAdvancedSettingsCreateAsAdmin() {
-        WriteAdvancedSettingsRequest request = new WriteAdvancedSettingsRequest(
-            ".kibana_1",
-            "config:3.0.0",
-            Map.of("type", "config", "config", Map.of("buildNum", 1)),
-            WriteAdvancedSettingsRequest.OperationType.CREATE
-        );
+        ActionRequest request = advancedSettingsWriteRequest("CREATE");
 
         TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
             "osd:admin/advanced_settings/write",
@@ -51,12 +43,7 @@ public class PrivilegesInterceptorImplTest {
 
     @Test
     public void shouldTreatAdvancedSettingsUpdateAsAdmin() {
-        WriteAdvancedSettingsRequest request = new WriteAdvancedSettingsRequest(
-            ".kibana_1",
-            "config:3.0.0",
-            Map.of("type", "config", "config", Map.of("buildNum", 1)),
-            WriteAdvancedSettingsRequest.OperationType.UPDATE
-        );
+        ActionRequest request = advancedSettingsWriteRequest("UPDATE");
 
         TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
             "osd:admin/advanced_settings/write",
@@ -68,7 +55,18 @@ public class PrivilegesInterceptorImplTest {
 
     @Test
     public void shouldTreatAdvancedSettingsUpdateAsAdminViaReflectionFallback() {
-        ActionRequest request = new ActionRequest() {
+        ActionRequest request = advancedSettingsWriteRequest("UPDATE");
+
+        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
+            "osd:admin/advanced_settings/write",
+            request
+        );
+
+        assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
+    }
+
+    private ActionRequest advancedSettingsWriteRequest(String operationType) {
+        return new ActionRequest() {
             @Override
             public org.opensearch.action.ActionRequestValidationException validate() {
                 return null;
@@ -79,17 +77,10 @@ public class PrivilegesInterceptorImplTest {
                 return new Object() {
                     @Override
                     public String toString() {
-                        return "UPDATE";
+                        return operationType;
                     }
                 };
             }
         };
-
-        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
-            "osd:admin/advanced_settings/write",
-            request
-        );
-
-        assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
     }
 }
