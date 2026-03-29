@@ -142,7 +142,7 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
             && resolveToDashboardsIndexOrAlias(requestedResolved, dashboardsIndexName);
         final boolean isTraceEnabled = log.isTraceEnabled();
 
-        TenantPrivileges.ActionType actionType = getActionTypeForAction(action, request);
+        TenantPrivileges.ActionType actionType = getActionTypeForAction(action);
 
         if (requestedTenant == null || requestedTenant.length() == 0) {
             if (isTraceEnabled) {

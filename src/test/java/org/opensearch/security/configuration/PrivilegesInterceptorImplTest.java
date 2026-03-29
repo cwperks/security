@@ -15,52 +15,33 @@ import org.opensearch.security.privileges.TenantPrivileges;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
 
 public class PrivilegesInterceptorImplTest {
 
     @Test
     public void shouldTreatAdvancedSettingsGetAsRead() {
-        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
-            "osd:admin/advanced_settings/get",
-            mock(ActionRequest.class)
-        );
+        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction("osd:admin/advanced_settings/get");
 
         assertThat(actionType, is(TenantPrivileges.ActionType.READ));
     }
 
     @Test
     public void shouldTreatAdvancedSettingsCreateAsAdmin() {
-        ActionRequest request = advancedSettingsWriteRequest("CREATE");
-
-        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
-            "osd:admin/advanced_settings/write",
-            request
-        );
+        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction("osd:admin/advanced_settings/write");
 
         assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
     }
 
     @Test
     public void shouldTreatAdvancedSettingsUpdateAsAdmin() {
-        ActionRequest request = advancedSettingsWriteRequest("UPDATE");
-
-        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
-            "osd:admin/advanced_settings/write",
-            request
-        );
+        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction("osd:admin/advanced_settings/write");
 
         assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
     }
 
     @Test
     public void shouldTreatAdvancedSettingsUpdateAsAdminViaReflectionFallback() {
-        ActionRequest request = advancedSettingsWriteRequest("UPDATE");
-
-        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction(
-            "osd:admin/advanced_settings/write",
-            request
-        );
+        TenantPrivileges.ActionType actionType = PrivilegesInterceptorImpl.getActionTypeForAction("osd:admin/advanced_settings/write");
 
         assertThat(actionType, is(TenantPrivileges.ActionType.ADMIN));
     }
