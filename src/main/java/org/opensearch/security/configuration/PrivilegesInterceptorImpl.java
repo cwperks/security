@@ -233,11 +233,10 @@ public class PrivilegesInterceptorImpl extends PrivilegesInterceptor {
         documentAllowList.applyTo(threadPool.getThreadContext());
     }
 
-    static TenantPrivileges.ActionType getActionTypeForAction(String action, ActionRequest request) {
+    static TenantPrivileges.ActionType getActionTypeForAction(String action) {
         if ("osd:admin/advanced_settings/write".equals(action)) {
             return TenantPrivileges.ActionType.ADMIN;
-        }
-        if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
+        } else if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
             return TenantPrivileges.ActionType.READ;
         } else {
             return TenantPrivileges.ActionType.WRITE;
