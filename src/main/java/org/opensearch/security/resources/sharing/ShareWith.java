@@ -116,7 +116,9 @@ public class ShareWith implements ToXContentFragment, NamedWriteable {
                 merged.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).addAll(entry.getValue());
             }
         }
-        return new ShareWith(Map.of(targetAccessLevel, new Recipients(merged)), generalAccess);
+        // Remap general_access to the target default access level too
+        String remappedGeneralAccess = generalAccess != null ? targetAccessLevel : null;
+        return new ShareWith(merged.isEmpty() ? Map.of() : Map.of(targetAccessLevel, new Recipients(merged)), remappedGeneralAccess);
     }
 
     @Override

@@ -508,12 +508,21 @@ public class ResourceAccessHandler {
                 String childId = entry.getKey();
                 String childType = entry.getValue();
                 String childIndex = resourcePluginInfo.indexByType(childType);
+                // Remap access levels if child type differs from parent type
+                ShareWith childTarget = target;
+                if (!childType.equals(parentType)) {
+                    String defaultAccessLevel = resourcePluginInfo.getDefaultAccessLevel(childType);
+                    if (defaultAccessLevel != null) {
+                        childTarget = target.remapToAccessLevel(defaultAccessLevel);
+                    }
+                }
+                ShareWith finalChildTarget = childTarget;
                 resourceSharingIndexHandler.share(
                     childId,
                     childIndex,
-                    target,
+                    childTarget,
                     ActionListener.wrap(
-                        result -> cascadeShareToChildren(childId, childType, target, groupListener),
+                        result -> cascadeShareToChildren(childId, childType, finalChildTarget, groupListener),
                         e -> groupListener.onResponse(null)
                     )
                 );
