@@ -660,7 +660,13 @@ public class ResourceSharingIndexHandler {
             try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
                 SearchRequest searchRequest = new SearchRequest(sharingIndex);
                 searchRequest.source(
-                    new SearchSourceBuilder().size(1000).query(QueryBuilders.termQuery("parent_id.keyword", parentId)).fetchSource(false)
+                    new SearchSourceBuilder().size(1000)
+                        .query(
+                            QueryBuilders.boolQuery()
+                                .must(QueryBuilders.termQuery("parent_id.keyword", parentId))
+                                .must(QueryBuilders.termQuery("resource_type.keyword", childProvider.resourceType()))
+                        )
+                        .fetchSource(false)
                 );
 
                 client.search(searchRequest, ActionListener.wrap(response -> {

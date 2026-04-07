@@ -186,7 +186,7 @@ public class ResourceAccessHandler {
 
             // no matching access level, either recurse up or fail fast
             if (accessLevels.isEmpty()) {
-                if (sharingInfo.getParentId() != null) {
+                if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                     hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
                 } else {
                     listener.onResponse(false);
@@ -204,7 +204,7 @@ public class ResourceAccessHandler {
                 return;
             }
 
-            if (sharingInfo.getParentId() != null) {
+            if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                 hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
             } else {
                 listener.onResponse(false);
@@ -394,6 +394,56 @@ public class ResourceAccessHandler {
             } else {
                 directAccessLevels.addAll(sharingInfo.getAccessLevelsForUser(user));
                 allowedActions.addAll(resourcePluginInfo.flattenedForType(resourceType).resolve(directAccessLevels));
+
+                // Also resolve parent's access — parent may grant additional actions
+                if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
+                    String parentType = sharingInfo.getParentType();
+                    String parentIndex = resourcePluginInfo.indexByType(parentType);
+                    if (parentIndex != null) {
+                        resourceSharingIndexHandler.fetchSharingInfo(
+                            parentIndex,
+                            sharingInfo.getParentId(),
+                            ActionListener.wrap(parentSharing -> {
+                                if (parentSharing != null) {
+                                    Set<String> parentAccessLevels = parentSharing.getAccessLevelsForUser(user);
+                                    allowedActions.addAll(resourcePluginInfo.flattenedForType(parentType).resolve(parentAccessLevels));
+                                }
+                                if (allowedActions.isEmpty()) {
+                                    listener.onFailure(
+                                        new OpenSearchStatusException(
+                                            "Not authorized to access resource [" + resourceId + "].",
+                                            RestStatus.FORBIDDEN
+                                        )
+                                    );
+                                    return;
+                                }
+                                String effectiveAccessLevel = resolveEffectiveAccessLevel(resourceType, directAccessLevels);
+                                boolean canShare = allowedActions.contains(ShareAction.NAME)
+                                    || resourceSharingIndexHandler.canUserShare(user, false, sharingInfo, resourceType);
+                                listener.onResponse(
+                                    new ResolvedResourceAccess(
+                                        resourceId,
+                                        resourceType,
+                                        isOwner,
+                                        isAdmin,
+                                        effectiveAccessLevel,
+                                        Set.copyOf(directAccessLevels),
+                                        Set.copyOf(allowedActions),
+                                        canShare
+                                    )
+                                );
+                            },
+                                e -> listener.onFailure(
+                                    new OpenSearchStatusException(
+                                        "Not authorized to access resource [" + resourceId + "].",
+                                        RestStatus.FORBIDDEN
+                                    )
+                                )
+                            )
+                        );
+                        return;
+                    }
+                }
             }
 
             if (allowedActions.isEmpty() && !isAdmin && !isOwner) {
@@ -491,6 +541,7 @@ public class ResourceAccessHandler {
 
     private void cascadeShareToChildren(String parentId, String parentType, ShareWith target, ActionListener<Void> listener) {
         List<ResourceProvider> childProviders = resourcePluginInfo.getChildProviders(parentType);
+        LOGGER.info("cascadeShareToChildren: parentId={} parentType={} childProviders={}", parentId, parentType, childProviders.size());
         if (childProviders.isEmpty()) {
             listener.onResponse(null);
             return;
@@ -512,8 +563,16 @@ public class ResourceAccessHandler {
                 ShareWith childTarget = target;
                 if (!childType.equals(parentType)) {
                     String defaultAccessLevel = resourcePluginInfo.getDefaultAccessLevel(childType);
+                    LOGGER.info(
+                        "cascadeShareToChildren: childId={} childType={} parentType={} defaultAccessLevel={}",
+                        childId,
+                        childType,
+                        parentType,
+                        defaultAccessLevel
+                    );
                     if (defaultAccessLevel != null) {
                         childTarget = target.remapToAccessLevel(defaultAccessLevel);
+                        LOGGER.info("cascadeShareToChildren: remapped generalAccess to {}", childTarget.getGeneralAccess());
                     }
                 }
                 ShareWith finalChildTarget = childTarget;
@@ -557,13 +616,22 @@ public class ResourceAccessHandler {
                 String childId = entry.getKey();
                 String childType = entry.getValue();
                 String childIndex = resourcePluginInfo.indexByType(childType);
+                // Remap general_access if child type differs from parent type
+                String childGeneralAccess = generalAccess;
+                if (generalAccessPresent && generalAccess != null && !childType.equals(parentType)) {
+                    String defaultAccessLevel = resourcePluginInfo.getDefaultAccessLevel(childType);
+                    if (defaultAccessLevel != null) {
+                        childGeneralAccess = defaultAccessLevel;
+                    }
+                }
+                String finalChildGeneralAccess = childGeneralAccess;
                 resourceSharingIndexHandler.patchSharingInfo(
                     childId,
                     childIndex,
                     add,
                     revoke,
                     generalAccessPresent,
-                    generalAccess,
+                    childGeneralAccess,
                     ActionListener.wrap(
                         result -> cascadePatchToChildren(
                             childId,
@@ -571,7 +639,7 @@ public class ResourceAccessHandler {
                             add,
                             revoke,
                             generalAccessPresent,
-                            generalAccess,
+                            finalChildGeneralAccess,
                             groupListener
                         ),
                         e -> groupListener.onResponse(null)
