@@ -568,6 +568,13 @@ public final class TestUtils {
             }
         }
 
+        public TestRestClient.HttpResponse moveResourceToGroup(String resourceId, TestSecurityConfig.User user, String groupId) {
+            try (TestRestClient client = cluster.getRestClient(user)) {
+                String payload = "{\"name\": \"sample\", \"resource_type\": \"" + RESOURCE_TYPE + "\", \"group_id\": \"" + groupId + "\"}";
+                return client.postJson(SAMPLE_RESOURCE_UPDATE_ENDPOINT + "/" + resourceId, payload);
+            }
+        }
+
         public TestRestClient.HttpResponse updateResourceGroup(String resourceGroupId, TestSecurityConfig.User user, String newName) {
             try (TestRestClient client = cluster.getRestClient(user)) {
                 String updatePayload = "{" + "\"name\": \"" + newName + "\"}";

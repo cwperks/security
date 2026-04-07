@@ -8,8 +8,11 @@
 
 package org.opensearch.sample.resourcegroup;
 
+import java.time.Duration;
+
 import com.carrotsearch.randomizedtesting.RandomizedRunner;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -110,6 +113,42 @@ public class ResourceHierarchyTests {
 
         // group itself remains inaccessible
         forbidden(() -> api.getResourceGroup(resourceGroupId, FULL_ACCESS_USER));
+    }
+
+    @Test
+    public void testSharingGroupCascadesToExistingChildren() throws Exception {
+        // Before sharing the group, child is inaccessible to FULL_ACCESS_USER
+        forbidden(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+
+        // Share the group — cascade should propagate to the child
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Child should now be accessible via cascaded sharing
+        ok(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+    }
+
+    @Test
+    public void testMovingUngroupedResourceIntoSharedGroupInheritsAccess() throws Exception {
+        // Create an ungrouped resource
+        String ungroupedId = api.createSampleResourceAs(USER_ADMIN);
+        api.awaitSharingEntry(ungroupedId);
+
+        // Share the group with FULL_ACCESS_USER
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Ungrouped resource is not accessible to FULL_ACCESS_USER
+        forbidden(() -> api.getResource(ungroupedId, FULL_ACCESS_USER));
+
+        // Move the resource into the shared group
+        ok(() -> api.moveResourceToGroup(ungroupedId, USER_ADMIN, resourceGroupId));
+
+        // Wait for sharing to propagate via index listener
+        Awaitility.await("Wait for ungrouped resource to inherit group sharing")
+            .pollInterval(Duration.ofMillis(500))
+            .atMost(Duration.ofSeconds(10))
+            .untilAsserted(() -> {
+                ok(() -> api.getResource(ungroupedId, FULL_ACCESS_USER));
+            });
     }
 
 }
