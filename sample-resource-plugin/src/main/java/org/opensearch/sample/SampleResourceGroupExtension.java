@@ -32,6 +32,16 @@ public class SampleResourceGroupExtension implements ResourceSharingExtension {
             public String typeField() {
                 return "resource_type";
             }
+
+            @Override
+            public String parentType() {
+                return RESOURCE_GROUP_TYPE;
+            }
+
+            @Override
+            public String parentIdField() {
+                return "group_id";
+            }
         });
     }
 

@@ -195,4 +195,78 @@ public class ResourceHierarchyTests {
             });
     }
 
+    @Test
+    public void testSharingGrandparentCascadesToGrandchildren() throws Exception {
+        // Create nested structure: grandparent group > child group > resource
+        String grandparentId = api.createSampleResourceGroupAs(USER_ADMIN);
+        api.awaitSharingEntry(grandparentId);
+        String childGroupId = api.createNestedResourceGroupAs(USER_ADMIN, grandparentId);
+        api.awaitSharingEntry(childGroupId);
+        String grandchildId = api.createSampleResourceWithGroupAs(USER_ADMIN, childGroupId);
+        api.awaitSharingEntry(grandchildId);
+
+        // Nothing shared yet
+        forbidden(() -> api.getResourceGroup(grandparentId, FULL_ACCESS_USER));
+        forbidden(() -> api.getResourceGroup(childGroupId, FULL_ACCESS_USER));
+        forbidden(() -> api.getResource(grandchildId, FULL_ACCESS_USER));
+
+        // Share grandparent — should cascade to child group and grandchild resource
+        ok(() -> api.shareResourceGroup(grandparentId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        ok(() -> api.getResourceGroup(grandparentId, FULL_ACCESS_USER));
+        ok(() -> api.getResourceGroup(childGroupId, FULL_ACCESS_USER));
+        ok(() -> api.getResource(grandchildId, FULL_ACCESS_USER));
+    }
+
+    @Test
+    public void testRevokingGrandparentCascadesToGrandchildren() throws Exception {
+        // Create nested structure and share grandparent
+        String grandparentId = api.createSampleResourceGroupAs(USER_ADMIN);
+        api.awaitSharingEntry(grandparentId);
+        String childGroupId = api.createNestedResourceGroupAs(USER_ADMIN, grandparentId);
+        api.awaitSharingEntry(childGroupId);
+        String grandchildId = api.createSampleResourceWithGroupAs(USER_ADMIN, childGroupId);
+        api.awaitSharingEntry(grandchildId);
+
+        ok(() -> api.shareResourceGroup(grandparentId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        ok(() -> api.getResource(grandchildId, FULL_ACCESS_USER));
+
+        // Revoke grandparent — should cascade down
+        ok(() -> api.revokeResourceGroup(grandparentId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        forbidden(() -> api.getResourceGroup(grandparentId, FULL_ACCESS_USER));
+        forbidden(() -> api.getResourceGroup(childGroupId, FULL_ACCESS_USER));
+        forbidden(() -> api.getResource(grandchildId, FULL_ACCESS_USER));
+    }
+
+    @Test
+    public void testOwnerRetainsAccessAfterRevokeCascade() throws Exception {
+        // Share group, then revoke — owner (admin) should still have access
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+        ok(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+
+        ok(() -> api.revokeResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Owner always retains access
+        ok(() -> api.getResourceGroup(resourceGroupId, USER_ADMIN));
+        ok(() -> api.getResource(resourceId, USER_ADMIN));
+
+        // Shared user loses access
+        forbidden(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+    }
+
+    @Test
+    public void testCreatingResourceInSharedGroupInheritsAccess() throws Exception {
+        // Share the group first
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Create a NEW resource in the shared group
+        String newResourceId = api.createSampleResourceWithGroupAs(USER_ADMIN, resourceGroupId);
+        api.awaitSharingEntry(newResourceId);
+
+        // New resource should be accessible via parent walk-up
+        ok(() -> api.getResource(newResourceId, FULL_ACCESS_USER));
+    }
+
 }

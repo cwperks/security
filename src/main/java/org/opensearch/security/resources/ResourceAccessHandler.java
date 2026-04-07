@@ -500,13 +500,23 @@ public class ResourceAccessHandler {
                 listener.onResponse(null);
                 return;
             }
-            GroupedActionListener<ResourceSharing> groupListener = new GroupedActionListener<>(
+            GroupedActionListener<Void> groupListener = new GroupedActionListener<>(
                 ActionListener.wrap(results -> listener.onResponse(null), listener::onFailure),
                 childIds.size()
             );
             for (var entry : childIds.entrySet()) {
-                String childIndex = resourcePluginInfo.indexByType(entry.getValue());
-                resourceSharingIndexHandler.share(entry.getKey(), childIndex, target, groupListener);
+                String childId = entry.getKey();
+                String childType = entry.getValue();
+                String childIndex = resourcePluginInfo.indexByType(childType);
+                resourceSharingIndexHandler.share(
+                    childId,
+                    childIndex,
+                    target,
+                    ActionListener.wrap(
+                        result -> cascadeShareToChildren(childId, childType, target, groupListener),
+                        e -> groupListener.onResponse(null)
+                    )
+                );
             }
         }, listener::onFailure));
     }
@@ -530,20 +540,33 @@ public class ResourceAccessHandler {
                 listener.onResponse(null);
                 return;
             }
-            GroupedActionListener<ResourceSharing> groupListener = new GroupedActionListener<>(
+            GroupedActionListener<Void> groupListener = new GroupedActionListener<>(
                 ActionListener.wrap(results -> listener.onResponse(null), listener::onFailure),
                 childIds.size()
             );
             for (var entry : childIds.entrySet()) {
-                String childIndex = resourcePluginInfo.indexByType(entry.getValue());
+                String childId = entry.getKey();
+                String childType = entry.getValue();
+                String childIndex = resourcePluginInfo.indexByType(childType);
                 resourceSharingIndexHandler.patchSharingInfo(
-                    entry.getKey(),
+                    childId,
                     childIndex,
                     add,
                     revoke,
                     generalAccessPresent,
                     generalAccess,
-                    groupListener
+                    ActionListener.wrap(
+                        result -> cascadePatchToChildren(
+                            childId,
+                            childType,
+                            add,
+                            revoke,
+                            generalAccessPresent,
+                            generalAccess,
+                            groupListener
+                        ),
+                        e -> groupListener.onResponse(null)
+                    )
                 );
             }
         }, listener::onFailure));
