@@ -103,19 +103,43 @@ public class ResourceIndexListener implements IndexingOperationListener {
                 );
             }, e -> { log.debug(e.getMessage()); });
 
-            // Check if the resource was moved into a parent (ungrouped -> grouped)
+            // Check if the resource's parent changed
             if (provider.parentType() != null && provider.parentIdField() != null) {
                 String newParentId = ResourcePluginInfo.extractFieldFromIndexOp(provider.parentIdField(), index);
-                log.info(
-                    "postIndex update: resource={} parentIdField={} newParentId={}",
-                    resourceId,
-                    provider.parentIdField(),
-                    newParentId
-                );
-                if (newParentId != null && !newParentId.isBlank()) {
-                    inheritParentSharing(resourceId, resourceIndex, resourceType, newParentId, provider.parentType(), visibilityListener);
-                    return;
-                }
+                String normalizedNewParentId = (newParentId == null || newParentId.isBlank()) ? null : newParentId;
+
+                // Compare with the sharing record's current parentId to detect actual changes
+                resourceSharingIndexHandler.fetchSharingInfo(resourceIndex, resourceId, ActionListener.wrap(sharingInfo -> {
+                    String currentParentId = (sharingInfo != null) ? sharingInfo.getParentId() : null;
+                    String normalizedCurrentParentId = (currentParentId == null || currentParentId.isBlank()) ? null : currentParentId;
+
+                    boolean parentChanged = !java.util.Objects.equals(normalizedNewParentId, normalizedCurrentParentId);
+                    if (!parentChanged) {
+                        // Parent didn't change — just update visibility normally
+                        resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, visibilityListener);
+                        return;
+                    }
+
+                    log.info(
+                        "postIndex update: resource={} parentId changed from {} to {}",
+                        resourceId,
+                        normalizedCurrentParentId,
+                        normalizedNewParentId
+                    );
+                    if (normalizedNewParentId != null) {
+                        inheritParentSharing(
+                            resourceId,
+                            resourceIndex,
+                            resourceType,
+                            normalizedNewParentId,
+                            provider.parentType(),
+                            visibilityListener
+                        );
+                    } else {
+                        revertToPrivate(resourceId, resourceIndex, visibilityListener);
+                    }
+                }, e -> { resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, visibilityListener); }));
+                return;
             }
 
             this.resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, visibilityListener);
@@ -159,6 +183,21 @@ public class ResourceIndexListener implements IndexingOperationListener {
      * When a resource is moved into a parent (e.g. document moved into a folder),
      * copy the parent's sharing configuration to the child.
      */
+    /**
+     * Reverts a resource to private (owner-only) by clearing its share_with.
+     * Used when a resource is moved out of a shared folder to ungrouped.
+     */
+    private void revertToPrivate(String resourceId, String resourceIndex, ActionListener<Void> then) {
+        log.info("revertToPrivate: clearing sharing for resource {}", resourceId);
+        resourceSharingIndexHandler.replaceSharing(resourceId, resourceIndex, null, null, ActionListener.wrap(result -> {
+            log.info("revertToPrivate: successfully reverted resource {} to private", resourceId);
+            resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, then);
+        }, e -> {
+            log.warn("revertToPrivate: failed for resource {}: {}", resourceId, e.getMessage());
+            resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, then);
+        }));
+    }
+
     private void inheritParentSharing(
         String childResourceId,
         String childResourceIndex,
@@ -188,25 +227,54 @@ public class ResourceIndexListener implements IndexingOperationListener {
         );
         resourceSharingIndexHandler.fetchSharingInfo(parentIndex, parentId, ActionListener.wrap(parentSharing -> {
             if (parentSharing == null) {
-                log.info("inheritParentSharing: no sharing record found for parent {}", parentId);
-                resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
+                log.info("inheritParentSharing: no sharing record found for parent {}, clearing child sharing", parentId);
+                resourceSharingIndexHandler.replaceSharing(
+                    childResourceId,
+                    childResourceIndex,
+                    null,
+                    parentId,
+                    ActionListener.wrap(
+                        r -> resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then),
+                        e -> resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then)
+                    )
+                );
                 return;
             }
             if (parentSharing.getShareWith() == null || parentSharing.getShareWith().isPrivate()) {
-                log.info("inheritParentSharing: parent {} has no sharing configured", parentId);
-                resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
+                log.info("inheritParentSharing: parent {} has no sharing configured, clearing child sharing", parentId);
+                resourceSharingIndexHandler.replaceSharing(
+                    childResourceId,
+                    childResourceIndex,
+                    null,
+                    parentId,
+                    ActionListener.wrap(
+                        r -> resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then),
+                        e -> resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then)
+                    )
+                );
                 return;
             }
             log.info("inheritParentSharing: propagating sharing from parent {} to child {}", parentId, childResourceId);
             ShareWith childShareWith = parentSharing.getShareWith().remapToAccessLevel(childDefaultAccessLevel);
-            resourceSharingIndexHandler.share(childResourceId, childResourceIndex, childShareWith, ActionListener.wrap(result -> {
-                log.info("inheritParentSharing: successfully inherited sharing for {}", childResourceId);
-                // Now update visibility AFTER sharing is written
-                resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
-            }, e -> {
-                log.warn("Failed to inherit parent sharing for resource {} from parent {}: {}", childResourceId, parentId, e.getMessage());
-                resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
-            }));
+            resourceSharingIndexHandler.replaceSharing(
+                childResourceId,
+                childResourceIndex,
+                childShareWith,
+                parentId,
+                ActionListener.wrap(result -> {
+                    log.info("inheritParentSharing: successfully inherited sharing for {}", childResourceId);
+                    // Now update visibility AFTER sharing is written
+                    resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
+                }, e -> {
+                    log.warn(
+                        "Failed to inherit parent sharing for resource {} from parent {}: {}",
+                        childResourceId,
+                        parentId,
+                        e.getMessage()
+                    );
+                    resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);
+                })
+            );
         }, e -> {
             log.warn("Could not fetch parent sharing for {}: {}", parentId, e.getMessage());
             resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(childResourceId, childResourceIndex, then);

@@ -121,6 +121,17 @@ public class ResourceSharing implements ToXContentFragment, NamedWriteable {
         return parentId;
     }
 
+    public void setParentId(String parentId) {
+        this.parentId = parentId;
+    }
+
+    /**
+     * Replaces the entire share_with, discarding previous sharing. Pass null to revert to private.
+     */
+    public void replaceShareWith(ShareWith replacement) {
+        this.shareWith = replacement != null ? replacement : new ShareWith(new HashMap<>());
+    }
+
     public void share(String accessLevel, Recipients target) {
         if (shareWith == null) {
             Map<String, Recipients> recs = new HashMap<>();

@@ -151,4 +151,48 @@ public class ResourceHierarchyTests {
             });
     }
 
+    @Test
+    public void testMovingResourceBetweenGroupsReplacesSharing() throws Exception {
+        // Create a second group and share it with a different user
+        String groupB = api.createSampleResourceGroupAs(USER_ADMIN);
+        api.awaitSharingEntry(groupB);
+
+        // Share group A with FULL_ACCESS_USER, group B is not shared with anyone extra
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Child resource is accessible via group A
+        ok(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+
+        // Move resource from group A to group B (which is not shared with FULL_ACCESS_USER)
+        ok(() -> api.moveResourceToGroup(resourceId, USER_ADMIN, groupB));
+
+        // Resource should lose group A's sharing
+        Awaitility.await("Wait for resource to lose old group sharing")
+            .pollInterval(Duration.ofMillis(500))
+            .atMost(Duration.ofSeconds(10))
+            .untilAsserted(() -> {
+                forbidden(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+            });
+    }
+
+    @Test
+    public void testMovingResourceToUngroupedRevokesInheritedSharing() throws Exception {
+        // Share the group with FULL_ACCESS_USER
+        ok(() -> api.shareResourceGroup(resourceGroupId, USER_ADMIN, FULL_ACCESS_USER, SAMPLE_GROUP_READ_ONLY));
+
+        // Child resource is accessible
+        ok(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+
+        // Move resource to ungrouped (update without group_id)
+        ok(() -> api.updateResource(resourceId, USER_ADMIN, "sample"));
+
+        // Resource should revert to private
+        Awaitility.await("Wait for resource to revert to private")
+            .pollInterval(Duration.ofMillis(500))
+            .atMost(Duration.ofSeconds(10))
+            .untilAsserted(() -> {
+                forbidden(() -> api.getResource(resourceId, FULL_ACCESS_USER));
+            });
+    }
+
 }

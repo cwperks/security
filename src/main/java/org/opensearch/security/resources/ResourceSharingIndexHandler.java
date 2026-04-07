@@ -738,6 +738,51 @@ public class ResourceSharingIndexHandler {
     }
 
     /**
+     * Replaces the share_with on a resource's sharing record, discarding any previous sharing.
+     * Used when a resource moves between parents and needs to adopt the new parent's sharing.
+     * Pass null for shareWith to revert to private (owner-only).
+     */
+    public void replaceSharing(
+        String resourceId,
+        String resourceIndex,
+        ShareWith shareWith,
+        String newParentId,
+        ActionListener<ResourceSharing> listener
+    ) {
+        StepListener<ResourceSharing> sharingInfoListener = new StepListener<>();
+        fetchSharingInfo(resourceIndex, resourceId, sharingInfoListener);
+
+        sharingInfoListener.whenComplete(sharingInfo -> {
+            if (sharingInfo == null) {
+                listener.onResponse(null);
+                return;
+            }
+            sharingInfo.replaceShareWith(shareWith);
+            sharingInfo.setParentId(newParentId);
+
+            String resourceSharingIndex = getSharingIndex(resourceIndex);
+            try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+                IndexRequest ir = client.prepareIndex(resourceSharingIndex)
+                    .setId(sharingInfo.getResourceId())
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                    .setSource(sharingInfo.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .setOpType(DocWriteRequest.OpType.INDEX)
+                    .request();
+
+                client.index(ir, ActionListener.wrap(idxResponse -> {
+                    ctx.restore();
+                    updateResourceVisibility(
+                        resourceId,
+                        resourceIndex,
+                        sharingInfo.getAllPrincipals(),
+                        ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> listener.onResponse(sharingInfo))
+                    );
+                }, listener::onFailure));
+            }
+        }, listener::onFailure);
+    }
+
+    /**
      * Fetch existing share_with, apply the patch ops in-memory, and update the sharing record.
      * Two ops are supported:
      * 1. share_with -> upgrade or downgrade access; share with new entities
