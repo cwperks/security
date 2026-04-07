@@ -33,6 +33,7 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
 
     private String name;
     private String description;
+    private String groupId;
 
     public SampleResourceGroup() throws IOException {
         super();
@@ -41,6 +42,7 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
     public SampleResourceGroup(StreamInput in) throws IOException {
         this.name = in.readString();
         this.description = in.readString();
+        this.groupId = in.readOptionalString();
     }
 
     private static final ConstructingObjectParser<SampleResourceGroup, Void> PARSER = new ConstructingObjectParser<>(
@@ -56,6 +58,7 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
             s.setName((String) a[0]);
             s.setDescription((String) a[1]);
             // ignore a[2] as we know the type
+            s.setGroupId((String) a[3]);
             return s;
         }
     );
@@ -64,6 +67,7 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
         PARSER.declareString(constructorArg(), new ParseField("name"));
         PARSER.declareStringOrNull(optionalConstructorArg(), new ParseField("description"));
         PARSER.declareStringOrNull(optionalConstructorArg(), new ParseField("resource_type"));
+        PARSER.declareStringOrNull(optionalConstructorArg(), new ParseField("group_id"));
     }
 
     public static SampleResourceGroup fromXContent(XContentParser parser) throws IOException {
@@ -75,12 +79,14 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
             .field("name", name)
             .field("description", description)
             .field("resource_type", RESOURCE_GROUP_TYPE)
+            .field("group_id", groupId)
             .endObject();
     }
 
     public void writeTo(StreamOutput out) throws IOException {
         out.writeString(name);
         out.writeString(description);
+        out.writeOptionalString(groupId);
     }
 
     public void setName(String name) {
@@ -91,8 +97,16 @@ public class SampleResourceGroup implements NamedWriteable, ToXContentObject {
         this.description = description;
     }
 
+    public void setGroupId(String groupId) {
+        this.groupId = groupId;
+    }
+
     public String getName() {
         return name;
+    }
+
+    public String getGroupId() {
+        return groupId;
     }
 
     @Override

@@ -43,6 +43,7 @@ import org.opensearch.action.search.ClearScrollRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.search.SearchResponse;
 import org.opensearch.action.search.SearchScrollRequest;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.action.support.WriteRequest;
 import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.action.update.UpdateResponse;
@@ -74,6 +75,7 @@ import org.opensearch.security.resources.sharing.Recipient;
 import org.opensearch.security.resources.sharing.Recipients;
 import org.opensearch.security.resources.sharing.ResourceSharing;
 import org.opensearch.security.resources.sharing.ShareWith;
+import org.opensearch.security.spi.resources.ResourceProvider;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
@@ -634,6 +636,54 @@ public class ResourceSharingIndexHandler {
      * @param listener        Listener to be notified when the operation completes
      * @throws RuntimeException if there's an error during the update operation
      */
+    /**
+     * Finds all resource IDs in the sharing index that have the given parentId.
+     * Returns a map of childResourceId -> childResourceType.
+     */
+    public void findChildResourceIds(String parentId, List<ResourceProvider> childProviders, ActionListener<Map<String, String>> listener) {
+        Map<String, String> result = new java.util.HashMap<>();
+        if (childProviders.isEmpty()) {
+            listener.onResponse(result);
+            return;
+        }
+
+        // Search each child provider's sharing index for records with matching parent_id
+        GroupedActionListener<Void> groupListener = new GroupedActionListener<>(
+            ActionListener.wrap(ignored -> listener.onResponse(result), listener::onFailure),
+            childProviders.size()
+        );
+
+        for (ResourceProvider childProvider : childProviders) {
+            String childIndex = childProvider.resourceIndexName();
+            String sharingIndex = getSharingIndex(childIndex);
+
+            try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+                SearchRequest searchRequest = new SearchRequest(sharingIndex);
+                searchRequest.source(
+                    new SearchSourceBuilder().size(1000)
+                        .query(
+                            QueryBuilders.boolQuery()
+                                .must(QueryBuilders.termQuery("parent_id.keyword", parentId))
+                                .must(QueryBuilders.termQuery("resource_type.keyword", childProvider.resourceType()))
+                        )
+                        .fetchSource(false)
+                );
+
+                client.search(searchRequest, ActionListener.wrap(response -> {
+                    ctx.restore();
+                    for (var hit : response.getHits().getHits()) {
+                        result.put(hit.getId(), childProvider.resourceType());
+                    }
+                    groupListener.onResponse(null);
+                }, e -> {
+                    ctx.restore();
+                    LOGGER.debug("No sharing index or no children found for parent {}: {}", parentId, e.getMessage());
+                    groupListener.onResponse(null);
+                }));
+            }
+        }
+    }
+
     public void share(String resourceId, String resourceIndex, ShareWith shareWith, ActionListener<ResourceSharing> listener) {
         StepListener<ResourceSharing> sharingInfoListener = new StepListener<>();
 
@@ -689,6 +739,51 @@ public class ResourceSharingIndexHandler {
                     listener.onFailure(failResponse);
                 });
                 client.index(ir, irListener);
+            }
+        }, listener::onFailure);
+    }
+
+    /**
+     * Replaces the share_with on a resource's sharing record, discarding any previous sharing.
+     * Used when a resource moves between parents and needs to adopt the new parent's sharing.
+     * Pass null for shareWith to revert to private (owner-only).
+     */
+    public void replaceSharing(
+        String resourceId,
+        String resourceIndex,
+        ShareWith shareWith,
+        String newParentId,
+        ActionListener<ResourceSharing> listener
+    ) {
+        StepListener<ResourceSharing> sharingInfoListener = new StepListener<>();
+        fetchSharingInfo(resourceIndex, resourceId, sharingInfoListener);
+
+        sharingInfoListener.whenComplete(sharingInfo -> {
+            if (sharingInfo == null) {
+                listener.onResponse(null);
+                return;
+            }
+            sharingInfo.replaceShareWith(shareWith);
+            sharingInfo.setParentId(newParentId);
+
+            String resourceSharingIndex = getSharingIndex(resourceIndex);
+            try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
+                IndexRequest ir = client.prepareIndex(resourceSharingIndex)
+                    .setId(sharingInfo.getResourceId())
+                    .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+                    .setSource(sharingInfo.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
+                    .setOpType(DocWriteRequest.OpType.INDEX)
+                    .request();
+
+                client.index(ir, ActionListener.wrap(idxResponse -> {
+                    ctx.restore();
+                    updateResourceVisibility(
+                        resourceId,
+                        resourceIndex,
+                        sharingInfo.getAllPrincipals(),
+                        ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> listener.onResponse(sharingInfo))
+                    );
+                }, listener::onFailure));
             }
         }, listener::onFailure);
     }

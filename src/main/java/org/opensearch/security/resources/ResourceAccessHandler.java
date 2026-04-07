@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.OpenSearchStatusException;
+import org.opensearch.action.support.GroupedActionListener;
 import org.opensearch.common.Nullable;
 import org.opensearch.common.inject.Inject;
 import org.opensearch.common.util.concurrent.ThreadContext;
@@ -33,6 +34,7 @@ import org.opensearch.security.resources.api.share.ShareAction;
 import org.opensearch.security.resources.sharing.ResourceSharing;
 import org.opensearch.security.resources.sharing.ShareWith;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
+import org.opensearch.security.spi.resources.ResourceProvider;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -184,7 +186,7 @@ public class ResourceAccessHandler {
 
             // no matching access level, either recurse up or fail fast
             if (accessLevels.isEmpty()) {
-                if (sharingInfo.getParentId() != null) {
+                if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                     hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
                 } else {
                     listener.onResponse(false);
@@ -202,7 +204,7 @@ public class ResourceAccessHandler {
                 return;
             }
 
-            if (sharingInfo.getParentId() != null) {
+            if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                 hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
             } else {
                 listener.onResponse(false);
@@ -277,7 +279,18 @@ public class ResourceAccessHandler {
             generalAccess,
             ActionListener.wrap(sharingInfo -> {
                 LOGGER.debug("Successfully patched sharing info for resource {} with add: {}, revoke: {}", resourceId, add, revoke);
-                listener.onResponse(sharingInfo);
+                cascadePatchToChildren(
+                    resourceId,
+                    resourceType,
+                    add,
+                    revoke,
+                    generalAccessPresent,
+                    generalAccess,
+                    ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> {
+                        LOGGER.warn("Patched resource {} but failed to cascade to children: {}", resourceId, e.getMessage());
+                        listener.onResponse(sharingInfo);
+                    })
+                );
             }, e -> {
                 LOGGER.error(
                     "Failed to patched sharing info for resource {} with add: {}, revoke: {} : {}",
@@ -381,6 +394,56 @@ public class ResourceAccessHandler {
             } else {
                 directAccessLevels.addAll(sharingInfo.getAccessLevelsForUser(user));
                 allowedActions.addAll(resourcePluginInfo.flattenedForType(resourceType).resolve(directAccessLevels));
+
+                // Also resolve parent's access — parent may grant additional actions
+                if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
+                    String parentType = sharingInfo.getParentType();
+                    String parentIndex = resourcePluginInfo.indexByType(parentType);
+                    if (parentIndex != null) {
+                        resourceSharingIndexHandler.fetchSharingInfo(
+                            parentIndex,
+                            sharingInfo.getParentId(),
+                            ActionListener.wrap(parentSharing -> {
+                                if (parentSharing != null) {
+                                    Set<String> parentAccessLevels = parentSharing.getAccessLevelsForUser(user);
+                                    allowedActions.addAll(resourcePluginInfo.flattenedForType(parentType).resolve(parentAccessLevels));
+                                }
+                                if (allowedActions.isEmpty()) {
+                                    listener.onFailure(
+                                        new OpenSearchStatusException(
+                                            "Not authorized to access resource [" + resourceId + "].",
+                                            RestStatus.FORBIDDEN
+                                        )
+                                    );
+                                    return;
+                                }
+                                String effectiveAccessLevel = resolveEffectiveAccessLevel(resourceType, directAccessLevels);
+                                boolean canShare = allowedActions.contains(ShareAction.NAME)
+                                    || resourceSharingIndexHandler.canUserShare(user, false, sharingInfo, resourceType);
+                                listener.onResponse(
+                                    new ResolvedResourceAccess(
+                                        resourceId,
+                                        resourceType,
+                                        isOwner,
+                                        isAdmin,
+                                        effectiveAccessLevel,
+                                        Set.copyOf(directAccessLevels),
+                                        Set.copyOf(allowedActions),
+                                        canShare
+                                    )
+                                );
+                            },
+                                e -> listener.onFailure(
+                                    new OpenSearchStatusException(
+                                        "Not authorized to access resource [" + resourceId + "].",
+                                        RestStatus.FORBIDDEN
+                                    )
+                                )
+                            )
+                        );
+                        return;
+                    }
+                }
             }
 
             if (allowedActions.isEmpty() && !isAdmin && !isOwner) {
@@ -466,11 +529,124 @@ public class ResourceAccessHandler {
 
         this.resourceSharingIndexHandler.share(resourceId, resourceIndex, target, ActionListener.wrap(sharingInfo -> {
             LOGGER.debug("Successfully shared resource {} with {}", resourceId, target.toString());
-            listener.onResponse(sharingInfo);
+            cascadeShareToChildren(resourceId, resourceType, target, ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> {
+                LOGGER.warn("Shared resource {} but failed to cascade to children: {}", resourceId, e.getMessage());
+                listener.onResponse(sharingInfo);
+            }));
         }, e -> {
             LOGGER.error("Failed to share resource {} with {}: {}", resourceId, target.toString(), e.getMessage());
             listener.onFailure(e);
         }));
+    }
+
+    private void cascadeShareToChildren(String parentId, String parentType, ShareWith target, ActionListener<Void> listener) {
+        List<ResourceProvider> childProviders = resourcePluginInfo.getChildProviders(parentType);
+        LOGGER.info("cascadeShareToChildren: parentId={} parentType={} childProviders={}", parentId, parentType, childProviders.size());
+        if (childProviders.isEmpty()) {
+            listener.onResponse(null);
+            return;
+        }
+        resourceSharingIndexHandler.findChildResourceIds(parentId, childProviders, ActionListener.wrap(childIds -> {
+            if (childIds.isEmpty()) {
+                listener.onResponse(null);
+                return;
+            }
+            GroupedActionListener<Void> groupListener = new GroupedActionListener<>(
+                ActionListener.wrap(results -> listener.onResponse(null), listener::onFailure),
+                childIds.size()
+            );
+            for (var entry : childIds.entrySet()) {
+                String childId = entry.getKey();
+                String childType = entry.getValue();
+                String childIndex = resourcePluginInfo.indexByType(childType);
+                // Remap access levels if child type differs from parent type
+                ShareWith childTarget = target;
+                if (!childType.equals(parentType)) {
+                    String defaultAccessLevel = resourcePluginInfo.getDefaultAccessLevel(childType);
+                    LOGGER.info(
+                        "cascadeShareToChildren: childId={} childType={} parentType={} defaultAccessLevel={}",
+                        childId,
+                        childType,
+                        parentType,
+                        defaultAccessLevel
+                    );
+                    if (defaultAccessLevel != null) {
+                        childTarget = target.remapToAccessLevel(defaultAccessLevel);
+                        LOGGER.info("cascadeShareToChildren: remapped generalAccess to {}", childTarget.getGeneralAccess());
+                    }
+                }
+                ShareWith finalChildTarget = childTarget;
+                resourceSharingIndexHandler.share(
+                    childId,
+                    childIndex,
+                    childTarget,
+                    ActionListener.wrap(
+                        result -> cascadeShareToChildren(childId, childType, finalChildTarget, groupListener),
+                        e -> groupListener.onResponse(null)
+                    )
+                );
+            }
+        }, listener::onFailure));
+    }
+
+    private void cascadePatchToChildren(
+        String parentId,
+        String parentType,
+        ShareWith add,
+        ShareWith revoke,
+        boolean generalAccessPresent,
+        String generalAccess,
+        ActionListener<Void> listener
+    ) {
+        List<ResourceProvider> childProviders = resourcePluginInfo.getChildProviders(parentType);
+        if (childProviders.isEmpty()) {
+            listener.onResponse(null);
+            return;
+        }
+        resourceSharingIndexHandler.findChildResourceIds(parentId, childProviders, ActionListener.wrap(childIds -> {
+            if (childIds.isEmpty()) {
+                listener.onResponse(null);
+                return;
+            }
+            GroupedActionListener<Void> groupListener = new GroupedActionListener<>(
+                ActionListener.wrap(results -> listener.onResponse(null), listener::onFailure),
+                childIds.size()
+            );
+            for (var entry : childIds.entrySet()) {
+                String childId = entry.getKey();
+                String childType = entry.getValue();
+                String childIndex = resourcePluginInfo.indexByType(childType);
+                // Remap general_access if child type differs from parent type
+                String childGeneralAccess = generalAccess;
+                if (generalAccessPresent && generalAccess != null && !childType.equals(parentType)) {
+                    String defaultAccessLevel = resourcePluginInfo.getDefaultAccessLevel(childType);
+                    if (defaultAccessLevel != null) {
+                        childGeneralAccess = defaultAccessLevel;
+                    }
+                }
+                String finalChildGeneralAccess = childGeneralAccess;
+                resourceSharingIndexHandler.patchSharingInfo(
+                    childId,
+                    childIndex,
+                    add,
+                    revoke,
+                    generalAccessPresent,
+                    childGeneralAccess,
+                    ActionListener.wrap(
+                        result -> cascadePatchToChildren(
+                            childId,
+                            childType,
+                            add,
+                            revoke,
+                            generalAccessPresent,
+                            finalChildGeneralAccess,
+                            groupListener
+                        ),
+                        e -> groupListener.onResponse(null)
+                    )
+                );
+            }
+        }, listener::onFailure));
     }
 
     /**

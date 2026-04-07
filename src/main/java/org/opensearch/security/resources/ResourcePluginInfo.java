@@ -303,6 +303,18 @@ public class ResourcePluginInfo {
         }
     }
 
+    /**
+     * Returns all ResourceProviders whose parentType matches the given type.
+     */
+    public List<ResourceProvider> getChildProviders(String parentType) {
+        lock.readLock().lock();
+        try {
+            return typeToProvider.values().stream().filter(p -> parentType.equals(p.parentType())).toList();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     public Set<ResourceDashboardInfo> getResourceTypes() {
         lock.readLock().lock();
         try {

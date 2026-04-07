@@ -19,6 +19,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.any;
@@ -315,5 +316,51 @@ public class ResourceSharingTests {
         List<String> principals = rs.getAllPrincipals();
         assertEquals(1, principals.size());
         assertEquals("user:owner", principals.get(0));
+    }
+
+    @Test
+    public void remapToAccessLevel_mergesRecipientsUnderTargetLevel() {
+        Recipients r1 = new Recipients(Map.of(Recipient.USERS, Set.of("alice", "bob")));
+        Recipients r2 = new Recipients(Map.of(Recipient.USERS, Set.of("charlie")));
+        ShareWith original = new ShareWith(Map.of("level_a", r1, "level_b", r2));
+
+        ShareWith remapped = original.remapToAccessLevel("target_level");
+
+        assertEquals(Set.of("target_level"), remapped.accessLevels());
+        Set<String> users = remapped.atAccessLevel("target_level").getRecipients().get(Recipient.USERS);
+        assertEquals(Set.of("alice", "bob", "charlie"), users);
+        assertNull(remapped.getGeneralAccess());
+    }
+
+    @Test
+    public void remapToAccessLevel_remapsGeneralAccess() {
+        ShareWith original = new ShareWith(Map.of(), "parent_read_only");
+
+        ShareWith remapped = original.remapToAccessLevel("child_read_only");
+
+        assertEquals("child_read_only", remapped.getGeneralAccess());
+        assertTrue(remapped.accessLevels().isEmpty());
+    }
+
+    @Test
+    public void remapToAccessLevel_preservesNullGeneralAccess() {
+        Recipients r = new Recipients(Map.of(Recipient.USERS, Set.of("alice")));
+        ShareWith original = new ShareWith(Map.of("level_a", r));
+
+        ShareWith remapped = original.remapToAccessLevel("target");
+
+        assertNull(remapped.getGeneralAccess());
+        assertEquals(Set.of("alice"), remapped.atAccessLevel("target").getRecipients().get(Recipient.USERS));
+    }
+
+    @Test
+    public void replaceShareWith_clearsExistingSharing() {
+        ResourceSharing rs = ResourceSharing.builder().resourceId("r").createdBy(mockCreatedBy("owner")).build();
+        Recipients r = new Recipients(Map.of(Recipient.USERS, Set.of("alice")));
+        rs.share("level_a", r);
+        assertFalse(rs.getShareWith().isPrivate());
+
+        rs.replaceShareWith(null);
+        assertTrue(rs.getShareWith().isPrivate());
     }
 }

@@ -11,6 +11,7 @@ package org.opensearch.security.resources.sharing;
 import java.io.IOException;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -101,6 +102,23 @@ public class ShareWith implements ToXContentFragment, NamedWriteable {
     public ShareWith updateSharingInfo(String accessLevel, Recipients target) {
         sharingInfo.put(accessLevel, target);
         return this;
+    }
+
+    /**
+     * Creates a new ShareWith where all principals from all access levels are merged
+     * under a single target access level. Used when inheriting sharing from a parent
+     * resource type whose access levels differ from the child's.
+     */
+    public ShareWith remapToAccessLevel(String targetAccessLevel) {
+        Map<Recipient, Set<String>> merged = new HashMap<>();
+        for (Recipients r : sharingInfo.values()) {
+            for (Map.Entry<Recipient, Set<String>> entry : r.getRecipients().entrySet()) {
+                merged.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).addAll(entry.getValue());
+            }
+        }
+        // Remap general_access to the target default access level too
+        String remappedGeneralAccess = generalAccess != null ? targetAccessLevel : null;
+        return new ShareWith(merged.isEmpty() ? Map.of() : Map.of(targetAccessLevel, new Recipients(merged)), remappedGeneralAccess);
     }
 
     @Override

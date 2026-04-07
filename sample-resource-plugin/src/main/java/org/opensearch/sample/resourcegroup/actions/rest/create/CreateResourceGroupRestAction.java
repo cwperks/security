@@ -74,9 +74,11 @@ public class CreateResourceGroupRestAction extends BaseRestHandler {
     private RestChannelConsumer createResource(Map<String, Object> source, NodeClient client) throws IOException {
         String name = (String) source.get("name");
         String description = source.containsKey("description") ? (String) source.get("description") : null;
+        String groupId = source.containsKey("group_id") ? (String) source.get("group_id") : null;
         SampleResourceGroup resourceGroup = new SampleResourceGroup();
         resourceGroup.setName(name);
         resourceGroup.setDescription(description);
+        resourceGroup.setGroupId(groupId);
         final CreateResourceGroupRequest createSampleResourceRequest = new CreateResourceGroupRequest(resourceGroup);
         return channel -> client.executeLocally(
             CreateResourceGroupAction.INSTANCE,

@@ -408,6 +408,19 @@ public final class TestUtils {
             }
         }
 
+        public String createNestedResourceGroupAs(TestSecurityConfig.User user, String parentGroupId, Header... headers) {
+            try (TestRestClient client = cluster.getRestClient(user)) {
+                String sample = "{\"name\":\"nestedgroup\",\"resource_type\":\""
+                    + RESOURCE_GROUP_TYPE
+                    + "\",\"group_id\":\""
+                    + parentGroupId
+                    + "\"}";
+                TestRestClient.HttpResponse resp = client.putJson(SAMPLE_RESOURCE_GROUP_CREATE_ENDPOINT, sample, headers);
+                resp.assertStatusCode(HttpStatus.SC_OK);
+                return resp.getTextFromJsonBody("/message").split(":")[1].trim();
+            }
+        }
+
         public String createRawResourceAs(CertificateData adminCert) {
             try (TestRestClient client = cluster.getRestClient(adminCert)) {
                 String sample = "{\"name\":\"sample\",\"resource_type\":\"" + RESOURCE_TYPE + "\"}";
@@ -565,6 +578,13 @@ public final class TestUtils {
             try (TestRestClient client = cluster.getRestClient(user)) {
                 String updatePayload = "{" + "\"name\": \"" + newName + "\"}";
                 return client.postJson(SAMPLE_RESOURCE_UPDATE_ENDPOINT + "/" + resourceId, updatePayload);
+            }
+        }
+
+        public TestRestClient.HttpResponse moveResourceToGroup(String resourceId, TestSecurityConfig.User user, String groupId) {
+            try (TestRestClient client = cluster.getRestClient(user)) {
+                String payload = "{\"name\": \"sample\", \"resource_type\": \"" + RESOURCE_TYPE + "\", \"group_id\": \"" + groupId + "\"}";
+                return client.postJson(SAMPLE_RESOURCE_UPDATE_ENDPOINT + "/" + resourceId, payload);
             }
         }
 

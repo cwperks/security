@@ -9,6 +9,8 @@
 package org.opensearch.security.resources;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +28,7 @@ import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.resources.sharing.ResourceSharing;
 import org.opensearch.security.resources.sharing.ShareWith;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
+import org.opensearch.security.spi.resources.ResourceProvider;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
@@ -229,6 +232,8 @@ public class ResourceAccessHandlerTests {
             return null;
         }).when(sharingIndexHandler).share(eq(RESOURCE_ID), eq(INDEX), eq(shareWith), any());
 
+        when(resourcePluginInfo.getChildProviders(TYPE)).thenReturn(List.of());
+
         ActionListener<ResourceSharing> listener = mock(ActionListener.class);
         handler.share(RESOURCE_ID, TYPE, shareWith, listener);
 
@@ -298,5 +303,76 @@ public class ResourceAccessHandlerTests {
         handler.patchSharingInfo(RESOURCE_ID, TYPE, x, x, false, null, listener);
 
         verify(listener).onFailure(any(OpenSearchStatusException.class));
+    }
+
+    @Test
+    public void testShareCascadesToChildren() {
+        User user = new User("user1", ImmutableSet.of(), ImmutableSet.of(), null, ImmutableMap.of(), false);
+        injectUser(user);
+
+        ShareWith shareWith = mock(ShareWith.class);
+        ResourceSharing parentDoc = mock(ResourceSharing.class);
+
+        // Parent share succeeds
+        doAnswer(inv -> {
+            ActionListener<ResourceSharing> l = inv.getArgument(3);
+            l.onResponse(parentDoc);
+            return null;
+        }).when(sharingIndexHandler).share(eq(RESOURCE_ID), eq(INDEX), eq(shareWith), any());
+
+        // Declare a child provider
+        ResourceProvider childProvider = mock(ResourceProvider.class);
+        when(resourcePluginInfo.getChildProviders(TYPE)).thenReturn(List.of(childProvider));
+        when(resourcePluginInfo.indexByType("child-type")).thenReturn("child-index");
+
+        // findChildResourceIds returns one child
+        doAnswer(inv -> {
+            ActionListener<Map<String, String>> l = inv.getArgument(2);
+            l.onResponse(Map.of("child-1", "child-type"));
+            return null;
+        }).when(sharingIndexHandler).findChildResourceIds(eq(RESOURCE_ID), any(), any());
+
+        // Child share succeeds
+        doAnswer(inv -> {
+            ActionListener<ResourceSharing> l = inv.getArgument(3);
+            l.onResponse(mock(ResourceSharing.class));
+            return null;
+        }).when(sharingIndexHandler).share(eq("child-1"), eq("child-index"), eq(shareWith), any());
+
+        ActionListener<ResourceSharing> listener = mock(ActionListener.class);
+        handler.share(RESOURCE_ID, TYPE, shareWith, listener);
+
+        verify(listener).onResponse(parentDoc);
+        verify(sharingIndexHandler).share(eq("child-1"), eq("child-index"), eq(shareWith), any());
+    }
+
+    @Test
+    public void testShareCascadeFailureDoesNotBlockParent() {
+        User user = new User("user1", ImmutableSet.of(), ImmutableSet.of(), null, ImmutableMap.of(), false);
+        injectUser(user);
+
+        ShareWith shareWith = mock(ShareWith.class);
+        ResourceSharing parentDoc = mock(ResourceSharing.class);
+
+        doAnswer(inv -> {
+            ActionListener<ResourceSharing> l = inv.getArgument(3);
+            l.onResponse(parentDoc);
+            return null;
+        }).when(sharingIndexHandler).share(eq(RESOURCE_ID), eq(INDEX), eq(shareWith), any());
+
+        when(resourcePluginInfo.getChildProviders(TYPE)).thenReturn(List.of(mock(ResourceProvider.class)));
+
+        // findChildResourceIds fails
+        doAnswer(inv -> {
+            ActionListener<Map<String, String>> l = inv.getArgument(2);
+            l.onFailure(new RuntimeException("index not found"));
+            return null;
+        }).when(sharingIndexHandler).findChildResourceIds(eq(RESOURCE_ID), any(), any());
+
+        ActionListener<ResourceSharing> listener = mock(ActionListener.class);
+        handler.share(RESOURCE_ID, TYPE, shareWith, listener);
+
+        // Parent share still succeeds
+        verify(listener).onResponse(parentDoc);
     }
 }
