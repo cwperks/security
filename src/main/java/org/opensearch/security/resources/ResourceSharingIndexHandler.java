@@ -130,6 +130,10 @@ public class ResourceSharingIndexHandler {
         // TODO: Once stashContext is replaced with switchContext this call will have to be modified
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
             for (String resourceIndex : resourceIndices) {
+                // Skip wildcard patterns — sharing indices for these are created on-demand
+                if (resourceIndex.contains("*")) {
+                    continue;
+                }
                 String resourceSharingIndex = getSharingIndex(resourceIndex);
                 CreateIndexRequest cir = new CreateIndexRequest(resourceSharingIndex).settings(INDEX_SETTINGS).waitForActiveShards(1);
                 ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {

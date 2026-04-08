@@ -799,9 +799,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 resourceSharingEnabledSetting
             );
             Set<String> resourceIndices = resourcePluginInfo.getResourceIndices();
-            if (resourceIndices.contains(indexModule.getIndex().getName())) {
+            String indexName = indexModule.getIndex().getName();
+            boolean isResourceIndex = resourceIndices.stream().anyMatch(pattern -> ResourcePluginInfo.indexMatches(pattern, indexName));
+            if (isResourceIndex) {
                 indexModule.addIndexOperationListener(resourceIndexListener);
-                log.info("Security plugin started listening to operations on resource-index {}", indexModule.getIndex().getName());
+                log.info("Security plugin started listening to operations on resource-index {}", indexName);
             }
 
             indexModule.forceQueryCacheProvider((indexSettings, nodeCache) -> new QueryCache() {
