@@ -712,7 +712,12 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
                 // Resource sharing API to update sharing info
                 handlers.add(
-                    new ShareRestAction(resourcePluginInfo, resourceSharingEnabledSetting, resourceSharingProtectedResourceTypesSetting)
+                    new ShareRestAction(
+                        resourcePluginInfo,
+                        resourceSharingEnabledSetting,
+                        resourceSharingProtectedResourceTypesSetting,
+                        threadPool
+                    )
                 );
                 handlers.add(new ResourceTypesRestAction(resourcePluginInfo, resourceSharingEnabledSetting));
                 handlers.add(

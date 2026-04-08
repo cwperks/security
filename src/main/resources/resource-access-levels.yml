@@ -1,0 +1,33 @@
+resource_types:
+  dashboard:
+    dashboard_view:
+      default: true
+      allowed_actions:
+        - "osd:saved_object/get"
+    dashboard_edit:
+      allowed_actions:
+        - "osd:saved_object/get"
+        - "osd:saved_object/write"
+        - "osd:saved_object/delete"
+    dashboard_full_access:
+      allowed_actions:
+        - "osd:saved_object/get"
+        - "osd:saved_object/write"
+        - "osd:saved_object/delete"
+        - "cluster:admin/security/resource/share"
+  visualization:
+    visualization_view:
+      default: true
+      allowed_actions:
+        - "osd:saved_object/get"
+    visualization_edit:
+      allowed_actions:
+        - "osd:saved_object/get"
+        - "osd:saved_object/write"
+        - "osd:saved_object/delete"
+    visualization_full_access:
+      allowed_actions:
+        - "osd:saved_object/get"
+        - "osd:saved_object/write"
+        - "osd:saved_object/delete"
+        - "cluster:admin/security/resource/share"

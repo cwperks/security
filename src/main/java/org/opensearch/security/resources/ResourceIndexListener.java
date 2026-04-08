@@ -66,19 +66,34 @@ public class ResourceIndexListener implements IndexingOperationListener {
             // feature is disabled
             return;
         }
-        String resourceIndex = shardId.getIndexName();
+        String concreteIndex = shardId.getIndexName();
 
-        if (!resourcePluginInfo.isProtectedResourceIndex(resourceIndex)) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(concreteIndex)) {
             // type is marked as not protected
             return;
         }
 
-        log.debug("postIndex called on {}", resourceIndex);
+        log.debug("postIndex called on {}", concreteIndex);
 
-        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(resourceIndex, index);
+        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(concreteIndex, index);
 
         String resourceId = index.id();
         ResourceProvider provider = resourcePluginInfo.getResourceProvider(resourceType);
+
+        // For wildcard providers (e.g. .kibana*), use the resolved alias for the sharing index
+        // so reads via the alias can find the sharing record.
+        // For concrete providers, use the concrete index as before.
+        String resolvedIndex = concreteIndex;
+        if (provider != null && provider.resourceIndexName().contains("*")) {
+            final UserSubjectImpl userSubjectForIndex = (UserSubjectImpl) threadPool.getThreadContext()
+                .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+            String tenant = (userSubjectForIndex != null) ? userSubjectForIndex.getUser().getRequestedTenant() : null;
+            String resolved = resourcePluginInfo.resolveIndexForType(resourceType, tenant);
+            if (resolved != null) {
+                resolvedIndex = resolved;
+            }
+        }
+        final String resourceIndex = resolvedIndex;
         if (provider == null) {
             log.warn(
                 "Failed to create a resource sharing entry for resource: {} with type: {}. The type is not declared as a protected type in plugins.security.experimental.resource_sharing.protected_types.",

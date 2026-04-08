@@ -21,8 +21,11 @@ import org.opensearch.rest.BaseRestHandler;
 import org.opensearch.rest.BytesRestResponse;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.rest.action.RestToXContentListener;
+import org.opensearch.security.auth.UserSubjectImpl;
 import org.opensearch.security.resources.ResourcePluginInfo;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.node.NodeClient;
 
 import static org.opensearch.rest.RestRequest.Method.GET;
@@ -43,15 +46,31 @@ public class ShareRestAction extends BaseRestHandler {
     private final ResourcePluginInfo resourcePluginInfo;
     private final OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting;
     private final OpensearchDynamicSetting<List<String>> resourceSharingProtectedTypesSetting;
+    private final ThreadPool threadPool;
 
     public ShareRestAction(
         ResourcePluginInfo resourcePluginInfo,
         OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting,
-        OpensearchDynamicSetting<List<String>> resourceSharingProtectedTypesSetting
+        OpensearchDynamicSetting<List<String>> resourceSharingProtectedTypesSetting,
+        ThreadPool threadPool
     ) {
         this.resourcePluginInfo = resourcePluginInfo;
         this.resourceSharingEnabledSetting = resourceSharingEnabledSetting;
         this.resourceSharingProtectedTypesSetting = resourceSharingProtectedTypesSetting;
+        this.threadPool = threadPool;
+    }
+
+    private String getCurrentTenant() {
+        try {
+            UserSubjectImpl userSubject = (UserSubjectImpl) threadPool.getThreadContext()
+                .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+            if (userSubject != null) {
+                return userSubject.getUser().getRequestedTenant();
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
     }
 
     @Override
@@ -100,7 +119,7 @@ public class ShareRestAction extends BaseRestHandler {
             };
         }
 
-        String resourceIndex = resourcePluginInfo.indexByType(builder.resourceType);
+        String resourceIndex = resourcePluginInfo.resolveIndexForType(builder.resourceType, getCurrentTenant());
 
         if (resourceIndex == null) {
             return channel -> {

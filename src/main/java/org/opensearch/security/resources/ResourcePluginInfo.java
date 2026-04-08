@@ -46,6 +46,8 @@ public class ResourcePluginInfo {
 
     private OpensearchDynamicSetting<List<String>> protectedTypesSetting;
 
+    private String dashboardsIndexName = ".kibana";
+
     private final Set<ResourceSharingExtension> resourceSharingExtensions = new HashSet<>();
 
     // type <-> resource provider
@@ -76,6 +78,40 @@ public class ResourcePluginInfo {
 
     public void setProtectedTypesSetting(OpensearchDynamicSetting<List<String>> protectedTypesSetting) {
         this.protectedTypesSetting = protectedTypesSetting;
+    }
+
+    public void setDashboardsIndexName(String dashboardsIndexName) {
+        this.dashboardsIndexName = dashboardsIndexName;
+    }
+
+    /**
+     * Resolves the concrete index (or alias) for a resource type given the current tenant.
+     * For non-dashboards resource types, returns the provider's index name as-is.
+     * For dashboards types (.kibana*), resolves to the tenant-specific alias.
+     *
+     * @param type   the resource type
+     * @param tenant the requested tenant (null if multi-tenancy is disabled)
+     * @return the concrete index/alias name
+     */
+    public String resolveIndexForType(String type, String tenant) {
+        lock.readLock().lock();
+        try {
+            ResourceProvider provider = typeToProvider.get(type);
+            if (provider == null) return null;
+
+            String indexName = provider.resourceIndexName();
+            if (!indexName.contains("*")) {
+                return indexName;
+            }
+
+            // Wildcard pattern — resolve using dashboards index + tenant
+            if (tenant == null || tenant.isEmpty()) {
+                return dashboardsIndexName;
+            }
+            return dashboardsIndexName + "_" + tenant.hashCode() + "_" + tenant.toLowerCase().replaceAll("[^a-z0-9]+", "");
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     public void setResourceSharingExtensions(Set<ResourceSharingExtension> extensions) {
