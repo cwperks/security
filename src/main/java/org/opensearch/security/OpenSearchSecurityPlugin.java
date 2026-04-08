@@ -179,6 +179,7 @@ import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.privileges.RoleMapper;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
+import org.opensearch.security.resources.DashboardsSavedObjectsResourceSharingExtension;
 import org.opensearch.security.resources.PluginDefaultRolesHelper;
 import org.opensearch.security.resources.ResourceAccessControlClient;
 import org.opensearch.security.resources.ResourceAccessHandler;
@@ -2505,6 +2506,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public void loadExtensions(ExtensionLoader loader) {
         // discover & register resource-sharing extensions and their types
         Set<ResourceSharingExtension> exts = new HashSet<>(loader.loadExtensions(ResourceSharingExtension.class));
+        // Register built-in dashboards saved objects resource types
+        exts.add(new DashboardsSavedObjectsResourceSharingExtension());
         resourcePluginInfo.setResourceSharingExtensions(exts);
 
         // load action-groups in memory

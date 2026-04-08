@@ -63,6 +63,17 @@ public class ResourcePluginInfo {
     // cache current protected types and their indices
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();    // make the updates/reads thread-safe
 
+    /**
+     * Checks whether a concrete index name matches a provider's index name,
+     * supporting trailing wildcard patterns (e.g. ".kibana*" matches ".kibana_2").
+     */
+    public static boolean indexMatches(String pattern, String concreteIndex) {
+        if (pattern.endsWith("*")) {
+            return concreteIndex.startsWith(pattern.substring(0, pattern.length() - 1));
+        }
+        return pattern.equals(concreteIndex);
+    }
+
     public void setProtectedTypesSetting(OpensearchDynamicSetting<List<String>> protectedTypesSetting) {
         this.protectedTypesSetting = protectedTypesSetting;
     }
@@ -170,7 +181,7 @@ public class ResourcePluginInfo {
             // If typeField is not present, assume single resource type per index and return type from provider
             var provider = typeToProvider.values()
                 .stream()
-                .filter(p -> p.resourceIndexName().equals(resourceIndex))
+                .filter(p -> indexMatches(p.resourceIndexName(), resourceIndex))
                 .findFirst()
                 .orElse(null);
             if (provider == null) {
@@ -357,6 +368,13 @@ public class ResourcePluginInfo {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    /**
+     * Checks whether a concrete index name matches any protected resource index pattern.
+     */
+    public boolean isProtectedResourceIndex(String concreteIndex) {
+        return getResourceIndicesForProtectedTypes().stream().anyMatch(pattern -> indexMatches(pattern, concreteIndex));
     }
 
     public List<String> currentProtectedTypes() {

@@ -68,7 +68,7 @@ public class ResourceIndexListener implements IndexingOperationListener {
         }
         String resourceIndex = shardId.getIndexName();
 
-        if (!resourcePluginInfo.getResourceIndicesForProtectedTypes().contains(resourceIndex)) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(resourceIndex)) {
             // type is marked as not protected
             return;
         }
@@ -170,7 +170,11 @@ public class ResourceIndexListener implements IndexingOperationListener {
                     .parentId(ResourcePluginInfo.extractFieldFromIndexOp(provider.parentIdField(), index));
             }
             ResourceSharing sharingInfo = builder.build();
-            // User.getRequestedTenant() is null if multi-tenancy is disabled
+
+            // Apply default general access if the provider specifies one
+            if (provider.defaultGeneralAccess() != null) {
+                sharingInfo.setGeneralAccess(provider.defaultGeneralAccess());
+            }
 
             this.resourceSharingIndexHandler.indexResourceSharing(resourceIndex, sharingInfo, listener);
 
@@ -292,7 +296,7 @@ public class ResourceIndexListener implements IndexingOperationListener {
         }
         String resourceIndex = shardId.getIndexName();
 
-        if (!resourcePluginInfo.getResourceIndicesForProtectedTypes().contains(resourceIndex)) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(resourceIndex)) {
             // type is marked as not protected
             return;
         }
