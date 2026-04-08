@@ -127,6 +127,10 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
     );
 
     private static final WildcardMatcher ACTION_MATCHER = WildcardMatcher.from("indices:data/read/*search*");
+    private static final ImmutableSet<String> TENANT_SCOPED_ADVANCED_SETTINGS_ACTIONS = ImmutableSet.of(
+        "osd:admin/advanced_settings/get",
+        "osd:admin/advanced_settings/write"
+    );
 
     private static final IndicesOptions ALLOW_EMPTY = IndicesOptions.fromOptions(true, true, false, false);
 
@@ -400,6 +404,28 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             presponse = actionPrivileges.hasClusterPrivilege(context, action0);
 
             if (!presponse.isAllowed()) {
+                if (TENANT_SCOPED_ADVANCED_SETTINGS_ACTIONS.contains(action0)
+                    && privilegesInterceptor.getClass() != PrivilegesInterceptor.class) {
+
+                    final PrivilegesInterceptor.ReplaceResult replaceResult = privilegesInterceptor.replaceDashboardsIndex(
+                        request,
+                        action0,
+                        user,
+                        requestedResolved,
+                        context
+                    );
+
+                    log.debug("Result from privileges interceptor for advanced settings cluster perm fallback: {}", replaceResult);
+
+                    if (!replaceResult.continueEvaluation) {
+                        if (replaceResult.accessDenied) {
+                            auditLog.logMissingPrivileges(action0, request, task);
+                        } else {
+                            return PrivilegesEvaluatorResponse.ok().with(replaceResult.createIndexRequestBuilder);
+                        }
+                    }
+                }
+
                 log.info(
                     "No cluster-level perm match for {} {} [Action [{}]] [RolesChecked {}]. No permissions for {}",
                     user,
