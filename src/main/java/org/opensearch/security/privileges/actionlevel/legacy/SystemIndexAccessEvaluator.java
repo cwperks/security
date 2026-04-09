@@ -253,10 +253,14 @@ public class SystemIndexAccessEvaluator {
         if (!user.isPluginUser() || !this.isSystemIndexEnabled) {
             return Set.of();
         }
-        return SystemIndexRegistry.matchesPluginSystemIndexPattern(
-            user.getName().replace("plugin:", ""),
+        String pluginClassName = user.getName().replace("plugin:", "");
+        Set<String> result = SystemIndexRegistry.matchesPluginSystemIndexPattern(
+            pluginClassName,
             requestedResolved.getAllIndices()
         );
+        log.info("[SystemIndexAccess] getMatchingPluginIndices: pluginClassName={}, requestedIndices={}, matched={}",
+            pluginClassName, requestedResolved.getAllIndices(), result);
+        return result;
     }
 
     /**
@@ -287,6 +291,11 @@ public class SystemIndexAccessEvaluator {
         final Set<String> matchingPluginIndices = getMatchingPluginIndices(user, requestedResolved);
         final boolean containsOnlyPluginSystemIndices = !matchingPluginIndices.isEmpty()
             && requestedResolved.getAllIndices().equals(matchingPluginIndices);
+
+        if (user.isPluginUser()) {
+            log.info("[SystemIndexAccess] plugin={}, action={}, allIndices={}, matchingPluginIndices={}, containsOnlyPlugin={}, isSystemIndexEnabled={}, isSystemIndexPermissionEnabled={}",
+                user.getName(), action, requestedResolved.getAllIndices(), matchingPluginIndices, containsOnlyPluginSystemIndices, isSystemIndexEnabled, isSystemIndexPermissionEnabled);
+        }
 
         if (isSystemIndexPermissionEnabled) {
             if (serviceAccountUser && containsRegularIndex) {
@@ -348,6 +357,12 @@ public class SystemIndexAccessEvaluator {
                     // plugin is authorized to perform any actions on its own registered system indices
                     return PrivilegesEvaluatorResponse.ok();
                 } else {
+                    // Check if the plugin has explicit index privileges (from plugin-additional-permissions.yml)
+                    // Use WildcardMatcher since hasExplicitIndexPrivilege doesn't support wildcard patterns
+                    if (actionPrivileges.hasIndexPrivilege(context, ImmutableSet.of(action), requestedResolved.toResolvedIndices(context)).isAllowed()) {
+                        log.info("[SystemIndexAccess] Plugin {} granted access to {} via plugin-additional-permissions", user.getName(), requestedResolved.getAllIndices());
+                        return PrivilegesEvaluatorResponse.ok();
+                    }
                     Set<String> matchingSystemIndices = SystemIndexRegistry.matchesSystemIndexPattern(requestedResolved.getAllIndices());
                     matchingSystemIndices.removeAll(matchingPluginIndices);
                     // See if request matches other system indices not belong to the plugin

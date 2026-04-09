@@ -36,6 +36,7 @@ import org.opensearch.action.admin.indices.shrink.ResizeRequest;
 import org.opensearch.action.bulk.BulkAction;
 import org.opensearch.action.bulk.BulkItemRequest;
 import org.opensearch.action.bulk.BulkShardRequest;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.search.MultiSearchAction;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.update.UpdateRequest;
@@ -176,31 +177,37 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         }
         OptionallyResolvedIndices resolved = context.getResolvedIndices();
         ActionRequest request = context.getRequest();
-        if (HeaderHelper.isInternalOrPluginRequest(threadContext)) {
-            if (resourceSharingEnabledSetting.getDynamicSettingValue()
-                && request instanceof SearchRequest
-                && resolved instanceof ResolvedIndices resolvedIndices) {
-                Set<String> protectedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
-                WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
-                Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
-                if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
-                    IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
-                        namedXContentRegistry,
-                        resolvedIndexNames,
-                        userSubject.getUser()
-                    );
 
-                    return DlsFilterLevelActionHandler.handle(
-                        context,
-                        sharedResourceMap,
-                        listener,
-                        nodeClient,
-                        clusterService,
-                        OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
-                        threadContext
-                    );
-                }
+        // Apply resource sharing DLS for both internal and external requests on protected indices
+        if (userSubject != null
+            && resourceSharingEnabledSetting.getDynamicSettingValue()
+            && (request instanceof SearchRequest || request instanceof GetRequest)
+            && resolved instanceof ResolvedIndices resolvedIndices) {
+            Set<String> protectedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
+            WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
+            Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
+            if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
+                List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
+                IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
+                    namedXContentRegistry,
+                    resolvedIndexNames,
+                    userSubject.getUser(),
+                    currentProtectedTypes
+                );
+
+                return DlsFilterLevelActionHandler.handle(
+                    context,
+                    sharedResourceMap,
+                    listener,
+                    nodeClient,
+                    clusterService,
+                    OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
+                    threadContext
+                );
             }
+        }
+
+        if (HeaderHelper.isInternalOrPluginRequest(threadContext)) {
             return true;
         }
         DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();

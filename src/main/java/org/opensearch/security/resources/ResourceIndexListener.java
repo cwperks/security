@@ -9,6 +9,7 @@
 package org.opensearch.security.resources;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
@@ -76,6 +77,13 @@ public class ResourceIndexListener implements IndexingOperationListener {
         log.debug("postIndex called on {}", concreteIndex);
 
         String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(concreteIndex, index);
+
+        // Skip documents whose type isn't a registered protected resource type
+        List<String> protectedTypes = resourcePluginInfo.currentProtectedTypes();
+        if (resourceType == null || !protectedTypes.contains(resourceType)) {
+            log.debug("Skipping resource sharing for type [{}] in index [{}] - not a protected type", resourceType, concreteIndex);
+            return;
+        }
 
         String resourceId = index.id();
         ResourceProvider provider = resourcePluginInfo.getResourceProvider(resourceType);

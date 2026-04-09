@@ -31,7 +31,8 @@ public class ResourceSharingDlsUtils {
     public static IndexToRuleMap<DlsRestriction> resourceRestrictions(
         NamedXContentRegistry xContentRegistry,
         Collection<String> resolvedIndices,
-        User user
+        User user,
+        Collection<String> protectedTypes
     ) {
 
         List<String> principals = new ArrayList<>();
@@ -51,9 +52,42 @@ public class ResourceSharingDlsUtils {
         XContentBuilder builder = null;
         DlsRestriction restriction;
         try {
-            // Build a single `terms` query JSON
+            // Build a bool query: match shared principals OR document type is not a protected resource type
             builder = XContentFactory.jsonBuilder();
-            builder.startObject().startObject("terms").array("all_shared_principals", principals.toArray()).endObject().endObject();
+            builder.startObject()
+                .startObject("bool")
+                .startArray("should")
+                // Documents shared with this user (handle both keyword and text mappings)
+                .startObject()
+                .startObject("bool")
+                .startArray("should")
+                .startObject().startObject("terms").array("all_shared_principals", principals.toArray()).endObject().endObject()
+                .startObject().startObject("terms").array("all_shared_principals.keyword", principals.toArray()).endObject().endObject()
+                .endArray()
+                .field("minimum_should_match", 1)
+                .endObject()
+                .endObject()
+                // Documents whose type is NOT a protected resource type (pass through)
+                .startObject()
+                .startObject("bool")
+                .startArray("must_not")
+                .startObject()
+                .startObject("terms")
+                .array("type", protectedTypes.toArray())
+                .endObject()
+                .endObject()
+                .startObject()
+                .startObject("terms")
+                .array("type.keyword", protectedTypes.toArray())
+                .endObject()
+                .endObject()
+                .endArray()
+                .endObject()
+                .endObject()
+                .endArray()
+                .field("minimum_should_match", 1)
+                .endObject()
+                .endObject();
 
             String dlsJson = builder.toString();
             restriction = new DlsRestriction(List.of(DocumentPrivileges.getRenderedDlsQuery(xContentRegistry, dlsJson)));

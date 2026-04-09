@@ -42,7 +42,7 @@ public class DashboardsSavedObjectsResourceSharingExtension implements ResourceS
 
             @Override
             public String defaultGeneralAccess() {
-                return "view";
+                return "dashboard_view";
             }
         }, new ResourceProvider() {
             @Override
@@ -62,7 +62,7 @@ public class DashboardsSavedObjectsResourceSharingExtension implements ResourceS
 
             @Override
             public String defaultGeneralAccess() {
-                return "view";
+                return "visualization_view";
             }
         });
     }
