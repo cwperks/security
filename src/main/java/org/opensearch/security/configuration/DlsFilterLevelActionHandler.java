@@ -476,6 +476,8 @@ public class DlsFilterLevelActionHandler {
 
         Set<String> indices = resolved.local().names(clusterService.state());
 
+        log.info("[DLS modifyQuery] mapKeys={}, iteratingIndices={}", filterLevelQueries.keySet(), indices);
+
         for (String index : indices) {
             String prefixedIndex;
 
@@ -486,6 +488,8 @@ public class DlsFilterLevelActionHandler {
             }
 
             DlsRestriction dlsRestriction = filterLevelQueries.get(index);
+
+            log.info("[DLS modifyQuery] index={}, dlsRestriction={}", index, dlsRestriction != null ? "found" : "NULL");
 
             if (dlsRestriction == null || dlsRestriction.isUnrestricted()) {
                 if (requiresIndexScoping) {
@@ -526,8 +530,10 @@ public class DlsFilterLevelActionHandler {
 
         if (queryCount == 0) {
             // Return false to indicate that no query manipulation is necessary
+            log.info("[DLS modifyQuery] queryCount=0, NO DLS filter applied");
             return false;
         } else {
+            log.info("[DLS modifyQuery] queryCount={}, DLS filter WILL be applied", queryCount);
             this.filterLevelQueryBuilder = dlsQueryBuilder;
             this.documentAllowlist = documentAllowlist;
             return true;

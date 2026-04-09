@@ -491,7 +491,15 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             context
         );
 
-        log.debug("Result from privileges interceptor: {}", replaceResult);
+        log.info(
+            "[PrivEval] PrivilegesInterceptor result for user={}, action={}, indices={}: continueEvaluation={}, accessDenied={}, hasCreateIndexBuilder={}",
+            user.getName(),
+            action0,
+            requestedResolved.getAllIndices(),
+            replaceResult.continueEvaluation,
+            replaceResult.accessDenied,
+            replaceResult.createIndexRequestBuilder != null
+        );
 
         if (!replaceResult.continueEvaluation) {
             if (replaceResult.accessDenied) {

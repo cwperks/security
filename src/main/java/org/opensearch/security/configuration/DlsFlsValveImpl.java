@@ -177,37 +177,54 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         }
         OptionallyResolvedIndices resolved = context.getResolvedIndices();
         ActionRequest request = context.getRequest();
-
-        // Apply resource sharing DLS for both internal and external requests on protected indices
-        if (userSubject != null
-            && resourceSharingEnabledSetting.getDynamicSettingValue()
-            && (request instanceof SearchRequest || request instanceof GetRequest)
-            && resolved instanceof ResolvedIndices resolvedIndices) {
-            Set<String> protectedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
-            WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
-            Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
-            if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
-                List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
-                IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
-                    namedXContentRegistry,
-                    resolvedIndexNames,
-                    userSubject.getUser(),
-                    currentProtectedTypes
-                );
-
-                return DlsFilterLevelActionHandler.handle(
-                    context,
-                    sharedResourceMap,
-                    listener,
-                    nodeClient,
-                    clusterService,
-                    OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
-                    threadContext
-                );
-            }
-        }
-
         if (HeaderHelper.isInternalOrPluginRequest(threadContext)) {
+            if (resourceSharingEnabledSetting.getDynamicSettingValue()
+                && (request instanceof SearchRequest || request instanceof GetRequest)
+                && resolved instanceof ResolvedIndices resolvedIndices) {
+                Set<String> protectedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
+                WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
+                Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
+                // Also include alias names since DlsFilterLevelActionHandler.modifyQuery uses resolved.local().names()
+                Set<String> allIndexNames = new java.util.HashSet<>(resolvedIndexNames);
+                allIndexNames.addAll(resolvedIndices.local().names(context.clusterState()));
+                log.info(
+                    "[DLS] internal request: action={}, resolvedIndices={}, aliasNames={}, protectedIndices={}, matchAll={}",
+                    context.getAction(),
+                    resolvedIndexNames,
+                    allIndexNames,
+                    protectedIndices,
+                    resourceIndicesMatcher.matchAll(resolvedIndexNames)
+                );
+                if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
+                    List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
+                    String userName = userSubject != null ? userSubject.getUser().getName() : "null";
+                    log.info(
+                        "[DLS] Applying resource DLS for user={}, protectedTypes={}, indices={}",
+                        userName,
+                        currentProtectedTypes,
+                        allIndexNames
+                    );
+                    IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
+                        namedXContentRegistry,
+                        allIndexNames,
+                        userSubject.getUser(),
+                        currentProtectedTypes
+                    );
+
+                    log.info("[DLS] About to call DlsFilterLevelActionHandler.handle for action={}", context.getAction());
+                    boolean result = DlsFilterLevelActionHandler.handle(
+                        context,
+                        sharedResourceMap,
+                        listener,
+                        nodeClient,
+                        clusterService,
+                        OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
+                        threadContext
+                    );
+                    log.info("[DLS] DlsFilterLevelActionHandler.handle returned {} for action={}", result, context.getAction());
+                    return result;
+                }
+            }
             return true;
         }
         DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();

@@ -254,12 +254,13 @@ public class SystemIndexAccessEvaluator {
             return Set.of();
         }
         String pluginClassName = user.getName().replace("plugin:", "");
-        Set<String> result = SystemIndexRegistry.matchesPluginSystemIndexPattern(
+        Set<String> result = SystemIndexRegistry.matchesPluginSystemIndexPattern(pluginClassName, requestedResolved.getAllIndices());
+        log.info(
+            "[SystemIndexAccess] getMatchingPluginIndices: pluginClassName={}, requestedIndices={}, matched={}",
             pluginClassName,
-            requestedResolved.getAllIndices()
+            requestedResolved.getAllIndices(),
+            result
         );
-        log.info("[SystemIndexAccess] getMatchingPluginIndices: pluginClassName={}, requestedIndices={}, matched={}",
-            pluginClassName, requestedResolved.getAllIndices(), result);
         return result;
     }
 
@@ -293,8 +294,16 @@ public class SystemIndexAccessEvaluator {
             && requestedResolved.getAllIndices().equals(matchingPluginIndices);
 
         if (user.isPluginUser()) {
-            log.info("[SystemIndexAccess] plugin={}, action={}, allIndices={}, matchingPluginIndices={}, containsOnlyPlugin={}, isSystemIndexEnabled={}, isSystemIndexPermissionEnabled={}",
-                user.getName(), action, requestedResolved.getAllIndices(), matchingPluginIndices, containsOnlyPluginSystemIndices, isSystemIndexEnabled, isSystemIndexPermissionEnabled);
+            log.info(
+                "[SystemIndexAccess] plugin={}, action={}, allIndices={}, matchingPluginIndices={}, containsOnlyPlugin={}, isSystemIndexEnabled={}, isSystemIndexPermissionEnabled={}",
+                user.getName(),
+                action,
+                requestedResolved.getAllIndices(),
+                matchingPluginIndices,
+                containsOnlyPluginSystemIndices,
+                isSystemIndexEnabled,
+                isSystemIndexPermissionEnabled
+            );
         }
 
         if (isSystemIndexPermissionEnabled) {
@@ -359,8 +368,13 @@ public class SystemIndexAccessEvaluator {
                 } else {
                     // Check if the plugin has explicit index privileges (from plugin-additional-permissions.yml)
                     // Use WildcardMatcher since hasExplicitIndexPrivilege doesn't support wildcard patterns
-                    if (actionPrivileges.hasIndexPrivilege(context, ImmutableSet.of(action), requestedResolved.toResolvedIndices(context)).isAllowed()) {
-                        log.info("[SystemIndexAccess] Plugin {} granted access to {} via plugin-additional-permissions", user.getName(), requestedResolved.getAllIndices());
+                    if (actionPrivileges.hasIndexPrivilege(context, ImmutableSet.of(action), requestedResolved.toResolvedIndices(context))
+                        .isAllowed()) {
+                        log.info(
+                            "[SystemIndexAccess] Plugin {} granted access to {} via plugin-additional-permissions",
+                            user.getName(),
+                            requestedResolved.getAllIndices()
+                        );
                         return PrivilegesEvaluatorResponse.ok();
                     }
                     Set<String> matchingSystemIndices = SystemIndexRegistry.matchesSystemIndexPattern(requestedResolved.getAllIndices());

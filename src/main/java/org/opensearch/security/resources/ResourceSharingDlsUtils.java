@@ -61,8 +61,16 @@ public class ResourceSharingDlsUtils {
                 .startObject()
                 .startObject("bool")
                 .startArray("should")
-                .startObject().startObject("terms").array("all_shared_principals", principals.toArray()).endObject().endObject()
-                .startObject().startObject("terms").array("all_shared_principals.keyword", principals.toArray()).endObject().endObject()
+                .startObject()
+                .startObject("terms")
+                .array("all_shared_principals", principals.toArray())
+                .endObject()
+                .endObject()
+                .startObject()
+                .startObject("terms")
+                .array("all_shared_principals.keyword", principals.toArray())
+                .endObject()
+                .endObject()
                 .endArray()
                 .field("minimum_should_match", 1)
                 .endObject()
@@ -90,6 +98,12 @@ public class ResourceSharingDlsUtils {
                 .endObject();
 
             String dlsJson = builder.toString();
+            LOGGER.info(
+                "[DLS] Resource sharing DLS query: principals={}, protectedTypes={}, query={}",
+                principals,
+                protectedTypes,
+                dlsJson
+            );
             restriction = new DlsRestriction(List.of(DocumentPrivileges.getRenderedDlsQuery(xContentRegistry, dlsJson)));
         } catch (IOException e) {
             LOGGER.warn("Received error while applying resource restrictions.", e);
