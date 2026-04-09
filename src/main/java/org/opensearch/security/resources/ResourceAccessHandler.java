@@ -458,7 +458,8 @@ public class ResourceAccessHandler {
                                         effectiveAccessLevel,
                                         Set.copyOf(directAccessLevels),
                                         Set.copyOf(allowedActions),
-                                        canShare
+                                        canShare,
+                                        sharingInfo.getShareWith() != null ? sharingInfo.getShareWith().getGeneralAccess() : null
                                     )
                                 );
                             },
@@ -497,7 +498,8 @@ public class ResourceAccessHandler {
                     effectiveAccessLevel,
                     Set.copyOf(directAccessLevels),
                     Set.copyOf(allowedActions),
-                    canShare
+                    canShare,
+                    sharingInfo.getShareWith() != null ? sharingInfo.getShareWith().getGeneralAccess() : null
                 )
             );
         }, listener::onFailure));
