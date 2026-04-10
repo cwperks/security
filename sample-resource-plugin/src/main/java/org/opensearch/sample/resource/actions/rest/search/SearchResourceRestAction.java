@@ -58,7 +58,8 @@ public class SearchResourceRestAction extends BaseRestHandler {
             searchSourceBuilder.query(QueryBuilders.matchAllQuery());
         }
 
-        SearchRequest searchRequest = new SearchRequest().indices(RESOURCE_INDEX_NAME).source(searchSourceBuilder);
+        String index = request.param("index", RESOURCE_INDEX_NAME);
+        SearchRequest searchRequest = new SearchRequest().indices(index).source(searchSourceBuilder);
 
         return channel -> client.executeLocally(SearchResourceAction.INSTANCE, searchRequest, new RestToXContentListener<>(channel));
     }

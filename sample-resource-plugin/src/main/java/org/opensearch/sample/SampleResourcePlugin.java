@@ -20,6 +20,7 @@ import org.opensearch.cluster.node.DiscoveryNodes;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
+import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.settings.SettingsFilter;
 import org.opensearch.core.action.ActionResponse;
@@ -74,6 +75,7 @@ import org.opensearch.transport.client.Client;
 import org.opensearch.watcher.ResourceWatcherService;
 
 import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_NAME;
+import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_PATTERN;
 
 /**
  * Sample Resource plugin.
@@ -82,6 +84,16 @@ import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_NAME;
  */
 public class SampleResourcePlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, IdentityAwarePlugin {
     private PluginClient pluginClient;
+
+    /** When true, the plugin uses an alias (.sample_resource) over a concrete index (.sample_resource_1) with a wildcard pattern. */
+    static volatile boolean aliasMode = false;
+
+    public static final String ALIAS_MODE_SETTING_KEY = "sample_resource.alias_mode";
+    public static final Setting<Boolean> ALIAS_MODE_SETTING = Setting.boolSetting(
+        ALIAS_MODE_SETTING_KEY,
+        false,
+        Setting.Property.NodeScope
+    );
 
     public SampleResourcePlugin() {}
 
@@ -100,6 +112,7 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
         this.pluginClient = new PluginClient(client);
+        aliasMode = environment.settings().getAsBoolean(ALIAS_MODE_SETTING_KEY, false);
 
         return List.of(pluginClient);
     }
@@ -147,8 +160,13 @@ public class SampleResourcePlugin extends Plugin implements ActionPlugin, System
 
     @Override
     public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
-        final SystemIndexDescriptor systemIndexDescriptor = new SystemIndexDescriptor(RESOURCE_INDEX_NAME, "Sample index with resources");
-        return Collections.singletonList(systemIndexDescriptor);
+        String indexName = settings.getAsBoolean(ALIAS_MODE_SETTING_KEY, false) ? RESOURCE_INDEX_PATTERN : RESOURCE_INDEX_NAME;
+        return Collections.singletonList(new SystemIndexDescriptor(indexName, "Sample index with resources"));
+    }
+
+    @Override
+    public List<Setting<?>> getSettings() {
+        return List.of(ALIAS_MODE_SETTING);
     }
 
     @Override

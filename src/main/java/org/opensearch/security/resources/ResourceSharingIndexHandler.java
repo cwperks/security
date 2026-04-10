@@ -124,11 +124,10 @@ public class ResourceSharingIndexHandler {
      *                          or communicating with the cluster
      */
 
-    public void createResourceSharingIndicesIfAbsent(Collection<String> resourceIndices) {
+    public void createResourceSharingIndicesIfAbsent(Collection<String> sharingIndices) {
         // TODO: Once stashContext is replaced with switchContext this call will have to be modified
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
-            for (String resourceIndex : resourceIndices) {
-                String resourceSharingIndex = getSharingIndex(resourceIndex);
+            for (String resourceSharingIndex : sharingIndices) {
                 CreateIndexRequest cir = new CreateIndexRequest(resourceSharingIndex).settings(INDEX_SETTINGS).waitForActiveShards(1);
                 ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {
                     ctx.restore();
@@ -144,6 +143,15 @@ public class ResourceSharingIndexHandler {
 
     public static String getSharingIndex(String resourceIndex) {
         return resourceIndex + "-sharing";
+    }
+
+    /**
+     * Resolves the sharing index for a concrete resource index name using the registered providers.
+     * Falls back to the static {@link #getSharingIndex(String)} convention if no provider matches.
+     */
+    String resolveSharingIndex(String resourceIndex) {
+        String resolved = resourcePluginInfo.sharingIndexForResourceIndex(resourceIndex);
+        return resolved != null ? resolved : getSharingIndex(resourceIndex);
     }
 
     /**
@@ -251,7 +259,7 @@ public class ResourceSharingIndexHandler {
         String resourceId = sharingInfo.getResourceId();
         CreatedBy createdBy = sharingInfo.getCreatedBy();
         // TODO: Once stashContext is replaced with switchContext this call will have to be modified
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
             IndexRequest ir = client.prepareIndex(resourceSharingIndex)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
@@ -329,7 +337,7 @@ public class ResourceSharingIndexHandler {
      * </ul>
      */
     public void fetchAllResourceIds(String resourceIndex, ActionListener<Set<String>> listener) {
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         LOGGER.debug("Fetching all documents asynchronously from {}", resourceSharingIndex);
         Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
 
@@ -357,7 +365,7 @@ public class ResourceSharingIndexHandler {
      * @param listener to collect and return the sharing records
      */
     public void fetchAllResourceSharingRecords(String resourceIndex, String resourceType, ActionListener<Set<SharingRecord>> listener) {
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         LOGGER.debug("Fetching all resource-sharing records asynchronously from {}", resourceSharingIndex);
         Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
 
@@ -554,7 +562,7 @@ public class ResourceSharingIndexHandler {
             listener.onFailure(new IllegalArgumentException("resourceIndex and resourceId must not be null or empty"));
             return;
         }
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         LOGGER.debug("Fetching document from {}, matching resource_id: {}", resourceSharingIndex, resourceId);
 
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
@@ -653,7 +661,7 @@ public class ResourceSharingIndexHandler {
                 sharingInfo.share(accessLevel, target);
             }
 
-            String resourceSharingIndex = getSharingIndex(resourceIndex);
+            String resourceSharingIndex = resolveSharingIndex(resourceIndex);
             try (ThreadContext.StoredContext ctx = threadPool.getThreadContext().stashContext()) {
                 IndexRequest ir = client.prepareIndex(resourceSharingIndex)
                     .setId(sharingInfo.getResourceId())
@@ -711,7 +719,7 @@ public class ResourceSharingIndexHandler {
     ) {
 
         StepListener<ResourceSharing> sharingInfoListener = new StepListener<>();
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
 
         // Fetch the current ResourceSharing document
         fetchSharingInfo(resourceIndex, resourceId, sharingInfoListener);
@@ -807,7 +815,7 @@ public class ResourceSharingIndexHandler {
      * </pre>
      */
     public void deleteResourceSharingRecord(String resourceId, String resourceIndex, ActionListener<Boolean> listener) {
-        String resourceSharingIndex = getSharingIndex(resourceIndex);
+        String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         LOGGER.debug(
             "Deleting documents asynchronously from {} where source_idx = {} and resource_id = {}",
             resourceSharingIndex,
@@ -943,7 +951,7 @@ public class ResourceSharingIndexHandler {
         Set<String> flatPrincipals,
         ActionListener<Set<SharingRecord>> listener
     ) {
-        final String resourceSharingIndex = getSharingIndex(resourceIndex);
+        final String resourceSharingIndex = resolveSharingIndex(resourceIndex);
         final ThreadContext.StoredContext stored = this.threadPool.getThreadContext().stashContext();
 
         // Phase 1: resolve resource IDs from the RESOURCE index

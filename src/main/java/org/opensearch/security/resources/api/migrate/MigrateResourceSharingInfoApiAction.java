@@ -62,6 +62,7 @@ import org.opensearch.security.resources.sharing.ResourceSharing;
 import org.opensearch.security.resources.sharing.ShareWith;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.spi.resources.ResourceProvider;
+import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
@@ -257,7 +258,7 @@ public class MigrateResourceSharingInfoApiAction extends AbstractApiAction {
                         // no type field and no explicit access level map — infer from the single registered type for this index
                         type = resourcePluginInfo.currentProtectedTypes()
                             .stream()
-                            .filter(t -> sourceIndex.equals(resourcePluginInfo.indexByType(t)))
+                            .filter(t -> WildcardMatcher.from(resourcePluginInfo.indexByType(t)).test(sourceIndex))
                             .findFirst()
                             .orElse(null);
                     }
@@ -481,13 +482,9 @@ public class MigrateResourceSharingInfoApiAction extends AbstractApiAction {
                         Set<String> allowedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
                         RequestContentValidator.FieldValidator sourceIndexValidator = (fieldName, value) -> {
                             if (value instanceof String strValue) {
-                                RequestContentValidator.validateFieldValueInSet(
-                                    fieldName,
-                                    strValue,
-                                    RequestContentValidator.MAX_STRING_LENGTH,
-                                    allowedIndices,
-                                    "indices"
-                                );
+                                if (!WildcardMatcher.from(allowedIndices).test(strValue)) {
+                                    throw new IllegalArgumentException(fieldName + " " + strValue + " is not a recognized resource index");
+                                }
                             }
                         };
 

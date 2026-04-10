@@ -20,6 +20,7 @@ import org.opensearch.security.spi.resources.client.ResourceSharingClient;
 
 import static org.opensearch.sample.utils.Constants.RESOURCE_GROUP_TYPE;
 import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_NAME;
+import static org.opensearch.sample.utils.Constants.RESOURCE_INDEX_PATTERN;
 import static org.opensearch.sample.utils.Constants.RESOURCE_TYPE;
 
 /**
@@ -37,7 +38,13 @@ public class SampleResourceExtension implements ResourceSharingExtension {
 
             @Override
             public String resourceIndexName() {
-                return RESOURCE_INDEX_NAME;
+                return SampleResourcePlugin.aliasMode ? RESOURCE_INDEX_PATTERN : RESOURCE_INDEX_NAME;
+            }
+
+            @Override
+            public String resourceSharingIndexName() {
+                // Always use the same sharing index name regardless of mode
+                return RESOURCE_INDEX_NAME + "-sharing";
             }
 
             @Override
