@@ -197,18 +197,21 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                 );
                 if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
                     List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
+                    String typeField = resolvedIndexNames.stream().map(resourcePluginInfo::getTypeFieldForIndex).findFirst().orElse("type");
                     String userName = userSubject != null ? userSubject.getUser().getName() : "null";
                     log.info(
-                        "[DLS] Applying resource DLS for user={}, protectedTypes={}, indices={}",
+                        "[DLS] Applying resource DLS for user={}, protectedTypes={}, typeField={}, indices={}",
                         userName,
                         currentProtectedTypes,
+                        typeField,
                         allIndexNames
                     );
                     IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
                         namedXContentRegistry,
                         allIndexNames,
                         userSubject.getUser(),
-                        currentProtectedTypes
+                        currentProtectedTypes,
+                        typeField
                     );
 
                     log.info("[DLS] About to call DlsFilterLevelActionHandler.handle for action={}", context.getAction());

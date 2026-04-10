@@ -32,7 +32,8 @@ public class ResourceSharingDlsUtils {
         NamedXContentRegistry xContentRegistry,
         Collection<String> resolvedIndices,
         User user,
-        Collection<String> protectedTypes
+        Collection<String> protectedTypes,
+        String typeField
     ) {
 
         List<String> principals = new ArrayList<>();
@@ -81,12 +82,12 @@ public class ResourceSharingDlsUtils {
                 .startArray("must_not")
                 .startObject()
                 .startObject("terms")
-                .array("type", protectedTypes.toArray())
+                .array(typeField, protectedTypes.toArray())
                 .endObject()
                 .endObject()
                 .startObject()
                 .startObject("terms")
-                .array("type.keyword", protectedTypes.toArray())
+                .array(typeField + ".keyword", protectedTypes.toArray())
                 .endObject()
                 .endObject()
                 .endArray()

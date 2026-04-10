@@ -406,6 +406,21 @@ public class ResourcePluginInfo {
         }
     }
 
+    public String getTypeFieldForIndex(String indexName) {
+        lock.readLock().lock();
+        try {
+            return typeToProvider.values()
+                .stream()
+                .filter(p -> indexMatches(p.resourceIndexName(), indexName))
+                .map(ResourceProvider::typeField)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse("type");
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     /**
      * Checks whether a concrete index name matches any protected resource index pattern.
      */
