@@ -415,7 +415,7 @@ public class ResourcePluginInfo {
                 .map(ResourceProvider::typeField)
                 .filter(java.util.Objects::nonNull)
                 .findFirst()
-                .orElse("type");
+                .orElse(null);
         } finally {
             lock.readLock().unlock();
         }

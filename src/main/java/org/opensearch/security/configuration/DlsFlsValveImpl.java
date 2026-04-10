@@ -197,7 +197,11 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                 );
                 if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
                     List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
-                    String typeField = resolvedIndexNames.stream().map(resourcePluginInfo::getTypeFieldForIndex).findFirst().orElse("type");
+                    String typeField = resolvedIndexNames.stream()
+                        .map(resourcePluginInfo::getTypeFieldForIndex)
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst()
+                        .orElse(null);
                     String userName = userSubject != null ? userSubject.getUser().getName() : "null";
                     log.info(
                         "[DLS] Applying resource DLS for user={}, protectedTypes={}, typeField={}, indices={}",
