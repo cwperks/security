@@ -9,14 +9,23 @@
 package org.opensearch.security.resources;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
 import org.opensearch.security.auth.UserSubjectImpl;
@@ -55,6 +64,70 @@ public class ResourceIndexListener implements IndexingOperationListener {
         this.resourceSharingIndexHandler = new ResourceSharingIndexHandler(client, threadPool, resourcePluginInfo);
         this.resourcePluginInfo = resourcePluginInfo;
         this.resourceSharingEnabledSetting = resourceSharingEnabledSetting;
+    }
+
+    /**
+     * Injects all_shared_principals into the document source before indexing.
+     */
+    @Override
+    public Engine.Index preIndex(ShardId shardId, Engine.Index operation) {
+        if (!resourceSharingEnabledSetting.getDynamicSettingValue()) {
+            return operation;
+        }
+
+        String concreteIndex = shardId.getIndexName();
+        if (!resourcePluginInfo.isProtectedResourceIndex(concreteIndex)) {
+            return operation;
+        }
+
+        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(concreteIndex, operation);
+        List<String> protectedTypes = resourcePluginInfo.currentProtectedTypes();
+        if (resourceType == null || !protectedTypes.contains(resourceType)) {
+            return operation;
+        }
+
+        final UserSubjectImpl userSubject = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        if (userSubject == null) {
+            log.info("[preIndex] No authenticated user for {} in {}, skipping", operation.id(), concreteIndex);
+            return operation;
+        }
+        log.info(
+            "[preIndex] Injecting all_shared_principals for {} in {} as user={}",
+            operation.id(),
+            concreteIndex,
+            userSubject.getUser().getName()
+        );
+
+        try {
+            BytesReference source = operation.parsedDoc().source();
+            if (source == null) {
+                return operation;
+            }
+
+            Map<String, Object> sourceMap;
+            try (
+                XContentParser parser = XContentType.JSON.xContent()
+                    .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.IGNORE_DEPRECATIONS, source.streamInput())
+            ) {
+                sourceMap = parser.map();
+            }
+
+            // Only set if not already present (don't overwrite explicit values)
+            if (!sourceMap.containsKey("all_shared_principals")) {
+                String userName = userSubject.getUser().getName();
+                List<String> principals = new ArrayList<>();
+                principals.add("user:" + userName);
+                sourceMap.put("all_shared_principals", principals);
+
+                XContentBuilder builder = XContentFactory.jsonBuilder().map(sourceMap);
+                operation.parsedDoc().setSource(BytesReference.bytes(builder), XContentType.JSON);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to inject all_shared_principals in preIndex for {}: {}", operation.id(), e.getMessage());
+        }
+
+        return operation;
     }
 
     /**

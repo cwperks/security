@@ -177,6 +177,7 @@ public class ResourceSharingIndexHandler {
             UpdateRequest ur = client.prepareUpdate(resourceIndex, resourceId)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .setDoc(Map.of("all_shared_principals", principals))
+                .setDocAsUpsert(true)
                 .setId(resourceId)
                 .request();
 
