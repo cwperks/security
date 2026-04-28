@@ -70,6 +70,21 @@ public class ResourceAccessHandler {
         this.resourcePluginInfo = resourcePluginInfo;
     }
 
+    private String resolveIndex(String resourceType) {
+        String tenant = null;
+        try {
+            UserSubjectImpl userSubject = (UserSubjectImpl) threadContext.getPersistent(
+                ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER
+            );
+            if (userSubject != null) {
+                tenant = userSubject.getUser().getRequestedTenant();
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return resourcePluginInfo.resolveIndexForType(resourceType, tenant);
+    }
+
     /**
      * Returns a set of accessible resource IDs for the current user within the specified resource index.
      *
@@ -86,7 +101,7 @@ public class ResourceAccessHandler {
             return;
         }
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
 
         if (adminDNs.isAdmin(user)) {
             loadAllResourceIds(resourceType, ActionListener.wrap(listener::onResponse, listener::onFailure));
@@ -121,7 +136,7 @@ public class ResourceAccessHandler {
 
         Set<String> flatPrincipals = getFlatPrincipals(user);
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
 
         // 3) Fetch all accessible resource sharing records
         resourceSharingIndexHandler.fetchAccessibleResourceSharingRecords(resourceIndex, resourceType, user, flatPrincipals, listener);
@@ -160,7 +175,7 @@ public class ResourceAccessHandler {
             return;
         }
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
         if (resourceIndex == null) {
             LOGGER.debug("No resourceIndex mapping found for type '{}'; denying action {}", resourceType, action);
             listener.onResponse(false);
@@ -184,12 +199,12 @@ public class ResourceAccessHandler {
 
             Set<String> accessLevels = sharingInfo.getAccessLevelsForUser(user);
 
-            // no matching access level, either recurse up or fail fast
+            // no matching access level, either recurse up or check workspaces
             if (accessLevels.isEmpty()) {
                 if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                     hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
                 } else {
-                    listener.onResponse(false);
+                    checkWorkspacePermission(resourceId, resourceIndex, resourceType, action, user, listener);
                 }
                 return;
             }
@@ -207,7 +222,8 @@ public class ResourceAccessHandler {
             if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                 hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
             } else {
-                listener.onResponse(false);
+                // No direct permission and no parent — check workspace-level permissions
+                checkWorkspacePermission(resourceId, resourceIndex, resourceType, action, user, listener);
             }
         }, e -> {
             LOGGER.error("Error while checking permission for user {} on resource {}: {}", user.getName(), resourceId, e.getMessage());
@@ -216,7 +232,91 @@ public class ResourceAccessHandler {
     }
 
     /**
-     * Patches the sharing info. It could be either or all 3 of the following possibilities:
+     * Checks if the user has permission on a resource via workspace membership.
+     * Reads the resource's workspaces field, then checks the user's access level
+     * on each workspace. Maps workspace access levels to the requested action.
+     */
+    private void checkWorkspacePermission(
+        String resourceId,
+        String resourceIndex,
+        String resourceType,
+        String action,
+        User user,
+        ActionListener<Boolean> listener
+    ) {
+        LOGGER.info("[WorkspacePermCheck] user={}, resource={}, action={}", user.getName(), resourceId, action);
+        resourceSharingIndexHandler.getResourceWorkspaces(resourceIndex, resourceId, ActionListener.wrap(workspaceIds -> {
+            LOGGER.info("[WorkspacePermCheck] resource {} workspaces={}", resourceId, workspaceIds);
+            if (workspaceIds == null || workspaceIds.isEmpty()) {
+                LOGGER.info("[WorkspacePermCheck] No workspaces, denying");
+                listener.onResponse(false);
+                return;
+            }
+            checkWorkspaceAccessRecursive(workspaceIds, 0, action, user, listener);
+        }, e -> {
+            LOGGER.warn("[WorkspacePermCheck] Failed to read workspaces: {}", e.getMessage());
+            listener.onResponse(false);
+        }));
+    }
+
+    private void checkWorkspaceAccessRecursive(
+        java.util.List<String> workspaceIds,
+        int index,
+        String action,
+        User user,
+        ActionListener<Boolean> listener
+    ) {
+        if (index >= workspaceIds.size()) {
+            LOGGER.info("[WorkspacePermCheck] No workspace granted action {}, DENIED", action);
+            listener.onResponse(false);
+            return;
+        }
+
+        String workspaceResourceId = "workspace:" + workspaceIds.get(index);
+        String workspaceIndex = resolveIndex("workspace");
+        LOGGER.info("[WorkspacePermCheck] Checking ws={} index={}", workspaceResourceId, workspaceIndex);
+        if (workspaceIndex == null) {
+            LOGGER.warn("[WorkspacePermCheck] No index for workspace type");
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+            return;
+        }
+
+        resourceSharingIndexHandler.fetchSharingInfo(workspaceIndex, workspaceResourceId, ActionListener.wrap(wsSharing -> {
+            LOGGER.info("[WorkspacePermCheck] ws={} sharingInfo={}", workspaceResourceId, wsSharing != null ? "found" : "null");
+            if (wsSharing == null) {
+                checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+                return;
+            }
+
+            if (wsSharing.isCreatedBy(user.getName())) {
+                LOGGER.info("[WorkspacePermCheck] User {} is ws owner, GRANTED", user.getName());
+                listener.onResponse(true);
+                return;
+            }
+
+            Set<String> wsAccessLevels = wsSharing.getAccessLevelsForUser(user);
+            LOGGER.info("[WorkspacePermCheck] user={} wsAccessLevels={}", user.getName(), wsAccessLevels);
+            if (!wsAccessLevels.isEmpty()) {
+                FlattenedActionGroups wsActionGroups = resourcePluginInfo.flattenedForType("workspace");
+                Set<String> allowedActions = wsActionGroups.resolve(wsAccessLevels);
+                LOGGER.info("[WorkspacePermCheck] allowedActions={} requestedAction={}", allowedActions, action);
+                WildcardMatcher matcher = WildcardMatcher.from(allowedActions);
+                if (matcher.test(action)) {
+                    LOGGER.info("[WorkspacePermCheck] action {} GRANTED via workspace", action);
+                    listener.onResponse(true);
+                    return;
+                }
+                LOGGER.info("[WorkspacePermCheck] action {} NOT in allowed, checking next ws", action);
+            }
+
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+        }, e -> {
+            LOGGER.warn("[WorkspacePermCheck] Error fetching ws sharing: {}", e.getMessage());
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+        }));
+    }
+
+    /**
      * 1. Revoke access                 - remove op
      * 2. Upgrade or downgrade access   - move op
      * 3. Share with new entity         - add op
@@ -252,7 +352,7 @@ public class ResourceAccessHandler {
             return;
         }
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
         if (resourceIndex == null) {
             LOGGER.debug("No resourceIndex mapping found for type '{}';", resourceType);
             listener.onFailure(
@@ -270,38 +370,52 @@ public class ResourceAccessHandler {
             revoke
         );
 
-        this.resourceSharingIndexHandler.patchSharingInfo(
-            resourceId,
-            resourceIndex,
-            add,
-            revoke,
-            generalAccessPresent,
-            generalAccess,
-            ActionListener.wrap(sharingInfo -> {
-                LOGGER.debug("Successfully patched sharing info for resource {} with add: {}, revoke: {}", resourceId, add, revoke);
-                cascadePatchToChildren(
-                    resourceId,
-                    resourceType,
-                    add,
-                    revoke,
-                    generalAccessPresent,
-                    generalAccess,
-                    ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> {
-                        LOGGER.warn("Patched resource {} but failed to cascade to children: {}", resourceId, e.getMessage());
-                        listener.onResponse(sharingInfo);
-                    })
+        // Verify the user has share permission before allowing the patch
+        hasPermission(resourceId, resourceType, ShareAction.NAME, ActionListener.wrap(hasAccess -> {
+            if (!hasAccess) {
+                listener.onFailure(
+                    new OpenSearchStatusException(
+                        "User does not have permission to modify sharing for this resource.",
+                        RestStatus.FORBIDDEN
+                    )
                 );
-            }, e -> {
-                LOGGER.error(
-                    "Failed to patched sharing info for resource {} with add: {}, revoke: {} : {}",
-                    resourceId,
-                    add,
-                    revoke,
-                    e.getMessage()
-                );
-                listener.onFailure(e);
-            })
-        );
+                return;
+            }
+
+            this.resourceSharingIndexHandler.patchSharingInfo(
+                resourceId,
+                resourceIndex,
+                add,
+                revoke,
+                generalAccessPresent,
+                generalAccess,
+                ActionListener.wrap(sharingInfo -> {
+                    LOGGER.debug("Successfully patched sharing info for resource {} with add: {}, revoke: {}", resourceId, add, revoke);
+                    cascadePatchToChildren(
+                        resourceId,
+                        resourceType,
+                        add,
+                        revoke,
+                        generalAccessPresent,
+                        generalAccess,
+                        ActionListener.wrap(v -> listener.onResponse(sharingInfo), e -> {
+                            LOGGER.warn("Patched resource {} but failed to cascade to children: {}", resourceId, e.getMessage());
+                            listener.onResponse(sharingInfo);
+                        })
+                    );
+                }, e -> {
+                    LOGGER.error(
+                        "Failed to patched sharing info for resource {} with add: {}, revoke: {} : {}",
+                        resourceId,
+                        add,
+                        revoke,
+                        e.getMessage()
+                    );
+                    listener.onFailure(e);
+                })
+            );
+
+        }, listener::onFailure));
 
     }
 
@@ -330,7 +444,7 @@ public class ResourceAccessHandler {
 
         LOGGER.debug("User {} is fetching sharing info for resource {} in index {}", user.getName(), resourceId, resourceType);
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
         if (resourceIndex == null) {
             LOGGER.debug("No resourceIndex mapping found for type '{}';", resourceType);
             listener.onFailure(
@@ -369,7 +483,7 @@ public class ResourceAccessHandler {
             return;
         }
 
-        final String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        final String resourceIndex = resolveIndex(resourceType);
         if (resourceIndex == null) {
             listener.onFailure(
                 new OpenSearchStatusException("No resourceIndex mapping found for type " + resourceType, RestStatus.BAD_REQUEST)
@@ -398,7 +512,7 @@ public class ResourceAccessHandler {
                 // Also resolve parent's access — parent may grant additional actions
                 if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                     String parentType = sharingInfo.getParentType();
-                    String parentIndex = resourcePluginInfo.indexByType(parentType);
+                    String parentIndex = resolveIndex(parentType);
                     if (parentIndex != null) {
                         resourceSharingIndexHandler.fetchSharingInfo(
                             parentIndex,
@@ -429,7 +543,8 @@ public class ResourceAccessHandler {
                                         effectiveAccessLevel,
                                         Set.copyOf(directAccessLevels),
                                         Set.copyOf(allowedActions),
-                                        canShare
+                                        canShare,
+                                        sharingInfo.getShareWith() != null ? sharingInfo.getShareWith().getGeneralAccess() : null
                                     )
                                 );
                             },
@@ -468,7 +583,8 @@ public class ResourceAccessHandler {
                     effectiveAccessLevel,
                     Set.copyOf(directAccessLevels),
                     Set.copyOf(allowedActions),
-                    canShare
+                    canShare,
+                    sharingInfo.getShareWith() != null ? sharingInfo.getShareWith().getGeneralAccess() : null
                 )
             );
         }, listener::onFailure));
@@ -525,7 +641,7 @@ public class ResourceAccessHandler {
 
         LOGGER.debug("Sharing resource {} created by {} with {}", resourceId, user.getName(), target.toString());
 
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
 
         this.resourceSharingIndexHandler.share(resourceId, resourceIndex, target, ActionListener.wrap(sharingInfo -> {
             LOGGER.debug("Successfully shared resource {} with {}", resourceId, target.toString());
@@ -558,7 +674,7 @@ public class ResourceAccessHandler {
             for (var entry : childIds.entrySet()) {
                 String childId = entry.getKey();
                 String childType = entry.getValue();
-                String childIndex = resourcePluginInfo.indexByType(childType);
+                String childIndex = resolveIndex(childType);
                 // Remap access levels if child type differs from parent type
                 ShareWith childTarget = target;
                 if (!childType.equals(parentType)) {
@@ -615,7 +731,7 @@ public class ResourceAccessHandler {
             for (var entry : childIds.entrySet()) {
                 String childId = entry.getKey();
                 String childType = entry.getValue();
-                String childIndex = resourcePluginInfo.indexByType(childType);
+                String childIndex = resolveIndex(childType);
                 // Remap general_access if child type differs from parent type
                 String childGeneralAccess = generalAccess;
                 if (generalAccessPresent && generalAccess != null && !childType.equals(parentType)) {
@@ -656,7 +772,7 @@ public class ResourceAccessHandler {
      * @param listener      The listener to be notified with the set of resource IDs.
      */
     private void loadAllResourceIds(String resourceType, ActionListener<Set<String>> listener) {
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
         this.resourceSharingIndexHandler.fetchAllResourceIds(resourceIndex, listener);
     }
 
@@ -667,7 +783,7 @@ public class ResourceAccessHandler {
      * @param listener      The listener to be notified with the set of resource-sharing records.
      */
     private void loadAllResourceSharingRecords(String resourceType, ActionListener<Set<SharingRecord>> listener) {
-        String resourceIndex = resourcePluginInfo.indexByType(resourceType);
+        String resourceIndex = resolveIndex(resourceType);
         this.resourceSharingIndexHandler.fetchAllResourceSharingRecords(resourceIndex, resourceType, listener);
     }
 

@@ -36,6 +36,7 @@ import org.opensearch.action.admin.indices.shrink.ResizeRequest;
 import org.opensearch.action.bulk.BulkAction;
 import org.opensearch.action.bulk.BulkItemRequest;
 import org.opensearch.action.bulk.BulkShardRequest;
+import org.opensearch.action.get.GetRequest;
 import org.opensearch.action.search.MultiSearchAction;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.action.update.UpdateRequest;
@@ -109,6 +110,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     private final AdminDNs adminDNs;
     private final OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting;
     private final ResourcePluginInfo resourcePluginInfo;
+    private final org.opensearch.security.resources.ResourceSharingIndexHandler resourceSharingIndexHandler;
     private volatile boolean dlsWriteBlockedEnabled;
 
     public DlsFlsValveImpl(
@@ -133,6 +135,9 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         this.settings = settings;
         this.adminDNs = adminDNs;
         this.resourcePluginInfo = resourcePluginInfo;
+        this.resourceSharingIndexHandler = new org.opensearch.security.resources.ResourceSharingIndexHandler(
+            nodeClient, threadPool, resourcePluginInfo
+        );
 
         clusterService.addListener(event -> {
             DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
@@ -178,19 +183,53 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         ActionRequest request = context.getRequest();
         if (HeaderHelper.isInternalOrPluginRequest(threadContext)) {
             if (resourceSharingEnabledSetting.getDynamicSettingValue()
-                && request instanceof SearchRequest
+                && (request instanceof SearchRequest || request instanceof GetRequest)
                 && resolved instanceof ResolvedIndices resolvedIndices) {
                 Set<String> protectedIndices = resourcePluginInfo.getResourceIndicesForProtectedTypes();
                 WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
                 Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
+                // Also include alias names since DlsFilterLevelActionHandler.modifyQuery uses resolved.local().names()
+                Set<String> allIndexNames = new java.util.HashSet<>(resolvedIndexNames);
+                allIndexNames.addAll(resolvedIndices.local().names(context.clusterState()));
+                log.info(
+                    "[DLS] internal request: action={}, resolvedIndices={}, aliasNames={}, protectedIndices={}, matchAll={}",
+                    context.getAction(),
+                    resolvedIndexNames,
+                    allIndexNames,
+                    protectedIndices,
+                    resourceIndicesMatcher.matchAll(resolvedIndexNames)
+                );
                 if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
+                    List<String> currentProtectedTypes = resourcePluginInfo.currentProtectedTypes();
+                    String typeField = resolvedIndexNames.stream()
+                        .map(resourcePluginInfo::getTypeFieldForIndex)
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst()
+                        .orElse(null);
+                    String userName = userSubject != null ? userSubject.getUser().getName() : "null";
+                    log.info(
+                        "[DLS] Applying resource DLS for user={}, protectedTypes={}, typeField={}, indices={}",
+                        userName,
+                        currentProtectedTypes,
+                        typeField,
+                        allIndexNames
+                    );
+                    // Resolve workspace IDs the user has access to
+                    java.util.List<String> accessibleWorkspaceIds = resourceSharingIndexHandler
+                        .resolveAccessibleWorkspaceIds(userSubject.getUser());
+                    log.info("[DLS] User {} has accessible workspaces: {}", userName, accessibleWorkspaceIds);
+
                     IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
                         namedXContentRegistry,
-                        resolvedIndexNames,
-                        userSubject.getUser()
+                        allIndexNames,
+                        userSubject.getUser(),
+                        currentProtectedTypes,
+                        typeField,
+                        accessibleWorkspaceIds
                     );
 
-                    return DlsFilterLevelActionHandler.handle(
+                    log.info("[DLS] About to call DlsFilterLevelActionHandler.handle for action={}", context.getAction());
+                    boolean result = DlsFilterLevelActionHandler.handle(
                         context,
                         sharedResourceMap,
                         listener,
@@ -199,6 +238,8 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                         OpenSearchSecurityPlugin.GuiceHolder.getIndicesService(),
                         threadContext
                     );
+                    log.info("[DLS] DlsFilterLevelActionHandler.handle returned {} for action={}", result, context.getAction());
+                    return result;
                 }
             }
             return true;

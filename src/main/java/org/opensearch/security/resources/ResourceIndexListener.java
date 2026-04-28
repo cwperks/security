@@ -9,13 +9,23 @@
 package org.opensearch.security.resources;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.common.xcontent.XContentFactory;
+import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.core.action.ActionListener;
+import org.opensearch.core.common.bytes.BytesReference;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.core.xcontent.DeprecationHandler;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.core.xcontent.XContentBuilder;
+import org.opensearch.core.xcontent.XContentParser;
 import org.opensearch.index.engine.Engine;
 import org.opensearch.index.shard.IndexingOperationListener;
 import org.opensearch.security.auth.UserSubjectImpl;
@@ -57,6 +67,72 @@ public class ResourceIndexListener implements IndexingOperationListener {
     }
 
     /**
+     * Injects all_shared_principals into the document source before indexing.
+     */
+    @Override
+    public Engine.Index preIndex(ShardId shardId, Engine.Index operation) {
+        if (!resourceSharingEnabledSetting.getDynamicSettingValue()) {
+            return operation;
+        }
+
+        String concreteIndex = shardId.getIndexName();
+        if (!resourcePluginInfo.isProtectedResourceIndex(concreteIndex)) {
+            return operation;
+        }
+
+        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(concreteIndex, operation);
+        List<String> protectedTypes = resourcePluginInfo.currentProtectedTypes();
+        if (resourceType == null || !protectedTypes.contains(resourceType)) {
+            return operation;
+        }
+
+        final UserSubjectImpl userSubject = (UserSubjectImpl) threadPool.getThreadContext()
+            .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+        if (userSubject == null) {
+            log.info("[preIndex] No authenticated user for {} in {}, skipping", operation.id(), concreteIndex);
+            return operation;
+        }
+        log.info(
+            "[preIndex] Injecting all_shared_principals for {} in {} as user={}",
+            operation.id(),
+            concreteIndex,
+            userSubject.getUser().getName()
+        );
+
+        try {
+            BytesReference source = operation.parsedDoc().source();
+            if (source == null) {
+                return operation;
+            }
+
+            Map<String, Object> sourceMap;
+            try (
+                XContentParser parser = XContentType.JSON.xContent()
+                    .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.IGNORE_DEPRECATIONS, source.streamInput())
+            ) {
+                sourceMap = parser.map();
+            }
+
+            // If all_shared_principals is missing (e.g., saved objects client overwrote the doc),
+            // inject the current user as a minimum. postIndex will correct this with the full
+            // principal list from the sharing record via fetchAndUpdateResourceVisibility.
+            if (!sourceMap.containsKey("all_shared_principals")) {
+                String userName = userSubject.getUser().getName();
+                List<String> principals = new ArrayList<>();
+                principals.add("user:" + userName);
+                sourceMap.put("all_shared_principals", principals);
+
+                XContentBuilder builder = XContentFactory.jsonBuilder().map(sourceMap);
+                operation.parsedDoc().setSource(BytesReference.bytes(builder), XContentType.JSON);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to inject all_shared_principals in preIndex for {}: {}", operation.id(), e.getMessage());
+        }
+
+        return operation;
+    }
+
+    /**
      * Creates a resource sharing entry for the newly created resource.
      */
     @Override
@@ -66,19 +142,41 @@ public class ResourceIndexListener implements IndexingOperationListener {
             // feature is disabled
             return;
         }
-        String resourceIndex = shardId.getIndexName();
+        String concreteIndex = shardId.getIndexName();
 
-        if (!resourcePluginInfo.getResourceIndicesForProtectedTypes().contains(resourceIndex)) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(concreteIndex)) {
             // type is marked as not protected
             return;
         }
 
-        log.debug("postIndex called on {}", resourceIndex);
+        log.debug("postIndex called on {}", concreteIndex);
 
-        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(resourceIndex, index);
+        String resourceType = resourcePluginInfo.getResourceTypeForIndexOp(concreteIndex, index);
+
+        // Skip documents whose type isn't a registered protected resource type
+        List<String> protectedTypes = resourcePluginInfo.currentProtectedTypes();
+        if (resourceType == null || !protectedTypes.contains(resourceType)) {
+            log.debug("Skipping resource sharing for type [{}] in index [{}] - not a protected type", resourceType, concreteIndex);
+            return;
+        }
 
         String resourceId = index.id();
         ResourceProvider provider = resourcePluginInfo.getResourceProvider(resourceType);
+
+        // For wildcard providers (e.g. .kibana*), use the resolved alias for the sharing index
+        // so reads via the alias can find the sharing record.
+        // For concrete providers, use the concrete index as before.
+        String resolvedIndex = concreteIndex;
+        if (provider != null && provider.resourceIndexName().contains("*")) {
+            final UserSubjectImpl userSubjectForIndex = (UserSubjectImpl) threadPool.getThreadContext()
+                .getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER);
+            String tenant = (userSubjectForIndex != null) ? userSubjectForIndex.getUser().getRequestedTenant() : null;
+            String resolved = resourcePluginInfo.resolveIndexForType(resourceType, tenant);
+            if (resolved != null) {
+                resolvedIndex = resolved;
+            }
+        }
+        final String resourceIndex = resolvedIndex;
         if (provider == null) {
             log.warn(
                 "Failed to create a resource sharing entry for resource: {} with type: {}. The type is not declared as a protected type in plugins.security.experimental.resource_sharing.protected_types.",
@@ -96,12 +194,12 @@ public class ResourceIndexListener implements IndexingOperationListener {
 
         if (!result.isCreated()) {
             ActionListener<Void> visibilityListener = ActionListener.wrap(unused -> {
-                log.debug(
+                log.info(
                     "postIndex: Successfully updated the resource visibility for resource {} within index {}",
                     resourceId,
                     resourceIndex
                 );
-            }, e -> { log.debug(e.getMessage()); });
+            }, e -> { log.warn("postIndex: Failed to update visibility for {} in {}: {}", resourceId, resourceIndex, e.getMessage()); });
 
             // Check if the resource's parent changed
             if (provider.parentType() != null && provider.parentIdField() != null) {
@@ -153,13 +251,18 @@ public class ResourceIndexListener implements IndexingOperationListener {
         try {
             Objects.requireNonNull(user);
             ActionListener<ResourceSharing> listener = ActionListener.wrap(entry -> {
-                log.debug(
+                log.info(
                     "postIndex: Successfully created a resource sharing entry {} for resource {} within index {}",
                     entry,
                     resourceId,
                     resourceIndex
                 );
-            }, e -> { log.debug(e.getMessage()); });
+                // Update all_shared_principals on the resource document
+                this.resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, ActionListener.wrap(
+                    unused -> log.info("postIndex: Updated visibility for new resource {} in {}", resourceId, resourceIndex),
+                    e2 -> log.warn("postIndex: Failed to update visibility for new resource {}: {}", resourceId, e2.getMessage())
+                ));
+            }, e -> { log.warn("postIndex: Failed to create sharing entry for {}: {}", resourceId, e.getMessage()); });
             // User.getRequestedTenant() is null if multi-tenancy is disabled
             ResourceSharing.Builder builder = ResourceSharing.builder()
                 .resourceId(resourceId)
@@ -170,7 +273,11 @@ public class ResourceIndexListener implements IndexingOperationListener {
                     .parentId(ResourcePluginInfo.extractFieldFromIndexOp(provider.parentIdField(), index));
             }
             ResourceSharing sharingInfo = builder.build();
-            // User.getRequestedTenant() is null if multi-tenancy is disabled
+
+            // Apply default general access if the provider specifies one
+            if (provider.defaultGeneralAccess() != null) {
+                sharingInfo.setGeneralAccess(provider.defaultGeneralAccess());
+            }
 
             this.resourceSharingIndexHandler.indexResourceSharing(resourceIndex, sharingInfo, listener);
 
@@ -292,7 +399,7 @@ public class ResourceIndexListener implements IndexingOperationListener {
         }
         String resourceIndex = shardId.getIndexName();
 
-        if (!resourcePluginInfo.getResourceIndicesForProtectedTypes().contains(resourceIndex)) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(resourceIndex)) {
             // type is marked as not protected
             return;
         }

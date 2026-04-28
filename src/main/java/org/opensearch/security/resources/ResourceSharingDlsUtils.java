@@ -31,7 +31,10 @@ public class ResourceSharingDlsUtils {
     public static IndexToRuleMap<DlsRestriction> resourceRestrictions(
         NamedXContentRegistry xContentRegistry,
         Collection<String> resolvedIndices,
-        User user
+        User user,
+        Collection<String> protectedTypes,
+        String typeField,
+        Collection<String> accessibleWorkspaceIds
     ) {
 
         List<String> principals = new ArrayList<>();
@@ -51,11 +54,66 @@ public class ResourceSharingDlsUtils {
         XContentBuilder builder = null;
         DlsRestriction restriction;
         try {
-            // Build a single `terms` query JSON
+            // Build a bool query: match shared principals OR document type is not a protected resource type
             builder = XContentFactory.jsonBuilder();
-            builder.startObject().startObject("terms").array("all_shared_principals", principals.toArray()).endObject().endObject();
+            builder.startObject()
+                .startObject("bool")
+                .startArray("should")
+                // Documents shared with this user (handle both keyword and text mappings)
+                .startObject()
+                .startObject("bool")
+                .startArray("should")
+                .startObject()
+                .startObject("terms")
+                .array("all_shared_principals", principals.toArray())
+                .endObject()
+                .endObject()
+                .startObject()
+                .startObject("terms")
+                .array("all_shared_principals.keyword", principals.toArray())
+                .endObject()
+                .endObject()
+                .endArray()
+                .field("minimum_should_match", 1)
+                .endObject()
+                .endObject();
+                // Documents in a workspace the user has access to
+                if (accessibleWorkspaceIds != null && !accessibleWorkspaceIds.isEmpty()) {
+                    builder.startObject()
+                        .startObject("terms")
+                        .array("workspaces", accessibleWorkspaceIds.toArray())
+                        .endObject()
+                        .endObject();
+                }
+            // Documents whose type is NOT a protected resource type (pass through)
+            // Only needed when the index has a type field (mixed-type indices like .kibana)
+            if (typeField != null) {
+                builder.startObject()
+                    .startObject("bool")
+                    .startArray("must_not")
+                    .startObject()
+                    .startObject("terms")
+                    .array(typeField, protectedTypes.toArray())
+                    .endObject()
+                    .endObject()
+                    .startObject()
+                    .startObject("terms")
+                    .array(typeField + ".keyword", protectedTypes.toArray())
+                    .endObject()
+                    .endObject()
+                    .endArray()
+                    .endObject()
+                    .endObject();
+            }
+            builder.endArray().field("minimum_should_match", 1).endObject().endObject();
 
             String dlsJson = builder.toString();
+            LOGGER.info(
+                "[DLS] Resource sharing DLS query: principals={}, protectedTypes={}, query={}",
+                principals,
+                protectedTypes,
+                dlsJson
+            );
             restriction = new DlsRestriction(List.of(DocumentPrivileges.getRenderedDlsQuery(xContentRegistry, dlsJson)));
         } catch (IOException e) {
             LOGGER.warn("Received error while applying resource restrictions.", e);

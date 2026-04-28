@@ -47,4 +47,15 @@ public interface ResourceProvider {
         return null;
     }
 
+    /**
+     * Returns the default general access level for newly created resources of this type.
+     * If non-null, new resources will be publicly accessible at this level (e.g. "view").
+     * If null, new resources are private by default.
+     *
+     * @return the default general access level, or null for private
+     */
+    default String defaultGeneralAccess() {
+        return null;
+    }
+
 }

@@ -25,9 +25,10 @@ import org.opensearch.core.xcontent.XContentBuilder;
  * @param accessLevels all matching access levels for the current user on this resource
  * @param allowedActions resolved actions granted to the current user
  * @param canShare whether the current user may update sharing for this resource
+ * @param generalAccess the general access level set on this resource, if any
  */
 public record ResolvedResourceAccess(String resourceId, String resourceType, boolean owner, boolean admin, String effectiveAccessLevel, Set<
-    String> accessLevels, Set<String> allowedActions, boolean canShare) implements ToXContentObject {
+    String> accessLevels, Set<String> allowedActions, boolean canShare, String generalAccess) implements ToXContentObject {
 
     @Override
     public XContentBuilder toXContent(XContentBuilder builder, Params params) throws IOException {
@@ -42,6 +43,9 @@ public record ResolvedResourceAccess(String resourceId, String resourceType, boo
         builder.field("access_levels", accessLevels);
         builder.field("allowed_actions", allowedActions);
         builder.field("can_share", canShare);
+        if (generalAccess != null) {
+            builder.field("general_access", generalAccess);
+        }
         builder.endObject();
         return builder;
     }

@@ -125,13 +125,15 @@ public class ResourceAccessEvaluator {
             return false;
         }
         // if requested index is not a resource sharing index, move on to the regular evaluator
-        if (!resourcePluginInfo.getResourceIndicesForProtectedTypes().contains(docRequest.index())) {
+        if (!resourcePluginInfo.isProtectedResourceIndex(docRequest.index())) {
             log.debug("Request index {} is not a protected resource index", docRequest.index());
             return false;
         }
 
         // if a resource is not included in protected resource list, we do not perform resource-level authorization
-        return protectedTypes.contains(docRequest.type());
+        if (!protectedTypes.contains(docRequest.type())) return false;
+
+        return true;
     }
 
 }

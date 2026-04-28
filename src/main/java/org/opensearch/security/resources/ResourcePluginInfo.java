@@ -46,6 +46,8 @@ public class ResourcePluginInfo {
 
     private OpensearchDynamicSetting<List<String>> protectedTypesSetting;
 
+    private String dashboardsIndexName = ".kibana";
+
     private final Set<ResourceSharingExtension> resourceSharingExtensions = new HashSet<>();
 
     // type <-> resource provider
@@ -63,8 +65,53 @@ public class ResourcePluginInfo {
     // cache current protected types and their indices
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();    // make the updates/reads thread-safe
 
+    /**
+     * Checks whether a concrete index name matches a provider's index name,
+     * supporting trailing wildcard patterns (e.g. ".kibana*" matches ".kibana_2").
+     */
+    public static boolean indexMatches(String pattern, String concreteIndex) {
+        if (pattern.endsWith("*")) {
+            return concreteIndex.startsWith(pattern.substring(0, pattern.length() - 1));
+        }
+        return pattern.equals(concreteIndex);
+    }
+
     public void setProtectedTypesSetting(OpensearchDynamicSetting<List<String>> protectedTypesSetting) {
         this.protectedTypesSetting = protectedTypesSetting;
+    }
+
+    public void setDashboardsIndexName(String dashboardsIndexName) {
+        this.dashboardsIndexName = dashboardsIndexName;
+    }
+
+    /**
+     * Resolves the concrete index (or alias) for a resource type given the current tenant.
+     * For non-dashboards resource types, returns the provider's index name as-is.
+     * For dashboards types (.kibana*), resolves to the tenant-specific alias.
+     *
+     * @param type   the resource type
+     * @param tenant the requested tenant (null if multi-tenancy is disabled)
+     * @return the concrete index/alias name
+     */
+    public String resolveIndexForType(String type, String tenant) {
+        lock.readLock().lock();
+        try {
+            ResourceProvider provider = typeToProvider.get(type);
+            if (provider == null) return null;
+
+            String indexName = provider.resourceIndexName();
+            if (!indexName.contains("*")) {
+                return indexName;
+            }
+
+            // Wildcard pattern — resolve using dashboards index + tenant
+            if (tenant == null || tenant.isEmpty()) {
+                return dashboardsIndexName;
+            }
+            return dashboardsIndexName + "_" + tenant.hashCode() + "_" + tenant.toLowerCase().replaceAll("[^a-z0-9]+", "");
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     public void setResourceSharingExtensions(Set<ResourceSharingExtension> extensions) {
@@ -170,7 +217,7 @@ public class ResourcePluginInfo {
             // If typeField is not present, assume single resource type per index and return type from provider
             var provider = typeToProvider.values()
                 .stream()
-                .filter(p -> p.resourceIndexName().equals(resourceIndex))
+                .filter(p -> indexMatches(p.resourceIndexName(), resourceIndex))
                 .findFirst()
                 .orElse(null);
             if (provider == null) {
@@ -357,6 +404,28 @@ public class ResourcePluginInfo {
         } finally {
             lock.readLock().unlock();
         }
+    }
+
+    public String getTypeFieldForIndex(String indexName) {
+        lock.readLock().lock();
+        try {
+            return typeToProvider.values()
+                .stream()
+                .filter(p -> indexMatches(p.resourceIndexName(), indexName))
+                .map(ResourceProvider::typeField)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Checks whether a concrete index name matches any protected resource index pattern.
+     */
+    public boolean isProtectedResourceIndex(String concreteIndex) {
+        return getResourceIndicesForProtectedTypes().stream().anyMatch(pattern -> indexMatches(pattern, concreteIndex));
     }
 
     public List<String> currentProtectedTypes() {

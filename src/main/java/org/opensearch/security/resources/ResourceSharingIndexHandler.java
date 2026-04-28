@@ -130,6 +130,10 @@ public class ResourceSharingIndexHandler {
         // TODO: Once stashContext is replaced with switchContext this call will have to be modified
         try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
             for (String resourceIndex : resourceIndices) {
+                // Skip wildcard patterns — sharing indices for these are created on-demand
+                if (resourceIndex.contains("*")) {
+                    continue;
+                }
                 String resourceSharingIndex = getSharingIndex(resourceIndex);
                 CreateIndexRequest cir = new CreateIndexRequest(resourceSharingIndex).settings(INDEX_SETTINGS).waitForActiveShards(1);
                 ActionListener<CreateIndexResponse> cirListener = ActionListener.wrap(response -> {
@@ -169,28 +173,32 @@ public class ResourceSharingIndexHandler {
         List<String> principals,
         ActionListener<UpdateResponse> listener
     ) {
-        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
-            UpdateRequest ur = client.prepareUpdate(resourceIndex, resourceId)
-                .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
-                .setDoc(Map.of("all_shared_principals", principals))
-                .setId(resourceId)
-                .request();
+        ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext();
+        UpdateRequest ur = client.prepareUpdate(resourceIndex, resourceId)
+            .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
+            .setDoc(Map.of("all_shared_principals", principals))
+            .setDocAsUpsert(true)
+            .setId(resourceId)
+            .request();
 
-            ActionListener<UpdateResponse> urListener = ActionListener.wrap(response -> {
-                ctx.restore();
-                LOGGER.info(
-                    "Successfully updated visibility of resource {} in index {} to principals {}.",
-                    resourceIndex,
-                    resourceId,
-                    principals
-                );
-                listener.onResponse(response);
-            }, (e) -> {
-                LOGGER.error("Failed to update visibility in [{}] for resource [{}]", resourceIndex, resourceId, e);
-                listener.onFailure(e);
-            });
-            client.update(ur, urListener);
-        }
+        ActionListener<UpdateResponse> urListener = ActionListener.wrap(response -> {
+            ctx.restore();
+            LOGGER.info(
+                "Updated visibility: index={}, id={}, result={}, version={}, seqNo={}, principals={}",
+                resourceIndex,
+                resourceId,
+                response.getResult(),
+                response.getVersion(),
+                response.getSeqNo(),
+                principals
+            );
+            listener.onResponse(response);
+        }, (e) -> {
+            ctx.restore();
+            LOGGER.error("Failed to update visibility in [{}] for resource [{}]", resourceIndex, resourceId, e);
+            listener.onFailure(e);
+        });
+        client.update(ur, urListener);
     }
 
     /**
@@ -254,8 +262,8 @@ public class ResourceSharingIndexHandler {
         CreatedBy createdBy = sharingInfo.getCreatedBy();
         // TODO: Once stashContext is replaced with switchContext this call will have to be modified
         String resourceSharingIndex = getSharingIndex(resourceIndex);
-        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
-            IndexRequest ir = client.prepareIndex(resourceSharingIndex)
+        ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext();
+        IndexRequest ir = client.prepareIndex(resourceSharingIndex)
                 .setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE)
                 .setSource(sharingInfo.toXContent(jsonBuilder(), ToXContent.EMPTY_PARAMS))
                 .setOpType(DocWriteRequest.OpType.CREATE) // only create if an entry doesn't exist
@@ -282,6 +290,7 @@ public class ResourceSharingIndexHandler {
                     })
                 );
             }, (e) -> {
+                ctx.restore();
                 if (ExceptionsHelper.unwrapCause(e) instanceof VersionConflictEngineException) {
                     // already exists → skipping
                     LOGGER.debug("Entry for [{}] already exists in [{}], skipping", resourceId, resourceSharingIndex);
@@ -292,7 +301,6 @@ public class ResourceSharingIndexHandler {
                 }
             });
             client.index(ir, irListener);
-        }
     }
 
     /**
@@ -551,6 +559,105 @@ public class ResourceSharingIndexHandler {
      * }
      * </pre>
      */
+    /**
+     * Resolves workspace IDs the user has access to by scanning workspace sharing records.
+     * Returns the list synchronously by blocking (for use in the DLS path).
+     */
+    public java.util.List<String> resolveAccessibleWorkspaceIds(org.opensearch.security.user.User user) {
+        java.util.List<String> workspaceIds = new java.util.ArrayList<>();
+        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
+            // Search all sharing indices for workspace sharing records
+            org.opensearch.action.search.SearchRequest searchRequest = new org.opensearch.action.search.SearchRequest("*-sharing");
+            searchRequest.source(new org.opensearch.search.builder.SearchSourceBuilder()
+                .query(org.opensearch.index.query.QueryBuilders.termQuery("resource_type", "workspace"))
+                .size(1000));
+            searchRequest.indicesOptions(org.opensearch.action.support.IndicesOptions.lenientExpandOpen());
+
+            org.opensearch.action.search.SearchResponse response = client.search(searchRequest).actionGet(5000);
+            ctx.restore();
+
+            String userName = user.getName();
+            java.util.Set<String> userRoles = user.getSecurityRoles() != null ? user.getSecurityRoles() : java.util.Set.of();
+            java.util.Set<String> backendRoles = user.getRoles() != null ? user.getRoles() : java.util.Set.of();
+
+            for (org.opensearch.search.SearchHit hit : response.getHits().getHits()) {
+                java.util.Map<String, Object> source = hit.getSourceAsMap();
+                String resourceId = (String) source.get("resource_id");
+
+                // Check created_by
+                Object createdByObj = source.get("created_by");
+                if (createdByObj instanceof java.util.Map) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> createdBy = (java.util.Map<String, Object>) createdByObj;
+                    if (userName.equals(createdBy.get("user"))) {
+                        workspaceIds.add(resourceId);
+                        continue;
+                    }
+                }
+
+                // Check share_with
+                Object shareWithObj = source.get("share_with");
+                if (shareWithObj instanceof java.util.Map) {
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> shareWith = (java.util.Map<String, Object>) shareWithObj;
+                    boolean matched = false;
+                    for (Object levelObj : shareWith.values()) {
+                        if (!(levelObj instanceof java.util.Map)) continue;
+                        @SuppressWarnings("unchecked")
+                        java.util.Map<String, Object> level = (java.util.Map<String, Object>) levelObj;
+                        Object users = level.get("users");
+                        if (users instanceof java.util.List && ((java.util.List<?>) users).contains(userName)) {
+                            matched = true;
+                            break;
+                        }
+                        Object roles = level.get("backend_roles");
+                        if (roles instanceof java.util.List) {
+                            for (Object r : (java.util.List<?>) roles) {
+                                if (backendRoles.contains(r)) { matched = true; break; }
+                            }
+                        }
+                        if (matched) break;
+                    }
+                    if (matched) {
+                        workspaceIds.add(resourceId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to resolve accessible workspace IDs: {}", e.getMessage());
+        }
+        // Strip "workspace:" prefix to get just the ID
+        return workspaceIds.stream()
+            .map(id -> id.startsWith("workspace:") ? id.substring("workspace:".length()) : id)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Reads the workspaces field from a saved object in the resource index.
+     */
+    @SuppressWarnings("unchecked")
+    public void getResourceWorkspaces(String resourceIndex, String resourceId, ActionListener<java.util.List<String>> listener) {
+        try (ThreadContext.StoredContext ctx = this.threadPool.getThreadContext().stashContext()) {
+            GetRequest getRequest = new GetRequest(resourceIndex).id(resourceId);
+            client.get(getRequest, ActionListener.wrap(getResponse -> {
+                ctx.restore();
+                if (!getResponse.isExists()) {
+                    listener.onResponse(java.util.List.of());
+                    return;
+                }
+                Object workspaces = getResponse.getSourceAsMap().get("workspaces");
+                if (workspaces instanceof java.util.List) {
+                    listener.onResponse((java.util.List<String>) workspaces);
+                } else {
+                    listener.onResponse(java.util.List.of());
+                }
+            }, e -> {
+                ctx.restore();
+                listener.onFailure(e);
+            }));
+        }
+    }
+
     public void fetchSharingInfo(String resourceIndex, String resourceId, ActionListener<ResourceSharing> listener) {
         if (StringUtils.isBlank(resourceIndex) || StringUtils.isBlank(resourceId)) {
             listener.onFailure(new IllegalArgumentException("resourceIndex and resourceId must not be null or empty"));

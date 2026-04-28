@@ -179,10 +179,11 @@ import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.privileges.RoleMapper;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
+import org.opensearch.security.resources.DashboardsSavedObjectsResourceSharingExtension;
 import org.opensearch.security.resources.PluginDefaultRolesHelper;
 import org.opensearch.security.resources.ResourceAccessControlClient;
 import org.opensearch.security.resources.ResourceAccessHandler;
-import org.opensearch.security.resources.ResourceActionGroupsHelper;
+import org.opensearch.security.resources.ResourceAccessLevelHelper;
 import org.opensearch.security.resources.ResourceIndexListener;
 import org.opensearch.security.resources.ResourcePluginInfo;
 import org.opensearch.security.resources.ResourceSharingIndexHandler;
@@ -711,7 +712,12 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
                 // Resource sharing API to update sharing info
                 handlers.add(
-                    new ShareRestAction(resourcePluginInfo, resourceSharingEnabledSetting, resourceSharingProtectedResourceTypesSetting)
+                    new ShareRestAction(
+                        resourcePluginInfo,
+                        resourceSharingEnabledSetting,
+                        resourceSharingProtectedResourceTypesSetting,
+                        threadPool
+                    )
                 );
                 handlers.add(new ResourceTypesRestAction(resourcePluginInfo, resourceSharingEnabledSetting));
                 handlers.add(
@@ -798,9 +804,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 resourceSharingEnabledSetting
             );
             Set<String> resourceIndices = resourcePluginInfo.getResourceIndices();
-            if (resourceIndices.contains(indexModule.getIndex().getName())) {
+            String indexName = indexModule.getIndex().getName();
+            boolean isResourceIndex = resourceIndices.stream().anyMatch(pattern -> ResourcePluginInfo.indexMatches(pattern, indexName));
+            if (isResourceIndex) {
                 indexModule.addIndexOperationListener(resourceIndexListener);
-                log.info("Security plugin started listening to operations on resource-index {}", indexModule.getIndex().getName());
+                log.info("Security plugin started listening to operations on resource-index {}", indexName);
             }
 
             indexModule.forceQueryCacheProvider((indexSettings, nodeCache) -> new QueryCache() {
@@ -2505,10 +2513,12 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     public void loadExtensions(ExtensionLoader loader) {
         // discover & register resource-sharing extensions and their types
         Set<ResourceSharingExtension> exts = new HashSet<>(loader.loadExtensions(ResourceSharingExtension.class));
+        // Register built-in dashboards saved objects resource types
+        exts.add(new DashboardsSavedObjectsResourceSharingExtension());
         resourcePluginInfo.setResourceSharingExtensions(exts);
 
         // load action-groups in memory
-        ResourceActionGroupsHelper.loadActionGroupsConfig(resourcePluginInfo);
+        ResourceAccessLevelHelper.loadAccessLevelConfig(resourcePluginInfo);
 
         // ResourceSharingExtension extends SecurityConfigExtension, so all resource-sharing
         // plugins are also config extensions. Collect them along with any standalone
