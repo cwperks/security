@@ -131,7 +131,9 @@ public class ResourceAccessEvaluator {
         }
 
         // if a resource is not included in protected resource list, we do not perform resource-level authorization
-        return protectedTypes.contains(docRequest.type());
+        if (!protectedTypes.contains(docRequest.type())) return false;
+
+        return true;
     }
 
 }

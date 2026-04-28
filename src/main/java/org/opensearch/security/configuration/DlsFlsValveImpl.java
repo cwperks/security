@@ -110,6 +110,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
     private final AdminDNs adminDNs;
     private final OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting;
     private final ResourcePluginInfo resourcePluginInfo;
+    private final org.opensearch.security.resources.ResourceSharingIndexHandler resourceSharingIndexHandler;
     private volatile boolean dlsWriteBlockedEnabled;
 
     public DlsFlsValveImpl(
@@ -134,6 +135,9 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         this.settings = settings;
         this.adminDNs = adminDNs;
         this.resourcePluginInfo = resourcePluginInfo;
+        this.resourceSharingIndexHandler = new org.opensearch.security.resources.ResourceSharingIndexHandler(
+            nodeClient, threadPool, resourcePluginInfo
+        );
 
         clusterService.addListener(event -> {
             DlsFlsProcessedConfig config = this.dlsFlsBaseContext.config();
@@ -210,12 +214,18 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                         typeField,
                         allIndexNames
                     );
+                    // Resolve workspace IDs the user has access to
+                    java.util.List<String> accessibleWorkspaceIds = resourceSharingIndexHandler
+                        .resolveAccessibleWorkspaceIds(userSubject.getUser());
+                    log.info("[DLS] User {} has accessible workspaces: {}", userName, accessibleWorkspaceIds);
+
                     IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
                         namedXContentRegistry,
                         allIndexNames,
                         userSubject.getUser(),
                         currentProtectedTypes,
-                        typeField
+                        typeField,
+                        accessibleWorkspaceIds
                     );
 
                     log.info("[DLS] About to call DlsFilterLevelActionHandler.handle for action={}", context.getAction());

@@ -199,12 +199,12 @@ public class ResourceAccessHandler {
 
             Set<String> accessLevels = sharingInfo.getAccessLevelsForUser(user);
 
-            // no matching access level, either recurse up or fail fast
+            // no matching access level, either recurse up or check workspaces
             if (accessLevels.isEmpty()) {
                 if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                     hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
                 } else {
-                    listener.onResponse(false);
+                    checkWorkspacePermission(resourceId, resourceIndex, resourceType, action, user, listener);
                 }
                 return;
             }
@@ -222,7 +222,8 @@ public class ResourceAccessHandler {
             if (sharingInfo.getParentId() != null && !sharingInfo.getParentId().isBlank()) {
                 hasPermission(sharingInfo.getParentId(), sharingInfo.getParentType(), action, listener);
             } else {
-                listener.onResponse(false);
+                // No direct permission and no parent — check workspace-level permissions
+                checkWorkspacePermission(resourceId, resourceIndex, resourceType, action, user, listener);
             }
         }, e -> {
             LOGGER.error("Error while checking permission for user {} on resource {}: {}", user.getName(), resourceId, e.getMessage());
@@ -231,7 +232,91 @@ public class ResourceAccessHandler {
     }
 
     /**
-     * Patches the sharing info. It could be either or all 3 of the following possibilities:
+     * Checks if the user has permission on a resource via workspace membership.
+     * Reads the resource's workspaces field, then checks the user's access level
+     * on each workspace. Maps workspace access levels to the requested action.
+     */
+    private void checkWorkspacePermission(
+        String resourceId,
+        String resourceIndex,
+        String resourceType,
+        String action,
+        User user,
+        ActionListener<Boolean> listener
+    ) {
+        LOGGER.info("[WorkspacePermCheck] user={}, resource={}, action={}", user.getName(), resourceId, action);
+        resourceSharingIndexHandler.getResourceWorkspaces(resourceIndex, resourceId, ActionListener.wrap(workspaceIds -> {
+            LOGGER.info("[WorkspacePermCheck] resource {} workspaces={}", resourceId, workspaceIds);
+            if (workspaceIds == null || workspaceIds.isEmpty()) {
+                LOGGER.info("[WorkspacePermCheck] No workspaces, denying");
+                listener.onResponse(false);
+                return;
+            }
+            checkWorkspaceAccessRecursive(workspaceIds, 0, action, user, listener);
+        }, e -> {
+            LOGGER.warn("[WorkspacePermCheck] Failed to read workspaces: {}", e.getMessage());
+            listener.onResponse(false);
+        }));
+    }
+
+    private void checkWorkspaceAccessRecursive(
+        java.util.List<String> workspaceIds,
+        int index,
+        String action,
+        User user,
+        ActionListener<Boolean> listener
+    ) {
+        if (index >= workspaceIds.size()) {
+            LOGGER.info("[WorkspacePermCheck] No workspace granted action {}, DENIED", action);
+            listener.onResponse(false);
+            return;
+        }
+
+        String workspaceResourceId = "workspace:" + workspaceIds.get(index);
+        String workspaceIndex = resolveIndex("workspace");
+        LOGGER.info("[WorkspacePermCheck] Checking ws={} index={}", workspaceResourceId, workspaceIndex);
+        if (workspaceIndex == null) {
+            LOGGER.warn("[WorkspacePermCheck] No index for workspace type");
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+            return;
+        }
+
+        resourceSharingIndexHandler.fetchSharingInfo(workspaceIndex, workspaceResourceId, ActionListener.wrap(wsSharing -> {
+            LOGGER.info("[WorkspacePermCheck] ws={} sharingInfo={}", workspaceResourceId, wsSharing != null ? "found" : "null");
+            if (wsSharing == null) {
+                checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+                return;
+            }
+
+            if (wsSharing.isCreatedBy(user.getName())) {
+                LOGGER.info("[WorkspacePermCheck] User {} is ws owner, GRANTED", user.getName());
+                listener.onResponse(true);
+                return;
+            }
+
+            Set<String> wsAccessLevels = wsSharing.getAccessLevelsForUser(user);
+            LOGGER.info("[WorkspacePermCheck] user={} wsAccessLevels={}", user.getName(), wsAccessLevels);
+            if (!wsAccessLevels.isEmpty()) {
+                FlattenedActionGroups wsActionGroups = resourcePluginInfo.flattenedForType("workspace");
+                Set<String> allowedActions = wsActionGroups.resolve(wsAccessLevels);
+                LOGGER.info("[WorkspacePermCheck] allowedActions={} requestedAction={}", allowedActions, action);
+                WildcardMatcher matcher = WildcardMatcher.from(allowedActions);
+                if (matcher.test(action)) {
+                    LOGGER.info("[WorkspacePermCheck] action {} GRANTED via workspace", action);
+                    listener.onResponse(true);
+                    return;
+                }
+                LOGGER.info("[WorkspacePermCheck] action {} NOT in allowed, checking next ws", action);
+            }
+
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+        }, e -> {
+            LOGGER.warn("[WorkspacePermCheck] Error fetching ws sharing: {}", e.getMessage());
+            checkWorkspaceAccessRecursive(workspaceIds, index + 1, action, user, listener);
+        }));
+    }
+
+    /**
      * 1. Revoke access                 - remove op
      * 2. Upgrade or downgrade access   - move op
      * 3. Share with new entity         - add op

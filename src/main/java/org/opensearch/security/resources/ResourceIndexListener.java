@@ -113,7 +113,9 @@ public class ResourceIndexListener implements IndexingOperationListener {
                 sourceMap = parser.map();
             }
 
-            // Only set if not already present (don't overwrite explicit values)
+            // If all_shared_principals is missing (e.g., saved objects client overwrote the doc),
+            // inject the current user as a minimum. postIndex will correct this with the full
+            // principal list from the sharing record via fetchAndUpdateResourceVisibility.
             if (!sourceMap.containsKey("all_shared_principals")) {
                 String userName = userSubject.getUser().getName();
                 List<String> principals = new ArrayList<>();
@@ -192,12 +194,12 @@ public class ResourceIndexListener implements IndexingOperationListener {
 
         if (!result.isCreated()) {
             ActionListener<Void> visibilityListener = ActionListener.wrap(unused -> {
-                log.debug(
+                log.info(
                     "postIndex: Successfully updated the resource visibility for resource {} within index {}",
                     resourceId,
                     resourceIndex
                 );
-            }, e -> { log.debug(e.getMessage()); });
+            }, e -> { log.warn("postIndex: Failed to update visibility for {} in {}: {}", resourceId, resourceIndex, e.getMessage()); });
 
             // Check if the resource's parent changed
             if (provider.parentType() != null && provider.parentIdField() != null) {
@@ -249,13 +251,18 @@ public class ResourceIndexListener implements IndexingOperationListener {
         try {
             Objects.requireNonNull(user);
             ActionListener<ResourceSharing> listener = ActionListener.wrap(entry -> {
-                log.debug(
+                log.info(
                     "postIndex: Successfully created a resource sharing entry {} for resource {} within index {}",
                     entry,
                     resourceId,
                     resourceIndex
                 );
-            }, e -> { log.debug(e.getMessage()); });
+                // Update all_shared_principals on the resource document
+                this.resourceSharingIndexHandler.fetchAndUpdateResourceVisibility(resourceId, resourceIndex, ActionListener.wrap(
+                    unused -> log.info("postIndex: Updated visibility for new resource {} in {}", resourceId, resourceIndex),
+                    e2 -> log.warn("postIndex: Failed to update visibility for new resource {}: {}", resourceId, e2.getMessage())
+                ));
+            }, e -> { log.warn("postIndex: Failed to create sharing entry for {}: {}", resourceId, e.getMessage()); });
             // User.getRequestedTenant() is null if multi-tenancy is disabled
             ResourceSharing.Builder builder = ResourceSharing.builder()
                 .resourceId(resourceId)

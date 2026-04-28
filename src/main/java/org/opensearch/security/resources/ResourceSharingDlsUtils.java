@@ -33,7 +33,8 @@ public class ResourceSharingDlsUtils {
         Collection<String> resolvedIndices,
         User user,
         Collection<String> protectedTypes,
-        String typeField
+        String typeField,
+        Collection<String> accessibleWorkspaceIds
     ) {
 
         List<String> principals = new ArrayList<>();
@@ -76,6 +77,14 @@ public class ResourceSharingDlsUtils {
                 .field("minimum_should_match", 1)
                 .endObject()
                 .endObject();
+                // Documents in a workspace the user has access to
+                if (accessibleWorkspaceIds != null && !accessibleWorkspaceIds.isEmpty()) {
+                    builder.startObject()
+                        .startObject("terms")
+                        .array("workspaces", accessibleWorkspaceIds.toArray())
+                        .endObject()
+                        .endObject();
+                }
             // Documents whose type is NOT a protected resource type (pass through)
             // Only needed when the index has a type field (mixed-type indices like .kibana)
             if (typeField != null) {
