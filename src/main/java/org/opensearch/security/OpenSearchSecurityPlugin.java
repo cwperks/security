@@ -1377,7 +1377,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         final var allowDefaultInit = settings.getAsBoolean(SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX, false);
         final var useClusterState = useClusterStateToInitSecurityConfig(settings);
-        if (!SSLConfig.isSslOnlyMode() && !isDisabled(settings) && allowDefaultInit && useClusterState) {
+        final var standbyMode = settings.getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false);
+        if (!SSLConfig.isSslOnlyMode() && !isDisabled(settings) && ((allowDefaultInit && useClusterState) || standbyMode)) {
             clusterService.addListener(cr);
         }
 
@@ -1626,6 +1627,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             );
 
             settings.add(Setting.boolSetting(ConfigConstants.SECURITY_DISABLED, false, Property.NodeScope, Property.Filtered));
+
+            settings.add(
+                Setting.boolSetting(ConfigConstants.SECURITY_STANDBY_MODE, false, Property.NodeScope, Property.Dynamic, Property.Sensitive)
+            );
 
             settings.add(SecuritySettings.CACHE_TTL_SETTING);
 
