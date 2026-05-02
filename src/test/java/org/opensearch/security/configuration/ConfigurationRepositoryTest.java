@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
@@ -94,10 +95,12 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -349,8 +352,8 @@ public class ConfigurationRepositoryTest {
         when(event.previousState().nodes().isLocalNodeElectedClusterManager()).thenReturn(false);
         when(event.localNodeClusterManager()).thenReturn(true);
 
-        final var configurationRepository = mock(ConfigurationRepository.class);
-        doCallRealMethod().when(configurationRepository).clusterChanged(any());
+        final var configurationRepository = spy(createConfigurationRepository(Settings.EMPTY));
+        doNothing().when(configurationRepository).initSecurityIndex(any());
         configurationRepository.clusterChanged(event);
 
         verify(configurationRepository).initSecurityIndex(any());
@@ -360,8 +363,8 @@ public class ConfigurationRepositoryTest {
     public void testClusterChanged_shouldExecuteInitialization() {
         when(event.state().custom(SecurityMetadata.TYPE)).thenReturn(new SecurityMetadata(Instant.now(), Set.of()));
 
-        final var configurationRepository = mock(ConfigurationRepository.class);
-        doCallRealMethod().when(configurationRepository).clusterChanged(any());
+        final var configurationRepository = spy(createConfigurationRepository(Settings.EMPTY));
+        doReturn(CompletableFuture.completedFuture(null)).when(configurationRepository).executeConfigurationInitialization(any());
         configurationRepository.clusterChanged(event);
 
         verify(configurationRepository).executeConfigurationInitialization(any());
@@ -369,8 +372,7 @@ public class ConfigurationRepositoryTest {
 
     @Test
     public void testClusterChanged_shouldNotExecuteInitialization() {
-        final var configurationRepository = mock(ConfigurationRepository.class);
-        doCallRealMethod().when(configurationRepository).clusterChanged(any());
+        final var configurationRepository = spy(createConfigurationRepository(Settings.EMPTY));
         configurationRepository.clusterChanged(event);
 
         verify(configurationRepository, never()).executeConfigurationInitialization(any());
