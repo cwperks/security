@@ -288,6 +288,8 @@ public class ConfigConstants {
     public static final String SECURITY_DISABLED = SECURITY_SETTINGS_PREFIX + "disabled";
 
     public static final String SECURITY_STANDBY_MODE = SECURITY_SETTINGS_PREFIX + "standby_mode";
+    public static final String CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT = "opensearch.ccr.replicated_system_index";
+    public static final String CCR_REPLICATED_SYSTEM_INDEX_HEADER = "opensearch_ccr_replicated_system_index";
 
     public static final String SECURITY_CACHE_TTL_MINUTES = SECURITY_SETTINGS_PREFIX + "cache.ttl_minutes";
     public static final String SECURITY_ALLOW_UNSAFE_DEMOCERTIFICATES = SECURITY_SETTINGS_PREFIX + "allow_unsafe_democertificates";

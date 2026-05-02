@@ -187,7 +187,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             isLocalNodeElectedClusterManager
         );
         snapshotRestoreEvaluator = new SnapshotRestoreEvaluator(settings, auditLog, isLocalNodeElectedClusterManager);
-        systemIndexAccessEvaluator = new SystemIndexAccessEvaluator(settings, auditLog, irr);
+        systemIndexAccessEvaluator = new SystemIndexAccessEvaluator(settings, auditLog, irr, threadContext);
         protectedIndexAccessEvaluator = new ProtectedIndexAccessEvaluator(settings, auditLog);
         termsAggregationEvaluator = new TermsAggregationEvaluator();
         pitPrivilegesEvaluator = new PitPrivilegesEvaluator();

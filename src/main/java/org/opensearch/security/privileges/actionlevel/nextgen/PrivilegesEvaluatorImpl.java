@@ -53,6 +53,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.common.transport.TransportAddress;
+import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.CompiledRoles;
 import org.opensearch.security.privileges.DocumentAllowList;
@@ -144,8 +145,9 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
         this.settings = coreDependencies.settings();
         this.specialIndexProtection = new RuntimeOptimizedActionPrivileges.SpecialIndexProtection(
-            dynamicDependencies.specialIndices()::isUniversallyDeniedIndex,
-            dynamicDependencies.specialIndices()::isSystemIndex,
+            index -> dynamicDependencies.specialIndices().isUniversallyDeniedIndex(index)
+                && isAllowedStandbyReplicatedSystemIndex(index) == false,
+            index -> dynamicDependencies.specialIndices().isSystemIndex(index) && isAllowedStandbyReplicatedSystemIndex(index) == false,
             indicesNeedingSpecialRoles(settings)
         );
 
@@ -197,6 +199,28 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         }
 
         this.indexReductionEnabled = globalDynamicSettings.ignoreUnauthorizedIndices;
+    }
+
+    private boolean isAllowedStandbyReplicatedSystemIndex(String index) {
+        if (settings.getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false) == false) {
+            log.debug("Standby CCR replicated system index [{}] denied because standby mode is disabled", index);
+            return false;
+        }
+        final String replicatedSystemIndex = threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
+        final boolean registeredSystemIndex = isRegisteredSystemIndex(index);
+        final boolean allowed = index.equals(replicatedSystemIndex) && registeredSystemIndex;
+        log.info(
+            "Evaluated standby CCR replicated system index [{}]: marker=[{}], registered=[{}], allowed=[{}]",
+            index,
+            replicatedSystemIndex,
+            registeredSystemIndex,
+            allowed
+        );
+        return allowed;
+    }
+
+    private boolean isRegisteredSystemIndex(String index) {
+        return SystemIndexRegistry.matchesSystemIndexPattern(index);
     }
 
     @Override
