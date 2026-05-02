@@ -67,6 +67,7 @@ import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPriv
 import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileges;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.SnapshotRestoreHelper;
 import org.opensearch.security.support.WildcardMatcher;
@@ -135,6 +136,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
     private final ThreadPool threadPool;
     private final RuntimeOptimizedActionPrivileges.SpecialIndexProtection specialIndexProtection;
     private final ActionConfiguration actionConfiguration;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
     private volatile boolean indexReductionEnabled = true;
 
     public PrivilegesEvaluatorImpl(CoreDependencies coreDependencies, DynamicDependencies dynamicDependencies) {
@@ -144,6 +146,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         this.threadPool = coreDependencies.threadPool();
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
         this.settings = coreDependencies.settings();
+        this.standbyModeSetting = coreDependencies.standbyModeSetting();
         this.specialIndexProtection = new RuntimeOptimizedActionPrivileges.SpecialIndexProtection(
             index -> dynamicDependencies.specialIndices().isUniversallyDeniedIndex(index)
                 && isAllowedStandbyReplicatedSystemIndex(index) == false,
@@ -202,7 +205,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
     }
 
     private boolean isAllowedStandbyReplicatedSystemIndex(String index) {
-        if (settings.getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false) == false) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
             log.debug("Standby CCR replicated system index [{}] denied because standby mode is disabled", index);
             return false;
         }

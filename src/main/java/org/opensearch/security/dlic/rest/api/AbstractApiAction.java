@@ -475,7 +475,7 @@ public abstract class AbstractApiAction extends BaseRestHandler implements RestR
     }
 
     protected boolean isStandbyMode() {
-        return securityApiDependencies.settings().getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false);
+        return securityApiDependencies.standbyModeEnabled();
     }
 
     abstract static class OnSucessActionListener<Response> implements ActionListener<Response> {

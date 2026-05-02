@@ -31,6 +31,7 @@ import org.opensearch.security.privileges.RoleMapper;
 import org.opensearch.security.resources.ResourcePluginInfo;
 import org.opensearch.security.resources.ResourceSharingIndexHandler;
 import org.opensearch.security.resources.api.migrate.MigrateResourceSharingInfoApiAction;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.ssl.SslSettingsManager;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.user.UserService;
@@ -59,7 +60,8 @@ public class SecurityRestApiActions {
         final boolean certificatesReloadEnabled,
         final PasswordHasher passwordHasher,
         final ResourceSharingIndexHandler resourceSharingIndexHandler,
-        final ResourcePluginInfo resourcePluginInfo
+        final ResourcePluginInfo resourcePluginInfo,
+        final OpensearchDynamicSetting<Boolean> standbyModeSetting
     ) {
         final var securityApiDependencies = new SecurityApiDependencies(
             adminDns,
@@ -73,7 +75,8 @@ public class SecurityRestApiActions {
                 settings.getAsBoolean(SECURITY_RESTAPI_ADMIN_ENABLED, false)
             ),
             auditLog,
-            settings
+            settings,
+            standbyModeSetting
         );
         List<RestHandler> handler = new ArrayList<>(
             List.of(

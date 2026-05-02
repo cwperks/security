@@ -47,6 +47,8 @@ import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.actionlevel.legacy.IndexResolverReplacer.Resolved;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -73,13 +75,19 @@ public class SystemIndexAccessEvaluator {
     private final WildcardMatcher superAdminAccessOnlyIndexMatcher;
     private final WildcardMatcher deniedActionsMatcher;
     private final ThreadContext threadContext;
-    private final boolean standbyMode;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
 
     private final boolean isSystemIndexEnabled;
     private final boolean isSystemIndexPermissionEnabled;
     private final static ImmutableSet<String> SYSTEM_INDEX_PERMISSION_SET = ImmutableSet.of(ConfigConstants.SYSTEM_INDEX_PERMISSION);
 
-    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr, ThreadContext threadContext) {
+    public SystemIndexAccessEvaluator(
+        final Settings settings,
+        AuditLog auditLog,
+        IndexResolverReplacer irr,
+        ThreadContext threadContext,
+        OpensearchDynamicSetting<Boolean> standbyModeSetting
+    ) {
         this.securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
@@ -87,7 +95,7 @@ public class SystemIndexAccessEvaluator {
         this.auditLog = auditLog;
         this.irr = irr;
         this.threadContext = threadContext;
-        this.standbyMode = settings.getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false);
+        this.standbyModeSetting = standbyModeSetting;
         this.filterSecurityIndex = settings.getAsBoolean(ConfigConstants.SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS, false);
         this.systemIndexMatcher = WildcardMatcher.from(
             settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
@@ -119,7 +127,7 @@ public class SystemIndexAccessEvaluator {
     }
 
     public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
-        this(settings, auditLog, irr, new ThreadContext(Settings.EMPTY));
+        this(settings, auditLog, irr, new ThreadContext(Settings.EMPTY), new StandbyModeSetting(settings));
     }
 
     private static List<String> deniedActionPatterns() {
@@ -249,7 +257,7 @@ public class SystemIndexAccessEvaluator {
     }
 
     private boolean isAllowedStandbyReplicatedSystemIndex(final String index) {
-        if (standbyMode == false) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
             log.debug("Standby CCR replicated system index [{}] denied because standby mode is disabled", index);
             return false;
         }

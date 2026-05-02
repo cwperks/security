@@ -61,6 +61,7 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.state.SecurityConfig;
 import org.opensearch.security.state.SecurityMetadata;
 import org.opensearch.security.support.ConfigConstants;
@@ -210,6 +211,21 @@ public class ConfigurationRepositoryTest {
             auditLog,
             securityIndexHandler,
             configurationLoaderSecurity7
+        );
+    }
+
+    private ConfigurationRepository createConfigurationRepository(Settings settings, OpensearchDynamicSetting<Boolean> standbyModeSetting) {
+        return new ConfigurationRepository(
+            settings.get(ConfigConstants.SECURITY_CONFIG_INDEX_NAME, ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX),
+            settings,
+            path,
+            threadPool,
+            localClient,
+            clusterService,
+            auditLog,
+            securityIndexHandler,
+            configurationLoaderSecurity7,
+            standbyModeSetting
         );
     }
 
@@ -376,6 +392,34 @@ public class ConfigurationRepositoryTest {
         configurationRepository.clusterChanged(event);
 
         verify(configurationRepository, never()).executeConfigurationInitialization(any());
+    }
+
+    @Test
+    public void testClusterChanged_whenStandbyModeDynamicallyEnabledShouldSkipSecurityIndexInitialization() {
+        @SuppressWarnings("unchecked")
+        final var standbyModeSetting = (OpensearchDynamicSetting<Boolean>) mock(OpensearchDynamicSetting.class);
+        when(standbyModeSetting.getDynamicSettingValue()).thenReturn(true);
+
+        final var configurationRepository = spy(createConfigurationRepository(Settings.EMPTY, standbyModeSetting));
+        configurationRepository.clusterChanged(event);
+
+        verify(configurationRepository, never()).initSecurityIndex(any());
+    }
+
+    @Test
+    public void testClusterChanged_whenStandbyModeDynamicallyDisabledShouldInitializeSecurityIndex() {
+        when(event.previousState().nodes().isLocalNodeElectedClusterManager()).thenReturn(false);
+        when(event.localNodeClusterManager()).thenReturn(true);
+
+        @SuppressWarnings("unchecked")
+        final var standbyModeSetting = (OpensearchDynamicSetting<Boolean>) mock(OpensearchDynamicSetting.class);
+        when(standbyModeSetting.getDynamicSettingValue()).thenReturn(false);
+
+        final var configurationRepository = spy(createConfigurationRepository(Settings.EMPTY, standbyModeSetting));
+        doNothing().when(configurationRepository).initSecurityIndex(any());
+        configurationRepository.clusterChanged(event);
+
+        verify(configurationRepository).initSecurityIndex(any());
     }
 
     @Test

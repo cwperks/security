@@ -97,6 +97,8 @@ import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.ResourceAccessEvaluator;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.support.Base64Helper;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
@@ -129,7 +131,7 @@ public class SecurityFilter implements ActionFilter {
     private final ResourceAccessEvaluator resourceAccessEvaluator;
     private final ThreadContextUserInfo threadContextUserInfo;
     private final Set<String> restApiAllowedRoles;
-    private final boolean standbyMode;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
 
     public SecurityFilter(
         final Settings settings,
@@ -142,6 +144,34 @@ public class SecurityFilter implements ActionFilter {
         final CompatConfig compatConfig,
         final XFFResolver xffResolver,
         ResourceAccessEvaluator resourceAccessEvaluator
+    ) {
+        this(
+            settings,
+            privilegesConfiguration,
+            adminDns,
+            dlsFlsValve,
+            auditLog,
+            threadPool,
+            cs,
+            compatConfig,
+            xffResolver,
+            resourceAccessEvaluator,
+            new StandbyModeSetting(settings)
+        );
+    }
+
+    public SecurityFilter(
+        final Settings settings,
+        PrivilegesConfiguration privilegesConfiguration,
+        final AdminDNs adminDns,
+        DlsFlsRequestValve dlsFlsValve,
+        AuditLog auditLog,
+        ThreadPool threadPool,
+        ClusterService cs,
+        final CompatConfig compatConfig,
+        final XFFResolver xffResolver,
+        ResourceAccessEvaluator resourceAccessEvaluator,
+        OpensearchDynamicSetting<Boolean> standbyModeSetting
     ) {
         this.privilegesConfiguration = privilegesConfiguration;
         this.adminDns = adminDns;
@@ -157,7 +187,7 @@ public class SecurityFilter implements ActionFilter {
         this.userInjector = new UserInjector(settings, threadPool, auditLog, xffResolver);
         this.resourceAccessEvaluator = resourceAccessEvaluator;
         this.restApiAllowedRoles = Set.copyOf(settings.getAsList(ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED));
-        this.standbyMode = settings.getAsBoolean(ConfigConstants.SECURITY_STANDBY_MODE, false);
+        this.standbyModeSetting = standbyModeSetting;
         this.threadContextUserInfo = new ThreadContextUserInfo(
             threadPool.getThreadContext(),
             privilegesConfiguration,
@@ -576,7 +606,7 @@ public class SecurityFilter implements ActionFilter {
     }
 
     private boolean isAllowedStandbyCcrSystemIndexReplication(String action, ActionRequest request) {
-        if (standbyMode == false) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
             return false;
         }
         final String replicatedSystemIndex = threadPool.getThreadContext()

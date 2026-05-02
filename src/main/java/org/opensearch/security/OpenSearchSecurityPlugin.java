@@ -203,6 +203,7 @@ import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.setting.TransportPassiveAuthSetting;
 import org.opensearch.security.spi.SecurityConfigExtension;
 import org.opensearch.security.spi.resources.ResourceSharingExtension;
@@ -297,6 +298,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private final AtomicReference<NamedXContentRegistry> namedXContentRegistry = new AtomicReference<>(NamedXContentRegistry.EMPTY);;
     private volatile DlsFlsRequestValve dlsFlsValve = null;
     private final OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
     private final OpensearchDynamicSetting<Boolean> resourceSharingEnabledSetting;
     private final OpensearchDynamicSetting<List<String>> resourceSharingProtectedResourceTypesSetting;
     private volatile PasswordHasher passwordHasher;
@@ -365,6 +367,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         // dynamic settings
         transportPassiveAuthSetting = new TransportPassiveAuthSetting(settings);
+        standbyModeSetting = new StandbyModeSetting(settings);
         resourceSharingEnabledSetting = new ResourceSharingFeatureFlagSetting(settings, resourcePluginInfo); // not filtered
         resourceSharingProtectedResourceTypesSetting = new ResourceSharingProtectedResourcesSetting(settings, resourcePluginInfo); // not
                                                                                                                                    // filtered
@@ -707,7 +710,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                         sslCertReloadEnabled,
                         passwordHasher,
                         rsIndexHandler,
-                        resourcePluginInfo
+                        resourcePluginInfo,
+                        standbyModeSetting
                     )
                 );
 
@@ -1163,6 +1167,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         // Register opensearch dynamic settings
         transportPassiveAuthSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
+        standbyModeSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
         resourceSharingEnabledSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
         resourceSharingProtectedResourceTypesSetting.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
 
@@ -1195,7 +1200,15 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
         adminDns = new AdminDNs(settings);
 
-        cr = ConfigurationRepository.create(settings, this.configPath, threadPool, localClient, clusterService, auditLog);
+        cr = ConfigurationRepository.create(
+            settings,
+            this.configPath,
+            threadPool,
+            localClient,
+            clusterService,
+            auditLog,
+            standbyModeSetting
+        );
 
         this.passwordHasher = PasswordHasherFactory.createPasswordHasher(settings);
 
@@ -1230,7 +1243,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 settings,
                 resolver,
                 cih::getReasonForUnavailability,
-                xContentRegistry
+                xContentRegistry,
+                standbyModeSetting
             )
         );
         this.privilegesConfiguration = privilegesConfiguration;
@@ -1286,7 +1300,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             cs,
             compatConfig,
             xffResolver,
-            resourceAccessEvaluator
+            resourceAccessEvaluator,
+            standbyModeSetting
         );
 
         final String principalExtractorClass = settings.get(SSLConfigConstants.SECURITY_SSL_TRANSPORT_PRINCIPAL_EXTRACTOR_CLASS, null);
@@ -1628,9 +1643,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
             settings.add(Setting.boolSetting(ConfigConstants.SECURITY_DISABLED, false, Property.NodeScope, Property.Filtered));
 
-            settings.add(
-                Setting.boolSetting(ConfigConstants.SECURITY_STANDBY_MODE, false, Property.NodeScope, Property.Dynamic, Property.Sensitive)
-            );
+            settings.add(StandbyModeSetting.STANDBY_MODE);
 
             settings.add(SecuritySettings.CACHE_TTL_SETTING);
 
