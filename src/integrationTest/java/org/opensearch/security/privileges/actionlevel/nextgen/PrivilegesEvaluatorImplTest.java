@@ -45,6 +45,7 @@ import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.user.User;
 import org.opensearch.test.framework.log.LogsRule;
 
@@ -280,7 +281,8 @@ public class PrivilegesEvaluatorImplTest {
                 settings,
                 indexNameExpressionResolver,
                 () -> "unavailable",
-                NamedXContentRegistry.EMPTY
+                NamedXContentRegistry.EMPTY,
+                new StandbyModeSetting(settings)
             ),
             dynamicDependencies.with(compiledRoles)
         );
