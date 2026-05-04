@@ -53,6 +53,7 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.common.Strings;
 import org.opensearch.core.common.transport.TransportAddress;
+import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.CompiledRoles;
 import org.opensearch.security.privileges.DocumentAllowList;
@@ -66,6 +67,7 @@ import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPriv
 import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileges;
 import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.SnapshotRestoreHelper;
 import org.opensearch.security.support.WildcardMatcher;
@@ -134,6 +136,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
     private final ThreadPool threadPool;
     private final RuntimeOptimizedActionPrivileges.SpecialIndexProtection specialIndexProtection;
     private final ActionConfiguration actionConfiguration;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
     private volatile boolean indexReductionEnabled = true;
 
     public PrivilegesEvaluatorImpl(CoreDependencies coreDependencies, DynamicDependencies dynamicDependencies) {
@@ -143,9 +146,11 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         this.threadPool = coreDependencies.threadPool();
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
         this.settings = coreDependencies.settings();
+        this.standbyModeSetting = coreDependencies.standbyModeSetting();
         this.specialIndexProtection = new RuntimeOptimizedActionPrivileges.SpecialIndexProtection(
-            dynamicDependencies.specialIndices()::isUniversallyDeniedIndex,
-            dynamicDependencies.specialIndices()::isSystemIndex,
+            index -> dynamicDependencies.specialIndices().isUniversallyDeniedIndex(index)
+                && isAllowedStandbyReplicatedSystemIndex(index) == false,
+            index -> dynamicDependencies.specialIndices().isSystemIndex(index) && isAllowedStandbyReplicatedSystemIndex(index) == false,
             indicesNeedingSpecialRoles(settings)
         );
 
@@ -197,6 +202,28 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         }
 
         this.indexReductionEnabled = globalDynamicSettings.ignoreUnauthorizedIndices;
+    }
+
+    private boolean isAllowedStandbyReplicatedSystemIndex(String index) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
+            log.debug("Standby CCR replicated system index [{}] denied because standby mode is disabled", index);
+            return false;
+        }
+        final String replicatedSystemIndex = threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
+        final boolean registeredSystemIndex = isRegisteredSystemIndex(index);
+        final boolean allowed = index.equals(replicatedSystemIndex) && registeredSystemIndex;
+        log.info(
+            "Evaluated standby CCR replicated system index [{}]: marker=[{}], registered=[{}], allowed=[{}]",
+            index,
+            replicatedSystemIndex,
+            registeredSystemIndex,
+            allowed
+        );
+        return allowed;
+    }
+
+    private boolean isRegisteredSystemIndex(String index) {
+        return SystemIndexRegistry.matchesSystemIndexPattern(index);
     }
 
     @Override

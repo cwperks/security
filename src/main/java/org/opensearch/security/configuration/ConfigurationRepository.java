@@ -68,6 +68,7 @@ import org.opensearch.cluster.metadata.MappingMetadata;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.Priority;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.unit.TimeValue;
 import org.opensearch.common.util.concurrent.OpenSearchExecutors;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.common.util.concurrent.ThreadContext.StoredContext;
@@ -88,11 +89,14 @@ import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.securityconf.DynamicConfigFactory;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.state.SecurityMetadata;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.ConfigHelper;
 import org.opensearch.security.support.SecurityIndexHandler;
+import org.opensearch.threadpool.Scheduler.Cancellable;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
@@ -126,6 +130,10 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
 
     private final ReloadThread reloadThread;
 
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
+
+    private volatile Cancellable configPollingTask;
+
     // visible for testing
     protected ConfigurationRepository(
         final String securityIndex,
@@ -137,6 +145,33 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
         final AuditLog auditLog,
         final SecurityIndexHandler securityIndexHandler,
         final ConfigurationLoaderSecurity7 configurationLoaderSecurity7
+    ) {
+        this(
+            securityIndex,
+            settings,
+            configPath,
+            threadPool,
+            client,
+            clusterService,
+            auditLog,
+            securityIndexHandler,
+            configurationLoaderSecurity7,
+            new StandbyModeSetting(settings)
+        );
+    }
+
+    // visible for testing
+    protected ConfigurationRepository(
+        final String securityIndex,
+        final Settings settings,
+        final Path configPath,
+        final ThreadPool threadPool,
+        final Client client,
+        final ClusterService clusterService,
+        final AuditLog auditLog,
+        final SecurityIndexHandler securityIndexHandler,
+        final ConfigurationLoaderSecurity7 configurationLoaderSecurity7,
+        final OpensearchDynamicSetting<Boolean> standbyModeSetting
     ) {
         this.securityIndex = securityIndex;
         this.settings = settings;
@@ -151,6 +186,7 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
         configCache = CacheBuilder.newBuilder().build();
         this.securityIndexHandler = securityIndexHandler;
         this.reloadThread = new ReloadThread(settings, this::doReload);
+        this.standbyModeSetting = standbyModeSetting;
     }
 
     private Path resolveConfigDir() {
@@ -162,6 +198,18 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
     @Override
     public void clusterChanged(final ClusterChangedEvent event) {
         final SecurityMetadata securityMetadata = event.state().custom(SecurityMetadata.TYPE);
+        // In standby mode, skip security index creation/initialization.
+        // The security index will be replicated from the leader cluster via CCR.
+        if (standbyModeEnabled()) {
+            // Still load config from the replicated index if it exists
+            if (securityMetadata != null) {
+                executeConfigurationInitialization(securityMetadata);
+            }
+            // Start polling for config index changes from CCR replication
+            startConfigPollingIfNeeded();
+            return;
+        }
+        stopConfigPollingIfNeeded();
         // init and upload sec index on the manager node only as soon as
         // creation of index and upload config are done a new cluster state will be created.
         // in case of failures it repeats attempt after restart
@@ -175,6 +223,63 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
         if (securityMetadata != null) {
             executeConfigurationInitialization(securityMetadata);
         }
+    }
+
+    /**
+     * In standby mode, CCR replicates the security index from the leader cluster but the normal
+     * config reload triggers (REST API writes, ConfigUpdateAction) don't fire. This method starts
+     * a periodic poll that detects changes in the replicated security index and reloads config.
+     */
+    private void startConfigPollingIfNeeded() {
+        if (configPollingTask != null) {
+            return; // already polling
+        }
+        LOGGER.info("Standby mode: starting config index polling for CCR-replicated changes");
+        configPollingTask = threadPool.scheduleWithFixedDelay(() -> {
+            try {
+                if (!standbyModeEnabled()) {
+                    stopConfigPollingIfNeeded();
+                    return;
+                }
+                if (!clusterService.state().metadata().hasConcreteIndex(securityIndex)) {
+                    return; // index not yet replicated
+                }
+                final ThreadContext threadContext = threadPool.getThreadContext();
+                try (StoredContext ctx = threadContext.stashContext()) {
+                    threadContext.putHeader(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true");
+                    if (!initalizeConfigTask.isDone()) {
+                        // First time seeing the index — do initial config load
+                        LOGGER.info("Standby mode: security index detected, loading initial configuration");
+                        ConfigurationMap loaded = getConfigurationsFromIndex(CType.values(), false, acceptInvalid);
+                        configCache.putAll(loaded.rawMap());
+                        notifyAboutChanges(loaded);
+                        final var auditConfigDocPresent = loaded.containsKey(CType.AUDIT) && loaded.get(CType.AUDIT).notEmpty();
+                        setupAuditConfigurationIfAny(auditConfigDocPresent);
+                        auditHotReloadingEnabled.getAndSet(auditConfigDocPresent);
+                        initalizeConfigTask.complete(null);
+                        this.reloadThread.start();
+                        LOGGER.info("Standby mode: security configuration initialized from replicated index");
+                    } else {
+                        // Subsequent polls — reload to pick up changes
+                        doReload(CType.values());
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.debug("Standby config poll failed, will retry", e);
+            }
+        }, TimeValue.timeValueSeconds(5), ThreadPool.Names.GENERIC);
+    }
+
+    private void stopConfigPollingIfNeeded() {
+        if (configPollingTask != null) {
+            LOGGER.info("Standby mode disabled: stopping config index polling");
+            configPollingTask.cancel();
+            configPollingTask = null;
+        }
+    }
+
+    private boolean standbyModeEnabled() {
+        return standbyModeSetting.getDynamicSettingValue();
     }
 
     private boolean nodeSelectedAsManager(final ClusterChangedEvent event) {
@@ -194,6 +299,13 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
     private void initalizeClusterConfiguration(final boolean installDefaultConfig) {
         try {
             LOGGER.info("Background init thread started. Install default config?: " + installDefaultConfig);
+
+            // In standby mode, skip all initialization — config will come from CCR replication
+            if (standbyModeEnabled()) {
+                LOGGER.info("Standby mode enabled — skipping security index initialization");
+                return;
+            }
+
             // wait for the cluster here until it will finish managed node election
             while (clusterService.state().blocks().hasGlobalBlockWithStatus(RestStatus.SERVICE_UNAVAILABLE)) {
                 LOGGER.info("Wait for cluster to be available ...");
@@ -492,6 +604,18 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
         ClusterService clusterService,
         AuditLog auditLog
     ) {
+        return create(settings, configPath, threadPool, client, clusterService, auditLog, new StandbyModeSetting(settings));
+    }
+
+    public static ConfigurationRepository create(
+        Settings settings,
+        final Path configPath,
+        final ThreadPool threadPool,
+        Client client,
+        ClusterService clusterService,
+        AuditLog auditLog,
+        OpensearchDynamicSetting<Boolean> standbyModeSetting
+    ) {
         final var securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
@@ -505,7 +629,8 @@ public class ConfigurationRepository implements ClusterStateListener, IndexEvent
             clusterService,
             auditLog,
             new SecurityIndexHandler(securityIndex, settings, client),
-            new ConfigurationLoaderSecurity7(client, threadPool, settings, clusterService)
+            new ConfigurationLoaderSecurity7(client, threadPool, settings, clusterService),
+            standbyModeSetting
         );
     }
 

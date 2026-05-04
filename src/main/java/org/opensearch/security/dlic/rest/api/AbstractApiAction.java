@@ -474,6 +474,10 @@ public abstract class AbstractApiAction extends BaseRestHandler implements RestR
         return clusterService.state().metadata().hasConcreteIndex(securityApiDependencies.securityIndexName());
     }
 
+    protected boolean isStandbyMode() {
+        return securityApiDependencies.standbyModeEnabled();
+    }
+
     abstract static class OnSucessActionListener<Response> implements ActionListener<Response> {
 
         private final RestChannel channel;
@@ -591,6 +595,15 @@ public abstract class AbstractApiAction extends BaseRestHandler implements RestR
         // check if .opendistro_security index has been initialized
         if (!ensureIndexExists()) {
             return channel -> internalServerError(channel, RequestContentValidator.ValidationError.SECURITY_NOT_INITIALIZED.message());
+        }
+
+        // check if cluster is in standby mode — reject config mutations (writes only)
+        if (isStandbyMode() && request.method() != Method.GET) {
+            return channel -> forbidden(
+                channel,
+                "Security configuration is read-only because this cluster is in standby mode. "
+                    + "Promote the cluster before updating security configuration."
+            );
         }
 
         // check if request is authorized

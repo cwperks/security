@@ -16,6 +16,8 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.configuration.ConfigurationRepository;
 import org.opensearch.security.privileges.PrivilegesConfiguration;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.support.ConfigConstants;
 
 public class SecurityApiDependencies {
@@ -25,6 +27,7 @@ public class SecurityApiDependencies {
     private final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator;
     private final AuditLog auditLog;
     private final Settings settings;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
 
     private final PrivilegesConfiguration privilegesConfiguration;
 
@@ -35,7 +38,8 @@ public class SecurityApiDependencies {
         final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator,
         final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator,
         final AuditLog auditLog,
-        final Settings settings
+        final Settings settings,
+        final OpensearchDynamicSetting<Boolean> standbyModeSetting
     ) {
         this.adminDNs = adminDNs;
         this.configurationRepository = configurationRepository;
@@ -44,6 +48,28 @@ public class SecurityApiDependencies {
         this.restApiAdminPrivilegesEvaluator = restApiAdminPrivilegesEvaluator;
         this.auditLog = auditLog;
         this.settings = settings;
+        this.standbyModeSetting = standbyModeSetting;
+    }
+
+    public SecurityApiDependencies(
+        final AdminDNs adminDNs,
+        final ConfigurationRepository configurationRepository,
+        final PrivilegesConfiguration privilegesConfiguration,
+        final RestApiPrivilegesEvaluator restApiPrivilegesEvaluator,
+        final RestApiAdminPrivilegesEvaluator restApiAdminPrivilegesEvaluator,
+        final AuditLog auditLog,
+        final Settings settings
+    ) {
+        this(
+            adminDNs,
+            configurationRepository,
+            privilegesConfiguration,
+            restApiPrivilegesEvaluator,
+            restApiAdminPrivilegesEvaluator,
+            auditLog,
+            settings,
+            new StandbyModeSetting(settings)
+        );
     }
 
     public AdminDNs adminDNs() {
@@ -72,6 +98,10 @@ public class SecurityApiDependencies {
 
     public Settings settings() {
         return settings;
+    }
+
+    public boolean standbyModeEnabled() {
+        return standbyModeSetting.getDynamicSettingValue();
     }
 
     public String securityIndexName() {

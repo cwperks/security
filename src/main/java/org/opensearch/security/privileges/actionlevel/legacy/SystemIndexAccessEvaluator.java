@@ -40,12 +40,15 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.RealtimeRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.actionlevel.legacy.IndexResolverReplacer.Resolved;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -71,18 +74,28 @@ public class SystemIndexAccessEvaluator {
     private final WildcardMatcher systemIndexMatcher;
     private final WildcardMatcher superAdminAccessOnlyIndexMatcher;
     private final WildcardMatcher deniedActionsMatcher;
+    private final ThreadContext threadContext;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
 
     private final boolean isSystemIndexEnabled;
     private final boolean isSystemIndexPermissionEnabled;
     private final static ImmutableSet<String> SYSTEM_INDEX_PERMISSION_SET = ImmutableSet.of(ConfigConstants.SYSTEM_INDEX_PERMISSION);
 
-    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
+    public SystemIndexAccessEvaluator(
+        final Settings settings,
+        AuditLog auditLog,
+        IndexResolverReplacer irr,
+        ThreadContext threadContext,
+        OpensearchDynamicSetting<Boolean> standbyModeSetting
+    ) {
         this.securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
         );
         this.auditLog = auditLog;
         this.irr = irr;
+        this.threadContext = threadContext;
+        this.standbyModeSetting = standbyModeSetting;
         this.filterSecurityIndex = settings.getAsBoolean(ConfigConstants.SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS, false);
         this.systemIndexMatcher = WildcardMatcher.from(
             settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
@@ -111,6 +124,10 @@ public class SystemIndexAccessEvaluator {
             ConfigConstants.SECURITY_SYSTEM_INDICES_PERMISSIONS_ENABLED_KEY,
             ConfigConstants.SECURITY_SYSTEM_INDICES_PERMISSIONS_DEFAULT
         );
+    }
+
+    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
+        this(settings, auditLog, irr, new ThreadContext(Settings.EMPTY), new StandbyModeSetting(settings));
     }
 
     private static List<String> deniedActionPatterns() {
@@ -234,6 +251,33 @@ public class SystemIndexAccessEvaluator {
         return allIndices.stream().anyMatch(index -> !allSystemIndices.contains(index) && !allProtectedSystemIndices.contains(index));
     }
 
+    private boolean requestContainsOnlyAllowedStandbyReplicatedSystemIndices(final Resolved requestedResolved) {
+        return requestedResolved.getAllIndices().isEmpty() == false
+            && requestedResolved.getAllIndices().stream().allMatch(this::isAllowedStandbyReplicatedSystemIndex);
+    }
+
+    private boolean isAllowedStandbyReplicatedSystemIndex(final String index) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
+            log.debug("Standby CCR replicated system index [{}] denied because standby mode is disabled", index);
+            return false;
+        }
+        final String replicatedSystemIndex = threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
+        final boolean registeredSystemIndex = isRegisteredSystemIndex(index);
+        final boolean allowed = index.equals(replicatedSystemIndex) && registeredSystemIndex;
+        log.info(
+            "Evaluated standby CCR replicated system index [{}]: marker=[{}], registered=[{}], allowed=[{}]",
+            index,
+            replicatedSystemIndex,
+            registeredSystemIndex,
+            allowed
+        );
+        return allowed;
+    }
+
+    private boolean isRegisteredSystemIndex(final String index) {
+        return securityIndex.equals(index) || SystemIndexRegistry.matchesSystemIndexPattern(index);
+    }
+
     /**
      * Is the current action allowed to be performed on security index
      * @param action request action on security index
@@ -282,6 +326,11 @@ public class SystemIndexAccessEvaluator {
         boolean containsSystemIndex = requestContainsAnySystemIndices(requestedResolved);
         boolean containsRegularIndex = requestContainsAnyRegularIndices(requestedResolved);
         boolean serviceAccountUser = user.isServiceAccount();
+
+        if (containsSystemIndex && requestContainsOnlyAllowedStandbyReplicatedSystemIndices(requestedResolved)) {
+            log.debug("Allowing standby CCR replicated system index request for {}", requestedResolved.getAllIndices());
+            return PrivilegesEvaluatorResponse.ok();
+        }
 
         // Calculate plugin-related information once for reuse
         final Set<String> matchingPluginIndices = getMatchingPluginIndices(user, requestedResolved);

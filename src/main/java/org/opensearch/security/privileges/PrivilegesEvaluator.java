@@ -47,6 +47,7 @@ import org.opensearch.security.securityconf.FlattenedActionGroups;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.user.User;
 import org.opensearch.tasks.Task;
 import org.opensearch.threadpool.ThreadPool;
@@ -304,7 +305,7 @@ public interface PrivilegesEvaluator {
     record CoreDependencies(ClusterService clusterService, Supplier<ClusterState> clusterStateSupplier, Client client,
         RoleMapper roleMapper, ThreadPool threadPool, ThreadContext threadContext, AuditLog auditLog, Settings settings,
         IndexNameExpressionResolver indexNameExpressionResolver, Supplier<String> unavailablityReasonSupplier,
-        NamedXContentRegistry namedXContentRegistry) {
+        NamedXContentRegistry namedXContentRegistry, OpensearchDynamicSetting<Boolean> standbyModeSetting) {
     }
 
     /**

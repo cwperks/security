@@ -196,6 +196,9 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
 
                 final String injectedRolesHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_HEADER);
                 final String injectedUserHeader = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER_HEADER);
+                final String ccrReplicatedSystemIndexHeader = getThreadContext().getHeader(
+                    ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_HEADER
+                );
 
                 if (Strings.isNullOrEmpty(userHeader)) {
                     // Keeping role injection with higher priority as plugins under OpenSearch will be using this
@@ -208,6 +211,13 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
                 } else {
                     user = user != null ? user : this.userFactory.fromSerializedBase64(userHeader);
                     getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
+                }
+                if (!Strings.isNullOrEmpty(ccrReplicatedSystemIndexHeader)) {
+                    log.debug("Restoring CCR replicated system index [{}] from transport header", ccrReplicatedSystemIndexHeader);
+                    getThreadContext().putTransient(
+                        ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT,
+                        ccrReplicatedSystemIndexHeader
+                    );
                 }
 
                 String originalRemoteAddress = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER);

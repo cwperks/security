@@ -44,6 +44,7 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.DocWriteRequest.OpType;
+import org.opensearch.action.IndicesRequest;
 import org.opensearch.action.admin.cluster.settings.ClusterUpdateSettingsAction;
 import org.opensearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
 import org.opensearch.action.admin.cluster.snapshots.restore.RestoreSnapshotRequest;
@@ -78,6 +79,7 @@ import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.reindex.DeleteByQueryRequest;
 import org.opensearch.index.reindex.UpdateByQueryRequest;
+import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.action.simulate.PermissionCheckResponse;
 import org.opensearch.security.action.whoami.WhoAmIAction;
 import org.opensearch.security.auditlog.AuditLog;
@@ -95,6 +97,8 @@ import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.ResourceAccessEvaluator;
+import org.opensearch.security.setting.OpensearchDynamicSetting;
+import org.opensearch.security.setting.StandbyModeSetting;
 import org.opensearch.security.support.Base64Helper;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
@@ -111,6 +115,8 @@ import static org.opensearch.security.support.ConfigConstants.SECURITY_PERFORM_P
 
 public class SecurityFilter implements ActionFilter {
 
+    private static final String CCR_REPLAY_CHANGES_ACTION = "indices:data/write/plugins/replication/changes";
+
     protected final Logger log = LogManager.getLogger(this.getClass());
     private final PrivilegesConfiguration privilegesConfiguration;
     private final AdminDNs adminDns;
@@ -125,6 +131,7 @@ public class SecurityFilter implements ActionFilter {
     private final ResourceAccessEvaluator resourceAccessEvaluator;
     private final ThreadContextUserInfo threadContextUserInfo;
     private final Set<String> restApiAllowedRoles;
+    private final OpensearchDynamicSetting<Boolean> standbyModeSetting;
 
     public SecurityFilter(
         final Settings settings,
@@ -137,6 +144,34 @@ public class SecurityFilter implements ActionFilter {
         final CompatConfig compatConfig,
         final XFFResolver xffResolver,
         ResourceAccessEvaluator resourceAccessEvaluator
+    ) {
+        this(
+            settings,
+            privilegesConfiguration,
+            adminDns,
+            dlsFlsValve,
+            auditLog,
+            threadPool,
+            cs,
+            compatConfig,
+            xffResolver,
+            resourceAccessEvaluator,
+            new StandbyModeSetting(settings)
+        );
+    }
+
+    public SecurityFilter(
+        final Settings settings,
+        PrivilegesConfiguration privilegesConfiguration,
+        final AdminDNs adminDns,
+        DlsFlsRequestValve dlsFlsValve,
+        AuditLog auditLog,
+        ThreadPool threadPool,
+        ClusterService cs,
+        final CompatConfig compatConfig,
+        final XFFResolver xffResolver,
+        ResourceAccessEvaluator resourceAccessEvaluator,
+        OpensearchDynamicSetting<Boolean> standbyModeSetting
     ) {
         this.privilegesConfiguration = privilegesConfiguration;
         this.adminDns = adminDns;
@@ -152,6 +187,7 @@ public class SecurityFilter implements ActionFilter {
         this.userInjector = new UserInjector(settings, threadPool, auditLog, xffResolver);
         this.resourceAccessEvaluator = resourceAccessEvaluator;
         this.restApiAllowedRoles = Set.copyOf(settings.getAsList(ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED));
+        this.standbyModeSetting = standbyModeSetting;
         this.threadContextUserInfo = new ThreadContextUserInfo(
             threadPool.getThreadContext(),
             privilegesConfiguration,
@@ -389,6 +425,16 @@ public class SecurityFilter implements ActionFilter {
                     }
             }
 
+            if (isAllowedStandbyCcrSystemIndexReplication(action, request)) {
+                log.debug(
+                    "Allowing standby CCR replicated system index operation before Security configuration is initialized: action=[{}], index=[{}]",
+                    action,
+                    threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT)
+                );
+                chain.proceed(task, action, request, listener);
+                return;
+            }
+
             final PrivilegesEvaluator eval = this.privilegesConfiguration.privilegesEvaluator();
 
             if (log.isTraceEnabled()) {
@@ -557,6 +603,31 @@ public class SecurityFilter implements ActionFilter {
 
     private static boolean isUserAdmin(User user, final AdminDNs adminDns) {
         return user != null && adminDns.isAdmin(user);
+    }
+
+    private boolean isAllowedStandbyCcrSystemIndexReplication(String action, ActionRequest request) {
+        if (standbyModeSetting.getDynamicSettingValue() == false) {
+            return false;
+        }
+        final String replicatedSystemIndex = threadPool.getThreadContext()
+            .getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
+        if (replicatedSystemIndex == null || SystemIndexRegistry.matchesSystemIndexPattern(replicatedSystemIndex) == false) {
+            return false;
+        }
+        if (request instanceof RestoreSnapshotRequest) {
+            return isSingleIndexRequest(((RestoreSnapshotRequest) request).indices(), replicatedSystemIndex);
+        }
+        return CCR_REPLAY_CHANGES_ACTION.equals(action)
+            && request instanceof IndicesRequest
+            && isSingleIndexRequest((IndicesRequest) request, replicatedSystemIndex);
+    }
+
+    private boolean isSingleIndexRequest(IndicesRequest request, String expectedIndex) {
+        return isSingleIndexRequest(request.indices(), expectedIndex);
+    }
+
+    private boolean isSingleIndexRequest(String[] indices, String expectedIndex) {
+        return indices != null && indices.length == 1 && expectedIndex.equals(indices[0]);
     }
 
     private void attachSourceFieldContext(ActionRequest request) {
