@@ -333,6 +333,49 @@ public class SecurityInterceptorTests {
     }
 
     @Test
+    public void testSendRequestDecoratePreservesCcrReplicatedSystemIndex() {
+        final String replicatedSystemIndex = ".opendistro_security";
+        threadPool.getThreadContext().putTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT, replicatedSystemIndex);
+
+        AsyncSender localCcrSender = new AsyncSender() {
+            @Override
+            public <T extends TransportResponse> void sendRequest(
+                Connection connection,
+                String action,
+                TransportRequest request,
+                TransportRequestOptions options,
+                TransportResponseHandler<T> handler
+            ) {
+                assertThat(
+                    threadPool.getThreadContext().getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT),
+                    is(replicatedSystemIndex)
+                );
+                senderLatch.get().countDown();
+            }
+        };
+
+        AsyncSender remoteCcrSender = new AsyncSender() {
+            @Override
+            public <T extends TransportResponse> void sendRequest(
+                Connection connection,
+                String action,
+                TransportRequest request,
+                TransportRequestOptions options,
+                TransportResponseHandler<T> handler
+            ) {
+                assertThat(
+                    threadPool.getThreadContext().getHeader(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_HEADER),
+                    is(replicatedSystemIndex)
+                );
+                senderLatch.get().countDown();
+            }
+        };
+
+        completableRequestDecorate(localCcrSender, connection1, action, request, options, handler, localNode);
+        completableRequestDecorate(remoteCcrSender, connection3, action, request, options, handler, localNode);
+    }
+
+    @Test
     public void testSendNoOriginNodeCausesSerialization() {
 
         // this is a request where the local node is null; have to use the remote connection since the serialization will fail

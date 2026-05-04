@@ -44,6 +44,7 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.ResourceAlreadyExistsException;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.DocWriteRequest.OpType;
+import org.opensearch.action.IndicesRequest;
 import org.opensearch.action.admin.cluster.settings.ClusterUpdateSettingsAction;
 import org.opensearch.action.admin.cluster.settings.ClusterUpdateSettingsRequest;
 import org.opensearch.action.admin.cluster.snapshots.restore.RestoreSnapshotRequest;
@@ -78,6 +79,7 @@ import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.reindex.DeleteByQueryRequest;
 import org.opensearch.index.reindex.UpdateByQueryRequest;
+import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.action.simulate.PermissionCheckResponse;
 import org.opensearch.security.action.whoami.WhoAmIAction;
 import org.opensearch.security.auditlog.AuditLog;
@@ -110,6 +112,8 @@ import static org.opensearch.security.OpenSearchSecurityPlugin.traceAction;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_PERFORM_PERMISSION_CHECK_PARAM;
 
 public class SecurityFilter implements ActionFilter {
+
+    private static final String CCR_REPLAY_CHANGES_ACTION = "indices:data/write/plugins/replication/changes";
 
     protected final Logger log = LogManager.getLogger(this.getClass());
     private final PrivilegesConfiguration privilegesConfiguration;
@@ -389,6 +393,16 @@ public class SecurityFilter implements ActionFilter {
                     }
             }
 
+            if (isAllowedCcrSystemIndexReplication(action, request)) {
+                log.debug(
+                    "Allowing CCR replicated system index operation: action=[{}], index=[{}]",
+                    action,
+                    threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT)
+                );
+                chain.proceed(task, action, request, listener);
+                return;
+            }
+
             final PrivilegesEvaluator eval = this.privilegesConfiguration.privilegesEvaluator();
 
             if (log.isTraceEnabled()) {
@@ -557,6 +571,28 @@ public class SecurityFilter implements ActionFilter {
 
     private static boolean isUserAdmin(User user, final AdminDNs adminDns) {
         return user != null && adminDns.isAdmin(user);
+    }
+
+    private boolean isAllowedCcrSystemIndexReplication(String action, ActionRequest request) {
+        final String replicatedSystemIndex = threadPool.getThreadContext()
+            .getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
+        if (replicatedSystemIndex == null || SystemIndexRegistry.matchesSystemIndexPattern(replicatedSystemIndex) == false) {
+            return false;
+        }
+        if (request instanceof RestoreSnapshotRequest) {
+            return isSingleIndexRequest(((RestoreSnapshotRequest) request).indices(), replicatedSystemIndex);
+        }
+        return CCR_REPLAY_CHANGES_ACTION.equals(action)
+            && request instanceof IndicesRequest
+            && isSingleIndexRequest((IndicesRequest) request, replicatedSystemIndex);
+    }
+
+    private boolean isSingleIndexRequest(IndicesRequest request, String expectedIndex) {
+        return isSingleIndexRequest(request.indices(), expectedIndex);
+    }
+
+    private boolean isSingleIndexRequest(String[] indices, String expectedIndex) {
+        return indices != null && indices.length == 1 && expectedIndex.equals(indices[0]);
     }
 
     private void attachSourceFieldContext(ActionRequest request) {
