@@ -79,7 +79,6 @@ import org.opensearch.core.common.logging.LoggerMessageFormat;
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.index.reindex.DeleteByQueryRequest;
 import org.opensearch.index.reindex.UpdateByQueryRequest;
-import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.action.simulate.PermissionCheckResponse;
 import org.opensearch.security.action.whoami.WhoAmIAction;
 import org.opensearch.security.auditlog.AuditLog;
@@ -98,6 +97,7 @@ import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.ResourceAccessEvaluator;
 import org.opensearch.security.support.Base64Helper;
+import org.opensearch.security.support.CcrSystemIndexReplication;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
 import org.opensearch.security.support.SourceFieldsContext;
@@ -394,6 +394,9 @@ public class SecurityFilter implements ActionFilter {
             }
 
             if (isAllowedCcrSystemIndexReplication(action, request)) {
+                // Security can see CCR restore/replay before the Security index has initialized enough for normal
+                // privilege evaluation. This early path is limited to exact registered system-index replication;
+                // initialized-cluster authorization is handled by SystemIndexAccessEvaluator.
                 log.debug(
                     "Allowing CCR replicated system index operation: action=[{}], index=[{}]",
                     action,
@@ -576,7 +579,7 @@ public class SecurityFilter implements ActionFilter {
     private boolean isAllowedCcrSystemIndexReplication(String action, ActionRequest request) {
         final String replicatedSystemIndex = threadPool.getThreadContext()
             .getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
-        if (replicatedSystemIndex == null || SystemIndexRegistry.matchesSystemIndexPattern(replicatedSystemIndex) == false) {
+        if (replicatedSystemIndex == null) {
             return false;
         }
         if (request instanceof RestoreSnapshotRequest) {
@@ -592,7 +595,7 @@ public class SecurityFilter implements ActionFilter {
     }
 
     private boolean isSingleIndexRequest(String[] indices, String expectedIndex) {
-        return indices != null && indices.length == 1 && expectedIndex.equals(indices[0]);
+        return indices != null && indices.length == 1 && CcrSystemIndexReplication.isMarkedReplicatedSystemIndex(indices[0], expectedIndex);
     }
 
     private void attachSourceFieldContext(ActionRequest request) {
