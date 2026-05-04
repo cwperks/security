@@ -40,14 +40,12 @@ import org.opensearch.action.ActionRequest;
 import org.opensearch.action.RealtimeRequest;
 import org.opensearch.action.search.SearchRequest;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.indices.SystemIndexRegistry;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.actionlevel.legacy.IndexResolverReplacer.Resolved;
-import org.opensearch.security.support.CcrSystemIndexReplication;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
@@ -73,20 +71,18 @@ public class SystemIndexAccessEvaluator {
     private final WildcardMatcher systemIndexMatcher;
     private final WildcardMatcher superAdminAccessOnlyIndexMatcher;
     private final WildcardMatcher deniedActionsMatcher;
-    private final ThreadContext threadContext;
 
     private final boolean isSystemIndexEnabled;
     private final boolean isSystemIndexPermissionEnabled;
     private final static ImmutableSet<String> SYSTEM_INDEX_PERMISSION_SET = ImmutableSet.of(ConfigConstants.SYSTEM_INDEX_PERMISSION);
 
-    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr, ThreadContext threadContext) {
+    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
         this.securityIndex = settings.get(
             ConfigConstants.SECURITY_CONFIG_INDEX_NAME,
             ConfigConstants.OPENDISTRO_SECURITY_DEFAULT_CONFIG_INDEX
         );
         this.auditLog = auditLog;
         this.irr = irr;
-        this.threadContext = threadContext;
         this.filterSecurityIndex = settings.getAsBoolean(ConfigConstants.SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS, false);
         this.systemIndexMatcher = WildcardMatcher.from(
             settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
@@ -115,10 +111,6 @@ public class SystemIndexAccessEvaluator {
             ConfigConstants.SECURITY_SYSTEM_INDICES_PERMISSIONS_ENABLED_KEY,
             ConfigConstants.SECURITY_SYSTEM_INDICES_PERMISSIONS_DEFAULT
         );
-    }
-
-    public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
-        this(settings, auditLog, irr, new ThreadContext(Settings.EMPTY));
     }
 
     private static List<String> deniedActionPatterns() {
@@ -242,16 +234,6 @@ public class SystemIndexAccessEvaluator {
         return allIndices.stream().anyMatch(index -> !allSystemIndices.contains(index) && !allProtectedSystemIndices.contains(index));
     }
 
-    private boolean requestContainsOnlyAllowedCcrReplicatedSystemIndices(final Resolved requestedResolved) {
-        return requestedResolved.getAllIndices().isEmpty() == false
-            && requestedResolved.getAllIndices().stream().allMatch(this::isAllowedCcrReplicatedSystemIndex);
-    }
-
-    private boolean isAllowedCcrReplicatedSystemIndex(final String index) {
-        final String replicatedSystemIndex = threadContext.getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
-        return CcrSystemIndexReplication.isMarkedReplicatedSystemIndex(index, replicatedSystemIndex);
-    }
-
     /**
      * Is the current action allowed to be performed on security index
      * @param action request action on security index
@@ -300,13 +282,6 @@ public class SystemIndexAccessEvaluator {
         boolean containsSystemIndex = requestContainsAnySystemIndices(requestedResolved);
         boolean containsRegularIndex = requestContainsAnyRegularIndices(requestedResolved);
         boolean serviceAccountUser = user.isServiceAccount();
-
-        if (containsSystemIndex && requestContainsOnlyAllowedCcrReplicatedSystemIndices(requestedResolved)) {
-            // CCR uses an internal marker for same-name system-index replication. Keep the exception here so normal
-            // initialized-cluster system-index authorization remains centralized in the system-index evaluator.
-            log.debug("Allowing CCR replicated system index request for {}", requestedResolved.getAllIndices());
-            return PrivilegesEvaluatorResponse.ok();
-        }
 
         // Calculate plugin-related information once for reuse
         final Set<String> matchingPluginIndices = getMatchingPluginIndices(user, requestedResolved);
