@@ -32,6 +32,9 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
       - name: Checkout security
         uses: actions/checkout@v6
         with:
