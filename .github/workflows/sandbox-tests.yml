@@ -47,6 +47,10 @@ jobs:
         working-directory: security
         run: ./gradlew -Pcrypto.standard=FIPS-140-3 publishPluginZipPublicationToMavenLocal
 
+      - name: Build OpenSearch native library
+        working-directory: OpenSearch
+        run: ./gradlew -Pcrypto.standard=FIPS-140-3 -Dsandbox.enabled=true :sandbox:libs:dataformat-native:buildRustLibrary
+
       - name: Start OpenSearch sandbox cluster
         working-directory: OpenSearch
         run: |
