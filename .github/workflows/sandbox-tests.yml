@@ -45,12 +45,13 @@ jobs:
 
       - name: Publish security plugin to Maven local
         working-directory: security
-        run: ./gradlew publishPluginZipPublicationToMavenLocal
+        run: ./gradlew -Pcrypto.standard=FIPS-140-3 publishPluginZipPublicationToMavenLocal
 
       - name: Start OpenSearch sandbox cluster
         working-directory: OpenSearch
         run: |
           ./gradlew run \
+            -Pcrypto.standard=FIPS-140-3 \
             -Dsandbox.enabled=true \
             -Dtests.jvm.argline='-Dopensearch.experimental.feature.transport.stream.enabled=true' \
             -PinstalledPlugins="['arrow-base','arrow-flight-rpc','opensearch-security','analytics-engine','parquet-data-format','analytics-backend-datafusion','analytics-backend-lucene','dsl-query-executor','composite-engine','test-ppl-frontend']" \
@@ -78,6 +79,7 @@ jobs:
         working-directory: security
         run: |
           ./gradlew sandboxAnalyticsSecurityTest \
+            -Pcrypto.standard=FIPS-140-3 \
             -Dtests.rest.cluster=localhost:9200 \
             -Dtests.cluster=localhost:9200 \
             -Dtests.clustername=runTask \
