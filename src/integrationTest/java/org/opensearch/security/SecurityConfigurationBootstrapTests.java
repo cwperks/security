@@ -116,7 +116,7 @@ public class SecurityConfigurationBootstrapTests {
                     cluster.getInternalNodeClient(),
                     Map.of(ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER, "true")
                 );
-                final var filesToUpload = ImmutableMap.<String, CType>builder()
+                final var filesToUpload = ImmutableMap.<String, CType<?>>builder()
                     .put("action_groups.yml", CType.ACTIONGROUPS)
                     .put("config.yml", CType.CONFIG)
                     .put("roles.yml", CType.ROLES)

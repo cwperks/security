@@ -161,8 +161,12 @@ public enum ClusterManager {
             }
         }
 
-        private List<Class<? extends Plugin>> mergePlugins(Collection<Class<? extends Plugin>>... plugins) {
-            List<Class<? extends Plugin>> mergedPlugins = Arrays.stream(plugins)
+        private List<Class<? extends Plugin>> mergePlugins(
+            Collection<Class<? extends Plugin>> plugins,
+            Collection<Class<? extends Plugin>> additionalPlugins
+        ) {
+            List<Class<? extends Plugin>> mergedPlugins = Arrays.asList(plugins, additionalPlugins)
+                .stream()
                 .filter(Objects::nonNull)
                 .flatMap(Collection::stream)
                 .collect(Collectors.toList());
@@ -171,7 +175,7 @@ public enum ClusterManager {
 
         @SuppressWarnings("unchecked")
         public Class<? extends Plugin>[] getPlugins() {
-            return plugins.toArray(new Class[0]);
+            return plugins.toArray(Class[]::new);
         }
 
         public Collection<Class<? extends Plugin>> pluginsWithAddition(List<Class<? extends Plugin>> additionalPlugins) {

@@ -325,7 +325,7 @@ public class LocalOpenSearchCluster {
             Node node = new Node(nodeCounter.getAndIncrement(), nodeSettings, transportPortIterator.next(), httpPortIterator.next());
             futures.add(node.start());
         }
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
     public void waitForCluster(ClusterHealthStatus status, TimeValue timeout, int expectedNodeCount) throws IOException {

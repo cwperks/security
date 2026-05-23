@@ -359,10 +359,10 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         }
     }
 
-    public void triggerConfigurationReloadForCTypes(Client client, List<CType> cTypes, boolean ignoreFailures) {
+    public void triggerConfigurationReloadForCTypes(Client client, List<CType<?>> cTypes, boolean ignoreFailures) {
         ConfigUpdateResponse configUpdateResponse = client.execute(
             ConfigUpdateAction.INSTANCE,
-            new ConfigUpdateRequest(cTypes.stream().map(CType::toLCString).toArray(String[]::new))
+            new ConfigUpdateRequest(cTypes.stream().map(cType -> cType.toLCString()).toArray(String[]::new))
         ).actionGet();
         if (!ignoreFailures && configUpdateResponse.hasFailures()) {
             throw new RuntimeException("ConfigUpdateResponse produced failures: " + configUpdateResponse.failures());
@@ -491,7 +491,9 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
          */
         @SafeVarargs
         public final Builder plugin(Class<? extends Plugin>... plugins) {
-            this.plugins.addAll(List.of(plugins));
+            for (Class<? extends Plugin> plugin : plugins) {
+                this.plugins.add(plugin);
+            }
 
             return this;
         }
@@ -499,7 +501,6 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
         /**
          * Adds additional plugins to the cluster
          */
-        @SafeVarargs
         public final Builder plugin(PluginInfo... plugins) {
             this.additionalPlugins.addAll(List.of(plugins));
 
