@@ -53,6 +53,7 @@ public abstract class AbstractDefaultConfigurationTests {
             client.confirmCorrectCredentials(ADMIN_USER.getName());
             TestRestClient.HttpResponse response = client.get("_plugins/_security/api/internalusers");
             response.assertStatusCode(HttpStatus.SC_OK);
+            @SuppressWarnings("unchecked")
             Map<String, Object> users = response.getBodyAs(Map.class);
             assertThat(
                 response.getBody(),

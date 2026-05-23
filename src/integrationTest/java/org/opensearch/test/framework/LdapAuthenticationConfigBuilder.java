@@ -19,7 +19,7 @@ import java.util.function.Function;
 *           type so that all method defined in subclass are available in one of builder superclass method is invoked. Please see
 *           {@link LdapAuthorizationConfigBuilder}
 */
-public class LdapAuthenticationConfigBuilder<T extends LdapAuthenticationConfigBuilder> {
+public class LdapAuthenticationConfigBuilder<T extends LdapAuthenticationConfigBuilder<T>> {
     private boolean enableSsl = false;
     private boolean enableStartTls = false;
     private boolean enableSslClientAuth = false;
@@ -38,12 +38,18 @@ public class LdapAuthenticationConfigBuilder<T extends LdapAuthenticationConfigB
     */
     private final T builderSubclass;
 
-    protected LdapAuthenticationConfigBuilder(Function<LdapAuthenticationConfigBuilder, T> thisCastFunction) {
+    protected LdapAuthenticationConfigBuilder(Function<LdapAuthenticationConfigBuilder<T>, T> thisCastFunction) {
         this.builderSubclass = thisCastFunction.apply(this);
     }
 
-    public static LdapAuthenticationConfigBuilder<LdapAuthenticationConfigBuilder> config() {
-        return new LdapAuthenticationConfigBuilder<>(Function.identity());
+    public static LdapAuthenticationConfigBuilder<?> config() {
+        return new RootLdapAuthenticationConfigBuilder();
+    }
+
+    private static class RootLdapAuthenticationConfigBuilder extends LdapAuthenticationConfigBuilder<RootLdapAuthenticationConfigBuilder> {
+        RootLdapAuthenticationConfigBuilder() {
+            super(RootLdapAuthenticationConfigBuilder.class::cast);
+        }
     }
 
     public T enableSsl(boolean enableSsl) {

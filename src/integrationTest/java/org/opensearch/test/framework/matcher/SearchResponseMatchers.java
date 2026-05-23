@@ -9,7 +9,7 @@
 */
 package org.opensearch.test.framework.matcher;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -78,8 +78,13 @@ public class SearchResponseMatchers {
         return new SearchHitsContainDocumentsInAnyOrderMatcher(documentIds);
     }
 
+    @SafeVarargs
     public static Matcher<SearchResponse> searchHitsContainDocumentsInAnyOrder(Pair<String, String>... documentIds) {
-        return new SearchHitsContainDocumentsInAnyOrderMatcher(Arrays.asList(documentIds));
+        List<Pair<String, String>> documentIdList = new ArrayList<>();
+        for (Pair<String, String> documentId : documentIds) {
+            documentIdList.add(documentId);
+        }
+        return new SearchHitsContainDocumentsInAnyOrderMatcher(documentIdList);
     }
 
     static Long readTotalHits(SearchResponse searchResponse) {

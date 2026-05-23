@@ -64,7 +64,7 @@ class JwtAuthorizationHeaderFactory {
     }
 
     private Map<String, Object> customClaimsMap(String username, String[] roles) {
-        ImmutableMap.Builder<String, Object> builder = new ImmutableMap.Builder();
+        ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
         // Handle username claim
         if (StringUtils.isNoneEmpty(username)) {
             if (usernameClaimName.size() == 1) {

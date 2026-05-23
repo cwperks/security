@@ -1151,7 +1151,7 @@ public class TestSecurityConfig {
         public static class HttpAuthenticator implements ToXContentObject {
             private final String type;
             private boolean challenge;
-            private Map<String, Object> config = new HashMap();
+            private Map<String, Object> config = new HashMap<>();
 
             public HttpAuthenticator(String type) {
                 this.type = type;
@@ -1182,7 +1182,7 @@ public class TestSecurityConfig {
 
         public static class AuthenticationBackend implements ToXContentObject {
             private final String type;
-            private Supplier<Map<String, Object>> config = () -> new HashMap();
+            private Supplier<Map<String, Object>> config = HashMap::new;
 
             public AuthenticationBackend(String type) {
                 this.type = type;

@@ -51,7 +51,7 @@ public class AsyncActions {
     public static <T> List<T> getAll(final List<CompletableFuture<T>> futures, final int n, final TimeUnit unit) {
         LOG.info("Starting to wait for " + futures.size() + " futures to complete in " + unit.toSeconds(n) + " seconds.");
         final long startTimeMs = System.currentTimeMillis();
-        final CompletableFuture<Void> futuresCompleted = CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
+        final CompletableFuture<Void> futuresCompleted = CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
         try {
             futuresCompleted.get(n, unit);
         } catch (final Exception ex) {
