@@ -15,8 +15,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import com.carrotsearch.randomizedtesting.RandomizedTest;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakFilters;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.ClassRule;
 
 import org.opensearch.common.settings.Settings;
@@ -33,7 +33,7 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.notNullValue;
 
 @ThreadLeakFilters(filters = { BouncyCastleThreadFilter.class, BCFipsEntropyDaemonFilter.class })
-public abstract class SslCertificatesLoaderTest extends RandomizedTest {
+public abstract class SslCertificatesLoaderTest extends LuceneTestCase {
 
     static final String LOGGER_NAME = SslCertificatesLoader.class.getCanonicalName();
 
@@ -53,7 +53,7 @@ public abstract class SslCertificatesLoaderTest extends RandomizedTest {
         final Path expectedFile,
         final Certificate... expectedCertificates
     ) {
-        assertThat("Truststore configuration created", nonNull(trustStoreConfiguration));
+        assertTrue("Truststore configuration created", nonNull(trustStoreConfiguration));
         assertThat(trustStoreConfiguration.files(), contains(expectedFile));
         assertThat(trustStoreConfiguration.loadCertificates(), containsInAnyOrder(expectedCertificates));
         assertThat(trustStoreConfiguration.createTrustManagerFactory(true, Set.of()), is(notNullValue()));
@@ -64,7 +64,7 @@ public abstract class SslCertificatesLoaderTest extends RandomizedTest {
         final List<Path> expectedFiles,
         final Certificate... expectedCertificates
     ) {
-        assertThat("Keystore configuration created", nonNull(keyStoreConfiguration));
+        assertTrue("Keystore configuration created", nonNull(keyStoreConfiguration));
         assertThat(keyStoreConfiguration.files(), contains(expectedFiles.toArray(new Path[0])));
         assertThat(keyStoreConfiguration.loadCertificates(), containsInAnyOrder(expectedCertificates));
         assertThat(keyStoreConfiguration.createKeyManagerFactory(true), is(notNullValue()));

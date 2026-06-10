@@ -13,6 +13,7 @@ package org.opensearch.security.identity;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
@@ -27,7 +28,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_USER;
 import static org.junit.Assert.assertNull;
 
-public class SecurePluginSubjectTests {
+public class SecurePluginSubjectTests extends LuceneTestCase {
     static class TestIdentityAwarePlugin extends Plugin implements IdentityAwarePlugin {
 
     }
