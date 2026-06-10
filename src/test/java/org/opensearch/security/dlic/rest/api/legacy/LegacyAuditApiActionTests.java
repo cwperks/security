@@ -11,11 +11,11 @@
 
 package org.opensearch.security.dlic.rest.api.legacy;
 
-import org.opensearch.security.dlic.rest.api.AuditApiActionTest;
+import org.opensearch.security.dlic.rest.api.AuditApiActionTests;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 
-public class LegacyAuditApiActionTests extends AuditApiActionTest {
+public class LegacyAuditApiActionTests extends AuditApiActionTests {
     @Override
     protected String getEndpointPrefix() {
         return LEGACY_OPENDISTRO_PREFIX;

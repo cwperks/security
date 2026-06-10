@@ -50,7 +50,7 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_H
 // OpenSearchTestCase. BC FIPS is registered as a provider for these tasks, and its entropy daemon
 // starts on first use, which lands inside suite scope.
 @ThreadLeakFilters(filters = { BouncyCastleThreadFilter.class, BCFipsEntropyDaemonFilter.class })
-public class SecurityRestTestCase extends OpenSearchRestTestCase {
+public abstract class SecurityRestTestCase extends OpenSearchRestTestCase {
 
     private static final String CERT_FILE_DIRECTORY = "sanity-tests/";
 

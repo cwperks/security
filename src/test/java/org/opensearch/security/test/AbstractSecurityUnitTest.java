@@ -38,7 +38,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.net.ssl.SSLContext;
 
-import com.carrotsearch.randomizedtesting.RandomizedTest;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import com.google.common.collect.ImmutableList;
@@ -87,6 +86,7 @@ import org.opensearch.security.test.helper.cluster.ClusterInfo;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.security.test.helper.rules.SecurityTestWatcher;
+import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 import org.opensearch.transport.netty4.ssl.SslUtils;
@@ -101,7 +101,7 @@ import static org.hamcrest.Matchers.is;
  * issues.
  */
 @ThreadLeakScope(Scope.NONE)
-public abstract class AbstractSecurityUnitTest extends RandomizedTest {
+public abstract class AbstractSecurityUnitTest extends OpenSearchTestCase {
 
     private static final String NODE_ROLE_KEY = "node.roles";
     protected static final AtomicLong num = new AtomicLong();
