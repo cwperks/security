@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises failure paths that log exceptions")
 public class ConfigUpgradeApiActionUnitTest extends AbstractApiActionValidationTest {
 
     @Mock
@@ -61,7 +63,7 @@ public class ConfigUpgradeApiActionUnitTest extends AbstractApiActionValidationT
     private ConfigUpgradeApiAction configUpgradeApiAction;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUpConfigUpgradeApiAction() throws IOException {
         setupRolesConfiguration();
         doReturn(XContentFactory.jsonBuilder()).when(restChannel).newBuilder();
 
