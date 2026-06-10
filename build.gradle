@@ -159,7 +159,7 @@ forbiddenApisMain.enabled = false
 forbiddenApisTest.enabled = false
 filepermissions.enabled = false
 forbiddenPatterns.enabled = false
-testingConventions.enabled = false
+testingConventions.enabled = true
 jarHell.enabled = true
 tasks.whenTaskAdded { task ->
     if (task.name.contains("forbiddenApisIntegrationTest")) {

@@ -47,7 +47,7 @@ import org.opensearch.common.xcontent.XContentType;
 import org.opensearch.node.Node;
 import org.opensearch.node.PluginAwareNode;
 import org.opensearch.security.OpenSearchSecurityPlugin;
-import org.opensearch.security.RolesInjectorIntegTest;
+import org.opensearch.security.RolesInjectorIntegTests;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.AbstractSecurityUnitTest;
@@ -1454,7 +1454,7 @@ public class CrossClusterSearchTests extends AbstractSecurityUnitTest {
 
         // with invalid role injection
         // 1. With invalid roles injection
-        RolesInjectorIntegTest.RolesInjectorPlugin.injectedRoles = "invalid_user|invalid_role";
+        RolesInjectorIntegTests.RolesInjectorPlugin.injectedRoles = "invalid_user|invalid_role";
         try (
             Node node = new PluginAwareNode(
                 false,
@@ -1462,7 +1462,7 @@ public class CrossClusterSearchTests extends AbstractSecurityUnitTest {
                 Lists.newArrayList(
                     Netty4ModulePlugin.class,
                     OpenSearchSecurityPlugin.class,
-                    RolesInjectorIntegTest.RolesInjectorPlugin.class
+                    RolesInjectorIntegTests.RolesInjectorPlugin.class
                 )
             ).start()
         ) {
@@ -1483,7 +1483,7 @@ public class CrossClusterSearchTests extends AbstractSecurityUnitTest {
 
         // with valid role injection
         // 2. With valid roles injection
-        RolesInjectorIntegTest.RolesInjectorPlugin.injectedRoles = "valid_user|opendistro_security_all_access";
+        RolesInjectorIntegTests.RolesInjectorPlugin.injectedRoles = "valid_user|opendistro_security_all_access";
         try (
             Node node = new PluginAwareNode(
                 false,
@@ -1491,7 +1491,7 @@ public class CrossClusterSearchTests extends AbstractSecurityUnitTest {
                 Lists.newArrayList(
                     Netty4ModulePlugin.class,
                     OpenSearchSecurityPlugin.class,
-                    RolesInjectorIntegTest.RolesInjectorPlugin.class
+                    RolesInjectorIntegTests.RolesInjectorPlugin.class
                 )
             ).start()
         ) {
