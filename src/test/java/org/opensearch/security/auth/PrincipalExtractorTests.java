@@ -9,8 +9,11 @@
 package org.opensearch.security.auth;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.StreamSupport;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +29,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class PrincipalExtractorTests {
+public class PrincipalExtractorTests extends LuceneTestCase {
 
     private ThreadPool threadPool;
 
@@ -35,12 +38,16 @@ public class PrincipalExtractorTests {
         threadPool = new ThreadPool(Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "name").build());
     }
 
+    @After
+    public void shutdownThreadPool() {
+        ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS);
+    }
+
     @Test
     public void testGetAttribute() {
         PrincipalExtractor extractor = new PrincipalExtractor(threadPool);
         Attribute attribute = extractor.getAttribute();
         assertEquals(PrincipalAttribute.PRINCIPAL, attribute);
-        threadPool.shutdown();
     }
 
     @Test

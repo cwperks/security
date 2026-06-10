@@ -44,6 +44,7 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_HTTP_PREFI
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_CLIENT_EXTENDED_PREFIX;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_PREFIX;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_SERVER_EXTENDED_PREFIX;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
 
 public class PemSslCertificatesLoaderTest extends SslCertificatesLoaderTest {
 

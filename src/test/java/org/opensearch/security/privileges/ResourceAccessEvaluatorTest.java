@@ -8,9 +8,10 @@
 
 package org.opensearch.security.privileges;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.common.settings.Settings;
@@ -24,7 +25,7 @@ import org.opensearch.security.support.ConfigConstants;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -34,9 +35,10 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-@RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked") // action listener mock
-public class ResourceAccessEvaluatorTest {
+public class ResourceAccessEvaluatorTest extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private ResourceAccessHandler resourceAccessHandler;
@@ -53,6 +55,7 @@ public class ResourceAccessEvaluatorTest {
 
     @Before
     public void setup() {
+        mocks = MockitoAnnotations.openMocks(this);
         threadContext = new ThreadContext(Settings.EMPTY);
         evaluator = new ResourceAccessEvaluator(
             resourcePluginInfo,
@@ -60,6 +63,11 @@ public class ResourceAccessEvaluatorTest {
             mock(OpensearchDynamicSetting.class),
             mock(OpensearchDynamicSetting.class)
         );
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     private void stubAuthenticatedUser() {

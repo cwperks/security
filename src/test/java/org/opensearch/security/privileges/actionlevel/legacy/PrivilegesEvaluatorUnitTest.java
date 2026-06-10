@@ -11,13 +11,11 @@ package org.opensearch.security.privileges.actionlevel.legacy;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.securityconf.impl.v7.ConfigV7;
-
-import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -27,8 +25,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@RunWith(MockitoJUnitRunner.class)
-public class PrivilegesEvaluatorUnitTest {
+public class PrivilegesEvaluatorUnitTest extends LuceneTestCase {
 
     private static final List<String> allowedDnfof = ImmutableList.of(
         "indices:admin/mappings/fields/get",

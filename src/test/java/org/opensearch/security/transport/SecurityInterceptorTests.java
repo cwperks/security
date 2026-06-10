@@ -18,6 +18,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -70,9 +72,10 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SecurityInterceptorTests {
+public class SecurityInterceptorTests extends LuceneTestCase {
 
     private SecurityInterceptor securityInterceptor;
+    private AutoCloseable mocks;
 
     @Mock
     private BackendRegistry backendRegistry;
@@ -139,7 +142,7 @@ public class SecurityInterceptorTests {
     public void setup() {
 
         // Build mocked objects
-        MockitoAnnotations.openMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         settings = Settings.builder()
             .put("node.name", SecurityInterceptorTests.class.getSimpleName())
             .put("request.headers.default", "1")
@@ -251,6 +254,12 @@ public class SecurityInterceptorTests {
         };
 
         threadPool.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_USER, user);
+    }
+
+    @After
+    public void cleanup() throws Exception {
+        ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS);
+        mocks.close();
     }
 
     /**
