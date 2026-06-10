@@ -18,10 +18,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.action.ActionRequest;
@@ -39,14 +39,11 @@ import org.opensearch.security.securityconf.impl.v7.RoleV7;
 import org.opensearch.security.user.User;
 import org.opensearch.tasks.Task;
 
-import org.mockito.junit.MockitoJUnitRunner;
-
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThrows;
 
-@RunWith(MockitoJUnitRunner.class)
-public class RestLayerPrivilegesEvaluatorTest {
+public class RestLayerPrivilegesEvaluatorTest extends LuceneTestCase {
 
     private static final User TEST_USER = new User("test_user").withSecurityRoles(Set.of("test_role"));
 
@@ -56,7 +53,7 @@ public class RestLayerPrivilegesEvaluatorTest {
     }
 
     @Before
-    public void setUp() {
+    public void setupLogging() {
         setLoggingLevel(Level.DEBUG); // Enable debug logging scenarios for verification
     }
 
