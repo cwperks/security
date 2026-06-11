@@ -58,6 +58,7 @@ import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -88,7 +89,6 @@ import org.opensearch.security.test.helper.cluster.ClusterInfo;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.security.test.helper.rules.SecurityTestWatcher;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
@@ -102,7 +102,8 @@ import static org.hamcrest.Matchers.is;
  * issues.
  */
 @ThreadLeakScope(Scope.NONE)
-public abstract class AbstractSecurityUnitTest extends OpenSearchTestCase {
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Security cluster tests log during embedded node startup and teardown")
+public abstract class AbstractSecurityUnitTest extends LuceneTestCase {
 
     private static final String NODE_ROLE_KEY = "node.roles";
     protected static final AtomicLong num = new AtomicLong();
