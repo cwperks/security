@@ -18,17 +18,17 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ActionGroupsV7;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class FlattenedActionGroupsTests extends OpenSearchTestCase {
+public class FlattenedActionGroupsTests extends LuceneTestCase {
     @Test
     public void basicTest() throws Exception {
         TestActionGroups testActionGroups = new TestActionGroups(

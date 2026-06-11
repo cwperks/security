@@ -23,13 +23,13 @@ import java.util.Set;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import org.opensearch.test.OpenSearchTestCase;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class HeapBasedClientBlockRegistryTests extends OpenSearchTestCase {
+public class HeapBasedClientBlockRegistryTests extends LuceneTestCase {
 
     @Test
     public void simpleTest() throws Exception {

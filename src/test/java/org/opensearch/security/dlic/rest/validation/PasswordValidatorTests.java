@@ -14,10 +14,10 @@ package org.opensearch.security.dlic.rest.validation;
 import java.util.List;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -25,7 +25,7 @@ import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_P
 import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_PASSWORD_SCORE_BASED_VALIDATION_STRENGTH;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_RESTAPI_PASSWORD_VALIDATION_REGEX;
 
-public class PasswordValidatorTests extends OpenSearchTestCase {
+public class PasswordValidatorTests extends LuceneTestCase {
 
     static final List<String> WEAK_PASSWORDS = ImmutableList.of("q", "5", "&", "admin", "123456", "password");
 

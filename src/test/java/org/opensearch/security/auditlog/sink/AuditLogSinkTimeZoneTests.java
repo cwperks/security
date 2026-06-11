@@ -11,6 +11,7 @@
 
 package org.opensearch.security.auditlog.sink;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -18,7 +19,6 @@ import org.junit.Test;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.auditlog.helper.LoggingSink;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
@@ -27,7 +27,7 @@ import org.joda.time.format.DateTimeFormat;
 
 import static org.junit.Assert.assertEquals;
 
-public class AuditLogSinkTimeZoneTests extends OpenSearchTestCase {
+public class AuditLogSinkTimeZoneTests extends LuceneTestCase {
 
     private static final long FIXED_UTC_MILLIS = new DateTime(2026, 1, 28, 10, 0, DateTimeZone.UTC).getMillis();
     private static final String MY_INDEX = "my-index";

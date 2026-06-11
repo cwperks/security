@@ -14,6 +14,7 @@ package org.opensearch.security.auth.http.jwt.keybyoidc;
 import java.util.HashMap;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,12 +22,11 @@ import org.junit.Test;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class SingleKeyHTTPJwtKeyByOpenIdConnectAuthenticatorTests extends OpenSearchTestCase {
+public class SingleKeyHTTPJwtKeyByOpenIdConnectAuthenticatorTests extends LuceneTestCase {
 
     @Test
     public void basicTest() throws Exception {

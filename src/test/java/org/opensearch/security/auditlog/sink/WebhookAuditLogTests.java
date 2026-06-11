@@ -27,6 +27,7 @@ import org.apache.hc.core5.http.impl.HttpProcessors;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
 import org.apache.hc.core5.util.TimeValue;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -42,12 +43,11 @@ import org.opensearch.security.auditlog.sink.WebhookSink.WebhookFormat;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class WebhookAuditLogTests extends OpenSearchTestCase {
+public class WebhookAuditLogTests extends LuceneTestCase {
 
     protected HttpServer server = null;
 

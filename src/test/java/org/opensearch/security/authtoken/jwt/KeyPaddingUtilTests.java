@@ -11,16 +11,15 @@
 
 package org.opensearch.security.authtoken.jwt;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import com.nimbusds.jose.JWSAlgorithm;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class KeyPaddingUtilTests extends OpenSearchTestCase {
+public class KeyPaddingUtilTests extends LuceneTestCase {
 
     private String signingKey = "testKey";
 

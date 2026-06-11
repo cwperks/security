@@ -23,6 +23,7 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakFilters;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.awaitility.Awaitility;
 import org.junit.After;
 import org.junit.Before;
@@ -38,7 +39,6 @@ import org.opensearch.env.TestEnvironment;
 import org.opensearch.security.ssl.config.CertType;
 import org.opensearch.security.util.BCFipsEntropyDaemonFilter;
 import org.opensearch.test.BouncyCastleThreadFilter;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.TestThreadPool;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.watcher.ResourceWatcherService;
@@ -56,9 +56,11 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_AUX_PREFIX
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_FILEPATH;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_TYPE;
 import static org.opensearch.transport.AuxTransport.AUX_TRANSPORT_TYPES_SETTING;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomAsciiAlphanumOfLength;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
 
 @ThreadLeakFilters(filters = { BouncyCastleThreadFilter.class, BCFipsEntropyDaemonFilter.class })
-public class SslSettingsManagerReloadListenerTests extends OpenSearchTestCase {
+public class SslSettingsManagerReloadListenerTests extends LuceneTestCase {
 
     @ClassRule
     public static CertificatesRule certificatesRule = new CertificatesRule(false);
@@ -148,7 +150,7 @@ public class SslSettingsManagerReloadListenerTests extends OpenSearchTestCase {
         final String keyStorePathSetting = settingPrefix + KEYSTORE_FILEPATH;
         final String keyStoreTypeSetting = settingPrefix + KEYSTORE_TYPE;
         final String certTypeFilePrefix = certType.id().toLowerCase(Locale.ROOT);
-        final var keyStorePassword = randomAlphaOfLength(10);
+        final var keyStorePassword = randomAsciiAlphanumOfLength(10);
         final var secureSettings = new MockSecureSettings();
         secureSettings.setString(settingPrefix + "truststore_password_secure", keyStorePassword);
         secureSettings.setString(settingPrefix + "keystore_password_secure", keyStorePassword);

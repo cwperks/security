@@ -11,12 +11,12 @@
 
 package org.opensearch.security.auditlog;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.opensearch.OpenSearchException;
 import org.opensearch.tasks.Task;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.TransportRequest;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -34,7 +34,7 @@ import static org.mockito.Mockito.verify;
  * before the {@link OpenSearchException} is thrown or delivered. The catch-site no longer emits a
  * {@code MISSING_PRIVILEGES} audit; it debug-logs for diagnostic visibility instead.
  */
-public class AuditLogSslExceptionHandlerTests extends OpenSearchTestCase {
+public class AuditLogSslExceptionHandlerTests extends LuceneTestCase {
 
     private AuditLog auditLog;
     private AuditLogSslExceptionHandler handler;

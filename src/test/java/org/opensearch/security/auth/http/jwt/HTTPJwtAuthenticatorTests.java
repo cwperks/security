@@ -30,6 +30,7 @@ import java.util.Map;
 import javax.crypto.SecretKey;
 
 import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +38,6 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
@@ -52,7 +52,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-public class HTTPJwtAuthenticatorTests extends OpenSearchTestCase {
+public class HTTPJwtAuthenticatorTests extends LuceneTestCase {
 
     final static byte[] secretKeyBytes = new byte[1024];
     final static SecretKey secretKey;

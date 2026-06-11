@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakFilters;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -28,7 +29,6 @@ import org.opensearch.env.TestEnvironment;
 import org.opensearch.security.ssl.config.CertType;
 import org.opensearch.security.util.BCFipsEntropyDaemonFilter;
 import org.opensearch.test.BouncyCastleThreadFilter;
-import org.opensearch.test.OpenSearchTestCase;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
@@ -66,11 +66,13 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_
 import static org.opensearch.security.ssl.util.SSLConfigConstants.getStringAffixKeyForCertType;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_SSL_ONLY;
 import static org.opensearch.transport.AuxTransport.AUX_TRANSPORT_TYPES_SETTING;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomFrom;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @ThreadLeakFilters(filters = { BouncyCastleThreadFilter.class, BCFipsEntropyDaemonFilter.class })
-public class SslSettingsManagerTests extends OpenSearchTestCase {
+public class SslSettingsManagerTests extends LuceneTestCase {
 
     @ClassRule
     public static CertificatesRule certificatesRule = new CertificatesRule();

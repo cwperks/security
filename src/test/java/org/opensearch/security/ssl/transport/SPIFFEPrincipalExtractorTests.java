@@ -17,16 +17,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SPIFFEPrincipalExtractorTests extends OpenSearchTestCase {
+public class SPIFFEPrincipalExtractorTests extends LuceneTestCase {
 
     @Test
     public void testExtractSpiffePrincipal() throws Exception {

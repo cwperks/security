@@ -10,6 +10,7 @@
 package org.opensearch.security.util;
 
 import org.apache.lucene.search.join.ScoreMode;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.index.query.BoolQueryBuilder;
@@ -18,7 +19,6 @@ import org.opensearch.index.query.QueryBuilders;
 import org.opensearch.index.query.TermQueryBuilder;
 import org.opensearch.join.query.HasChildQueryBuilder;
 import org.opensearch.join.query.HasParentQueryBuilder;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ParentChildrenQueryDetectorTests extends OpenSearchTestCase {
+public class ParentChildrenQueryDetectorTests extends LuceneTestCase {
 
     @Test
     public void termQueryShouldNotBeParentChildQuery() {

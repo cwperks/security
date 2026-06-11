@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,7 +30,6 @@ import org.opensearch.node.Node;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,7 +38,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES;
 import static org.mockito.Mockito.mock;
 
-public class RolesInjectorTests extends OpenSearchTestCase {
+public class RolesInjectorTests extends LuceneTestCase {
 
     private AuditLog auditLog;
 

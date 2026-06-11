@@ -20,6 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -27,7 +28,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.security.auth.http.jwt.keybyjwks.HTTPJwtKeyByJWKSAuthenticator;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.mockito.ArgumentCaptor;
 
@@ -37,7 +37,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class HTTPJwtKeyByJWKSAuthenticatorTests extends OpenSearchTestCase {
+public class HTTPJwtKeyByJWKSAuthenticatorTests extends LuceneTestCase {
 
     @Test
     public void testBasicJwksAuthentication() throws Exception {

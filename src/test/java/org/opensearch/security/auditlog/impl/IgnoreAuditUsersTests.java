@@ -13,6 +13,7 @@ package org.opensearch.security.auditlog.impl;
 
 import java.net.InetSocketAddress;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -27,7 +28,6 @@ import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.User;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,7 +38,7 @@ import static org.mockito.Mockito.when;
 /**
  * Created by martin.stange on 19.04.2017.
  */
-public class IgnoreAuditUsersTests extends OpenSearchTestCase {
+public class IgnoreAuditUsersTests extends LuceneTestCase {
 
     ClusterService cs = mock(ClusterService.class);
     DiscoveryNode dn = mock(DiscoveryNode.class);

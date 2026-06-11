@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -51,7 +52,6 @@ import org.opensearch.security.filter.SecurityRequestChannel;
 import org.opensearch.security.filter.SecurityRequestFactory;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.AuthCredentials;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -59,7 +59,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public class HTTPExtendedProxyAuthenticatorTests extends OpenSearchTestCase {
+public class HTTPExtendedProxyAuthenticatorTests extends LuceneTestCase {
 
     private HTTPExtendedProxyAuthenticator authenticator;
     private ThreadContext context = new ThreadContext(Settings.EMPTY);

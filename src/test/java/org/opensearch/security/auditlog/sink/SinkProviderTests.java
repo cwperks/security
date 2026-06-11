@@ -12,17 +12,17 @@
 package org.opensearch.security.auditlog.sink;
 
 import org.apache.logging.log4j.Level;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
-public class SinkProviderTests extends OpenSearchTestCase {
+public class SinkProviderTests extends LuceneTestCase {
 
     @Test
     public void testConfiguration() throws Exception {

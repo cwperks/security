@@ -20,6 +20,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -39,7 +40,6 @@ import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.filter.SecurityRequest;
 import org.opensearch.security.filter.SecurityRequestFactory;
 import org.opensearch.security.securityconf.impl.CType;
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -52,7 +52,7 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class AuditMessageTests extends OpenSearchTestCase {
+public class AuditMessageTests extends LuceneTestCase {
 
     private static final Map<String, List<String>> TEST_REST_HEADERS = ImmutableMap.of(
         "authorization",

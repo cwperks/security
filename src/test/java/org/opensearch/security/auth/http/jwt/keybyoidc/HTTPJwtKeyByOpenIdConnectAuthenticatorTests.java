@@ -13,6 +13,7 @@ package org.opensearch.security.auth.http.jwt.keybyoidc;
 import java.util.HashMap;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.Matchers;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -23,12 +24,11 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class HTTPJwtKeyByOpenIdConnectAuthenticatorTests extends OpenSearchTestCase {
+public class HTTPJwtKeyByOpenIdConnectAuthenticatorTests extends LuceneTestCase {
 
     protected static MockIpdServer mockIdpServer;
 

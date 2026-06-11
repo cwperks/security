@@ -13,15 +13,14 @@ package org.opensearch.security.authtoken.jwt;
 
 import java.util.Base64;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class EncryptionDecryptionUtilsTests extends OpenSearchTestCase {
+public class EncryptionDecryptionUtilsTests extends LuceneTestCase {
 
     @Test
     public void testEncryptDecrypt() {

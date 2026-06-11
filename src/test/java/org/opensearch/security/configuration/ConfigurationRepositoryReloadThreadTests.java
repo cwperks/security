@@ -17,17 +17,17 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.node.Node;
 import org.opensearch.security.securityconf.impl.CType;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 
-public class ConfigurationRepositoryReloadThreadTests extends OpenSearchTestCase {
+public class ConfigurationRepositoryReloadThreadTests extends LuceneTestCase {
 
     static final Settings settings = Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "test_node").build();
 

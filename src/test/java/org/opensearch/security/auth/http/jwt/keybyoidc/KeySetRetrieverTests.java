@@ -32,6 +32,7 @@ import org.apache.hc.core5.ssl.PrivateKeyDetails;
 import org.apache.hc.core5.ssl.PrivateKeyStrategy;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.ssl.SSLContexts;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -39,7 +40,6 @@ import org.junit.Test;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.network.SocketUtils;
 import org.opensearch.security.util.SettingsBasedSSLConfigurator;
-import org.opensearch.test.OpenSearchTestCase;
 
 import com.nimbusds.jose.jwk.JWKSet;
 
@@ -50,7 +50,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class KeySetRetrieverTests extends OpenSearchTestCase {
+public class KeySetRetrieverTests extends LuceneTestCase {
     protected static MockIpdServer mockIdpServer;
     protected static MockJwksServer mockJwksServer;
 

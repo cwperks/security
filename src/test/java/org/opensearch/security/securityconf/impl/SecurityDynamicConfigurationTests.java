@@ -13,11 +13,11 @@ package org.opensearch.security.securityconf.impl;
 
 import java.io.IOException;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.opensearch.security.DefaultObjectMapper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -27,7 +27,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.sameInstance;
 
-public class SecurityDynamicConfigurationTests extends OpenSearchTestCase {
+public class SecurityDynamicConfigurationTests extends LuceneTestCase {
 
     private SecurityDynamicConfiguration<?> securityDynamicConfiguration;
     private ObjectMapper objectMapper = DefaultObjectMapper.objectMapper();

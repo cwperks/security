@@ -16,11 +16,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
@@ -32,7 +31,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
-public class SelfRefreshingKeySetTests extends OpenSearchTestCase {
+public class SelfRefreshingKeySetTests extends LuceneTestCase {
 
     private SelfRefreshingKeySet selfRefreshingKeySet;
     private String keyForKidA;
