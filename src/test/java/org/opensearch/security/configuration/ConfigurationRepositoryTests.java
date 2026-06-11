@@ -20,9 +20,12 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.OpenSearchException;
 import org.opensearch.action.admin.cluster.health.ClusterHealthRequest;
@@ -65,7 +68,6 @@ import org.opensearch.security.state.SecurityMetadata;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.SecurityIndexHandler;
 import org.opensearch.security.transport.SecurityInterceptorTests;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.AdminClient;
 import org.opensearch.transport.client.Client;
@@ -75,7 +77,7 @@ import org.opensearch.transport.client.IndicesAdminClient;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 import org.mockito.stubbing.OngoingStubbing;
 import tools.jackson.databind.InjectableValues;
 
@@ -104,8 +106,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class ConfigurationRepositoryTests extends OpenSearchTestCase {
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "legacy test emits reload-thread interrupt logs")
+@ThreadLeakScope(Scope.NONE)
+public class ConfigurationRepositoryTests extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private Client localClient;
@@ -149,7 +154,9 @@ public class ConfigurationRepositoryTests extends OpenSearchTestCase {
     private static final String TEST_CONFIG_DIR = "./src/test/resources";
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
+        super.setUp();
+        mocks = MockitoAnnotations.openMocks(this);
         Settings settings = Settings.builder()
             .put("node.name", SecurityInterceptorTests.class.getSimpleName())
             .put("request.headers.default", "1")
@@ -181,6 +188,15 @@ public class ConfigurationRepositoryTests extends OpenSearchTestCase {
         when(localClient.admin()).thenReturn(adminClient);
         when(adminClient.cluster()).thenReturn(clusterAdminClient);
         when(adminClient.indices()).thenReturn(indicesAdminClient);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        try {
+            mocks.close();
+        } finally {
+            super.tearDown();
+        }
     }
 
     private ConfigurationRepository createConfigurationRepository(Settings settings) {

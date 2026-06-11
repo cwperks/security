@@ -21,9 +21,10 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentFactory;
@@ -36,10 +37,9 @@ import org.opensearch.rest.RestRequest;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.dlic.rest.validation.RequestContentValidator.DataType;
 import org.opensearch.security.dlic.rest.validation.RequestContentValidator.FieldConfiguration;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.NullNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -51,8 +51,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class RequestContentValidatorTests extends OpenSearchTestCase {
+public class RequestContentValidatorTests extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private HttpRequest httpRequest;
@@ -67,12 +68,16 @@ public class RequestContentValidatorTests extends OpenSearchTestCase {
 
     @Before
     public void setUpRequest() {
+        mocks = MockitoAnnotations.openMocks(this);
         when(httpRequest.uri()).thenReturn("");
         when(httpRequest.content()).thenReturn(new BytesArray(new byte[1]));
-        when(httpRequest.getHeaders()).thenReturn(
-                Collections.singletonMap("Content-Type", Collections.singletonList("application/json"))
-        );
+        when(httpRequest.getHeaders()).thenReturn(Collections.singletonMap("Content-Type", Collections.singletonList("application/json")));
         request = RestRequest.request(xContentRegistry, httpRequest, httpChannel);
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     @Test
