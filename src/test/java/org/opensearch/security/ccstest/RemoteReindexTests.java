@@ -71,8 +71,12 @@ public class RemoteReindexTests extends AbstractSecurityUnitTest {
 
     @After
     public void tearDown() throws Exception {
-        cl1.stopCluster();
-        cl2.stopCluster();
+        try {
+            cl1.stopCluster();
+            cl2.stopCluster();
+        } finally {
+            super.tearDown();
+        }
     }
 
     private Settings crossClusterNodeSettings(ClusterInfo remote) {
