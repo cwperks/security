@@ -152,8 +152,12 @@ public class CrossClusterSearchTests extends AbstractSecurityUnitTest {
 
     @After
     public void tearDown() throws Exception {
-        cl1.stopCluster();
-        cl2.stopCluster();
+        try {
+            cl1.stopCluster();
+            cl2.stopCluster();
+        } finally {
+            super.tearDown();
+        }
     }
 
     @Test

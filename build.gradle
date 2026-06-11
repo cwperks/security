@@ -75,6 +75,7 @@ apply plugin: 'opensearch.opensearchplugin'
 apply plugin: 'opensearch.pluginzip'
 apply plugin: 'opensearch.rest-test'
 apply plugin: 'opensearch.testclusters'
+apply plugin: 'opensearch.java-agent'
 apply from: 'gradle/formatting.gradle'
 
 licenseFile = rootProject.file('LICENSE.txt')
@@ -257,13 +258,19 @@ tasks.register('copyExtraTestResources', Copy) {
 
 def setCommonTestConfig(Test task) {
     task.testClassesDirs = sourceSets.test.output.classesDirs
-    task.classpath = sourceSets.test.runtimeClasspath
+    task.classpath = sourceSets.test.runtimeClasspath.filter { file ->
+        // Split CI tasks do not run Kafka sink tests. Keep Kafka's legacy Yammer metrics jar out of
+        // their OpenSearch bootstrap classpath because it collides with Dropwizard metrics as
+        // codebase.metrics-core.
+        file.name != "metrics-core-2.2.0.jar"
+    }
 
     task.maxParallelForks = 8
     task.jvmArgs += "-Xmx3072m"
     // this is needed to reflect access system env map.
     task.jvmArgs += "--add-opens=java.base/java.io=ALL-UNNAMED"
     task.jvmArgs += "--add-opens=java.base/java.util=ALL-UNNAMED"
+    task.systemProperty "testclusters.dir", file("${buildDir}/testrun/${task.name}/target").absolutePath
     task.retry {
         failOnPassedAfterRetry = false
         maxRetries = 5
