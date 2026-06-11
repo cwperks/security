@@ -15,9 +15,10 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.lang3.tuple.Triple;
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.core.rest.RestStatus;
 import org.opensearch.security.DefaultObjectMapper;
@@ -28,11 +29,10 @@ import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.ActionGroupsV7;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -42,8 +42,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class EndpointValidatorTests extends OpenSearchTestCase {
+public class EndpointValidatorTests extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     SecurityDynamicConfiguration<?> configuration;
@@ -55,6 +56,7 @@ public class EndpointValidatorTests extends OpenSearchTestCase {
 
     @Before
     public void createConfigurationValidator() {
+        mocks = MockitoAnnotations.openMocks(this);
         endpointValidator = new EndpointValidator() {
             @Override
             public Endpoint endpoint() {
@@ -71,6 +73,11 @@ public class EndpointValidatorTests extends OpenSearchTestCase {
                 return RequestContentValidator.NOOP_VALIDATOR;
             }
         };
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     @Test

@@ -14,8 +14,10 @@ package org.opensearch.security.dlic.rest.api;
 import java.io.IOException;
 import java.util.stream.Collectors;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.common.xcontent.XContentFactory;
 import org.opensearch.core.rest.RestStatus;
@@ -24,13 +26,12 @@ import org.opensearch.rest.RestChannel;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.dlic.rest.validation.ValidationResult;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.client.Client;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -40,8 +41,9 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class RequestHandlersBuilderTests extends OpenSearchTestCase {
+public class RequestHandlersBuilderTests extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     RestChannel channel;
@@ -54,6 +56,16 @@ public class RequestHandlersBuilderTests extends OpenSearchTestCase {
 
     @Captor
     ArgumentCaptor<BytesRestResponse> responseArgumentCaptor;
+
+    @Before
+    public void openMocks() {
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
+    }
 
     @Test
     public void checkPermissionsForAllMethodsOnDemand() throws IOException {
