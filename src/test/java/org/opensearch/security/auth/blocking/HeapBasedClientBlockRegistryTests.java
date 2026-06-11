@@ -17,14 +17,13 @@
 
 package org.opensearch.security.auth.blocking;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class HeapBasedClientBlockRegistryTests extends OpenSearchTestCase {
+public class HeapBasedClientBlockRegistryTests extends LuceneTestCase {
 
     @Test
     public void simpleTest() throws Exception {

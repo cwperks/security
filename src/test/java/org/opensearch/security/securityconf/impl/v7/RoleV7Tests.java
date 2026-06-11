@@ -13,10 +13,9 @@ package org.opensearch.security.securityconf.impl.v7;
 
 import java.net.URL;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
@@ -24,7 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class RoleV7Tests extends OpenSearchTestCase {
+public class RoleV7Tests extends LuceneTestCase {
 
     private URL testYamlUrl;
 

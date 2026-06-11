@@ -13,6 +13,7 @@ package org.opensearch.security.auth.ldap;
 
 import java.nio.charset.StandardCharsets;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -25,13 +26,12 @@ import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.user.User;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 @Ignore
-public class LdapBackendClientCertTests extends OpenSearchTestCase {
+public class LdapBackendClientCertTests extends LuceneTestCase {
 
     static {
         System.setProperty("security.display_lic_none", "true");

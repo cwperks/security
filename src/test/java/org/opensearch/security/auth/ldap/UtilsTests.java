@@ -14,15 +14,14 @@ package org.opensearch.security.auth.ldap;
 import javax.naming.InvalidNameException;
 import javax.naming.ldap.LdapName;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class UtilsTests extends OpenSearchTestCase {
+public class UtilsTests extends LuceneTestCase {
 
     @Test
     public void testLDAPName() throws Exception {

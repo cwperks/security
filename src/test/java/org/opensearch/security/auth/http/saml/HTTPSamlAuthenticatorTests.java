@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 import javax.net.ssl.KeyManagerFactory;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
@@ -56,7 +57,6 @@ import org.opensearch.security.filter.SecurityResponse;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import com.nimbusds.jwt.SignedJWT;
 import org.opensaml.saml.saml2.core.NameIDType;
@@ -67,7 +67,7 @@ import static org.hamcrest.Matchers.is;
 import static org.opensearch.security.auth.http.saml.HTTPSamlAuthenticator.IDP_METADATA_CONTENT;
 import static org.opensearch.security.auth.http.saml.HTTPSamlAuthenticator.IDP_METADATA_URL;
 
-public class HTTPSamlAuthenticatorTests extends OpenSearchTestCase {
+public class HTTPSamlAuthenticatorTests extends LuceneTestCase {
     protected MockSamlIdpServer mockSamlIdpServer;
     private static final Pattern WWW_AUTHENTICATE_PATTERN = Pattern.compile(
         "([^\\s]+)\\s*([^\\s=]+)=\"([^\"]+)\"\\s*([^\\s=]+)=\"([^\"]+)\"\\s*([^\\s=]+)=\"([^\"]+)\"\\s*"

@@ -4,18 +4,18 @@
  */
 package org.opensearch.security.ssl;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.opensearch.common.settings.MockSecureSettings;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.opensearch.security.ssl.SecureSSLSettings.SSLSetting.SECURITY_SSL_HTTP_PEMKEY_PASSWORD;
 
-public class SecureSSLSettingsTests extends OpenSearchTestCase {
+public class SecureSSLSettingsTests extends LuceneTestCase {
     @Test
     public void testGetSettings() {
         final var settings = SecureSSLSettings.getSecureSettings();

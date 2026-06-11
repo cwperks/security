@@ -57,6 +57,7 @@ import org.apache.http.ssl.PrivateKeyDetails;
 import org.apache.http.ssl.PrivateKeyStrategy;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.ssl.SSLContexts;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,13 +69,12 @@ import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.test.helper.network.SocketUtils;
 import org.opensearch.security.util.SettingsBasedSSLConfiguratorV4.SSLConfig;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.CoreMatchers.either;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.opensearch.security.ssl.SecureSSLSettings.SSLSetting.SECURITY_SSL_TRANSPORT_TRUSTSTORE_PASSWORD;
 
-public class SettingsBasedSSLConfiguratorV4Tests extends OpenSearchTestCase {
+public class SettingsBasedSSLConfiguratorV4Tests extends LuceneTestCase {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();

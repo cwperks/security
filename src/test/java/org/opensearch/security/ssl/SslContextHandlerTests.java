@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -34,7 +35,6 @@ import org.opensearch.security.ssl.config.CertType;
 import org.opensearch.security.ssl.config.KeyStoreConfiguration;
 import org.opensearch.security.ssl.config.SslParameters;
 import org.opensearch.security.ssl.config.TrustStoreConfiguration;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -44,7 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class SslContextHandlerTests extends OpenSearchTestCase {
+public class SslContextHandlerTests extends LuceneTestCase {
 
     @ClassRule
     public static CertificatesRule certificatesRule = new CertificatesRule();

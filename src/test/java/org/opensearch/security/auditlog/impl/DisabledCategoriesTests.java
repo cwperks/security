@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import com.google.common.base.Joiner;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -36,14 +37,13 @@ import org.opensearch.security.auditlog.helper.MockRestRequest;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.AbstractSecurityUnitTest;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.TransportRequest;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class DisabledCategoriesTests extends OpenSearchTestCase {
+public class DisabledCategoriesTests extends LuceneTestCase {
 
     ClusterService cs = mock(ClusterService.class);
     DiscoveryNode dn = mock(DiscoveryNode.class);

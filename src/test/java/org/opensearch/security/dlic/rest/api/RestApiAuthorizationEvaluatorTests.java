@@ -14,6 +14,7 @@ package org.opensearch.security.dlic.rest.api;
 import java.io.IOException;
 import java.nio.file.Path;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,14 +22,13 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.configuration.AdminDNs;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 
-public class RestApiAuthorizationEvaluatorTests extends OpenSearchTestCase {
+public class RestApiAuthorizationEvaluatorTests extends LuceneTestCase {
 
     private RestApiAuthorizationEvaluator privilegesEvaluator;
 

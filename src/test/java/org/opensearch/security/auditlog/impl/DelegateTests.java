@@ -11,6 +11,7 @@
 
 package org.opensearch.security.auditlog.impl;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
@@ -20,9 +21,8 @@ import org.opensearch.security.auditlog.sink.AuditLogSink;
 import org.opensearch.security.auditlog.sink.DebugSink;
 import org.opensearch.security.auditlog.sink.ExternalOpenSearchSink;
 import org.opensearch.security.auditlog.sink.InternalOpenSearchSink;
-import org.opensearch.test.OpenSearchTestCase;
 
-public class DelegateTests extends OpenSearchTestCase {
+public class DelegateTests extends LuceneTestCase {
     @Test
     public void auditLogTypeTest() throws Exception {
         testAuditType("DeBUg", DebugSink.class);

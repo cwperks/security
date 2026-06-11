@@ -25,6 +25,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.OpenSearchException;
@@ -34,7 +35,6 @@ import org.opensearch.env.Environment;
 import org.opensearch.security.filter.SecurityRequest;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.util.FakeRestRequest;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -45,7 +45,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SSLRequestHelperTests extends OpenSearchTestCase {
+public class SSLRequestHelperTests extends LuceneTestCase {
 
     /** Matches the fixed validation date used in CertificateValidatorTests. */
     private static final Date FIXED_CRL_DATE = new Date(1525546426000L);

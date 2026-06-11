@@ -14,6 +14,7 @@ package org.opensearch.security.auditlog.impl;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,7 +31,6 @@ import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.AbstractSecurityUnitTest;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.transport.TransportRequest;
 
 import static org.hamcrest.CoreMatchers.containsString;
@@ -50,7 +50,7 @@ import static org.mockito.Mockito.when;
  * - Empty/no-op requests producing no audit message
  * - Category disable filtering
  */
-public class SettingsChangeAuditTests extends OpenSearchTestCase {
+public class SettingsChangeAuditTests extends LuceneTestCase {
 
     private ClusterService cs;
     private DiscoveryNode dn;

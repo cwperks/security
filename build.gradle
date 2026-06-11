@@ -262,7 +262,7 @@ def setCommonTestConfig(Test task) {
         // Split CI tasks do not run Kafka sink tests. Keep Kafka's legacy Yammer metrics jar out of
         // their OpenSearch bootstrap classpath because it collides with Dropwizard metrics as
         // codebase.metrics-core.
-        file.name != "metrics-core-2.2.0.jar"
+        task.name == "citest" || file.name != "metrics-core-2.2.0.jar"
     }
 
     task.maxParallelForks = 8

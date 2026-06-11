@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -34,7 +35,6 @@ import org.opensearch.security.ssl.util.SSLConfigConstants;
 import org.opensearch.security.test.helper.file.FileHelper;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.user.User;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.ldaptive.Connection;
 import org.ldaptive.LdapAttribute;
@@ -47,7 +47,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
 
-public class LdapBackendTests extends OpenSearchTestCase {
+public class LdapBackendTests extends LuceneTestCase {
 
     static {
         System.setProperty("security.display_lic_none", "true");

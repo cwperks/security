@@ -20,15 +20,15 @@ package org.opensearch.security.auth.limiting;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongSupplier;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.security.util.ratetracking.HeapBasedRateTracker;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class HeapBasedRateTrackerTests extends OpenSearchTestCase {
+public class HeapBasedRateTrackerTests extends LuceneTestCase {
 
     private final AtomicLong currentTime = new AtomicLong(1);
     private LongSupplier timeProvider = () -> currentTime.getAndAdd(1);

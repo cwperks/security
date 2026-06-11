@@ -21,6 +21,7 @@ import java.util.List;
 import com.carrotsearch.randomizedtesting.RandomizedContext;
 import com.carrotsearch.randomizedtesting.RandomizedRunner;
 import com.google.common.collect.ImmutableSortedSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -33,19 +34,22 @@ import org.opensearch.core.common.io.stream.StreamInput;
 import org.opensearch.core.common.io.stream.Writeable;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.test.DiffableTestUtils;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomAsciiAlphanumOfLength;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomIntBetween;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomLongBetween;
 import static org.junit.Assert.assertNotSame;
 
 @RunWith(RandomizedRunner.class)
-public class SecurityMetadataSerializationTests extends OpenSearchTestCase {
+public class SecurityMetadataSerializationTests extends LuceneTestCase {
 
     protected ClusterState.Custom createTestInstance() {
         final var configuration = new ImmutableSortedSet.Builder<>(Comparator.comparing(SecurityConfig::type));
         for (final var c : CType.values()) {
-            configuration.add(new SecurityConfig(c, randomAlphaOfLength(128), null));
+            configuration.add(new SecurityConfig(c, randomAsciiAlphanumOfLength(128), null));
         }
         return new SecurityMetadata(randomInstant(), configuration.build());
     }
@@ -60,7 +64,7 @@ public class SecurityMetadataSerializationTests extends OpenSearchTestCase {
             final var securityMetadataBuilder = SecurityMetadata.from(securityMetadata);
             for (final var config : randomConfigs) {
                 securityMetadataBuilder.withSecurityConfig(
-                    SecurityConfig.from(config).withLastModified(randomInstant()).withHash(randomAlphaOfLength(128)).build()
+                    SecurityConfig.from(config).withLastModified(randomInstant()).withHash(randomAsciiAlphanumOfLength(128)).build()
                 );
             }
             return securityMetadataBuilder.build();

@@ -23,6 +23,7 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.hc.core5.http.impl.HttpProcessors;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,12 +36,11 @@ import org.opensearch.security.auditlog.helper.TestHttpHandler;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class SinkProviderTLSTests extends OpenSearchTestCase {
+public class SinkProviderTLSTests extends LuceneTestCase {
 
     protected HttpServer server = null;
 

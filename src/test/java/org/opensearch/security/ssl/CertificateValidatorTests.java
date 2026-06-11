@@ -33,6 +33,7 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 import org.bouncycastle.crypto.CryptoServicesRegistrar;
@@ -41,13 +42,12 @@ import org.opensearch.security.ssl.util.CertificateValidator;
 import org.opensearch.security.ssl.util.ExceptionUtils;
 import org.opensearch.security.ssl.util.SSLRequestHelper;
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 
-public class CertificateValidatorTests extends OpenSearchTestCase {
+public class CertificateValidatorTests extends LuceneTestCase {
 
     public static final Date CRL_DATE = new Date(1525546426000L);
     protected final Logger log = LogManager.getLogger(this.getClass());

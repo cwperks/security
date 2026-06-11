@@ -22,6 +22,7 @@ import java.util.TreeSet;
 import javax.crypto.SecretKey;
 
 import com.google.common.collect.ImmutableMultimap;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,7 +37,6 @@ import org.opensearch.security.http.HTTPBasicAuthenticator;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.securityconf.DynamicConfigModel;
 import org.opensearch.security.user.User;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 
 import io.grpc.Metadata;
@@ -54,7 +54,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class BackendRegistryGrpcAuthTests extends OpenSearchTestCase {
+public class BackendRegistryGrpcAuthTests extends LuceneTestCase {
 
     @Mock
     private ThreadPool threadPool;

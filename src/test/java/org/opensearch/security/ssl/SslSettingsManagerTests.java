@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -25,7 +26,6 @@ import org.opensearch.common.settings.Settings;
 import org.opensearch.env.Environment;
 import org.opensearch.env.TestEnvironment;
 import org.opensearch.security.ssl.config.CertType;
-import org.opensearch.test.OpenSearchTestCase;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
@@ -63,10 +63,12 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_
 import static org.opensearch.security.ssl.util.SSLConfigConstants.getStringAffixKeyForCertType;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_SSL_ONLY;
 import static org.opensearch.transport.AuxTransport.AUX_TRANSPORT_TYPES_SETTING;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomFrom;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class SslSettingsManagerTests extends OpenSearchTestCase {
+public class SslSettingsManagerTests extends LuceneTestCase {
 
     @ClassRule
     public static CertificatesRule certificatesRule = new CertificatesRule();

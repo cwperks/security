@@ -17,16 +17,16 @@
 
 package org.opensearch.security.auth.limiting;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.user.AuthCredentials;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class UserNameBasedRateLimiterTests extends OpenSearchTestCase {
+public class UserNameBasedRateLimiterTests extends LuceneTestCase {
 
     private final static byte[] PASSWORD = new byte[] { '1', '2', '3' };
 

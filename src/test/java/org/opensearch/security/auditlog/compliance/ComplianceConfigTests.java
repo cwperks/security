@@ -18,13 +18,13 @@ import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
-import org.opensearch.test.OpenSearchTestCase;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -43,7 +43,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-public class ComplianceConfigTests extends OpenSearchTestCase {
+public class ComplianceConfigTests extends LuceneTestCase {
 
     @Test
     public void testDefault() {

@@ -11,17 +11,17 @@
 
 package org.opensearch.security;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertThrows;
 
-public class OpenSearchSecurityPluginFIPSValidationTests extends OpenSearchTestCase {
+public class OpenSearchSecurityPluginFIPSValidationTests extends LuceneTestCase {
 
     @Test
     public void testFipsModeWithDefaultAlgorithmThrows() {

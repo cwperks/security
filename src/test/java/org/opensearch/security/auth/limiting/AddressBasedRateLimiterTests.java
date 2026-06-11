@@ -19,15 +19,15 @@ package org.opensearch.security.auth.limiting;
 
 import java.net.InetAddress;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class AddressBasedRateLimiterTests extends OpenSearchTestCase {
+public class AddressBasedRateLimiterTests extends LuceneTestCase {
 
     @Test
     public void simpleTest() throws Exception {

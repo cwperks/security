@@ -17,6 +17,7 @@ import java.util.EnumSet;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,7 +28,6 @@ import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.InjectableValues;
 import tools.jackson.databind.ObjectMapper;
@@ -42,7 +42,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
-public class AuditConfigSerializeTests extends OpenSearchTestCase {
+public class AuditConfigSerializeTests extends LuceneTestCase {
 
     private ObjectMapper objectMapper;
     private final WildcardMatcher DEFAULT_IGNORED_USER = WildcardMatcher.from(AuditConfig.DEFAULT_IGNORED_USERS);

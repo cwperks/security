@@ -18,12 +18,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLContext;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.test.OpenSearchTestCase;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
@@ -42,7 +42,7 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_T
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_AUX_PREFIX;
 import static org.junit.Assert.assertThrows;
 
-public class SslParametersTests extends OpenSearchTestCase {
+public class SslParametersTests extends LuceneTestCase {
 
     private List<String> finalDefaultCiphers;
 

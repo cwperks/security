@@ -13,6 +13,7 @@ package org.opensearch.security.dlic.rest.api;
 
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -20,7 +21,6 @@ import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 import org.opensearch.security.securityconf.impl.v7.RoleV7;
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.ObjectMapper;
 
@@ -30,7 +30,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class SecurityConfigurationTests extends OpenSearchTestCase {
+public class SecurityConfigurationTests extends LuceneTestCase {
 
     SecurityDynamicConfiguration<?> configuration;
 

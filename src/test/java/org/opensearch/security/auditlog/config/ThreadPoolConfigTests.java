@@ -11,17 +11,17 @@
 
 package org.opensearch.security.auditlog.config;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import org.opensearch.common.settings.Settings;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class ThreadPoolConfigTests extends OpenSearchTestCase {
+public class ThreadPoolConfigTests extends LuceneTestCase {
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();

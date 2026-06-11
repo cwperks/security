@@ -12,17 +12,17 @@ package org.opensearch.security.ssl.util;
 
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.config.CertType;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_HTTP_ENABLED_PROTOCOLS;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_TRANSPORT_ENABLED_PROTOCOLS;
 import static org.junit.Assert.assertArrayEquals;
 
-public class SSLConfigConstantsTests extends OpenSearchTestCase {
+public class SSLConfigConstantsTests extends LuceneTestCase {
 
     @Test
     public void testDefaultTLSProtocols() {

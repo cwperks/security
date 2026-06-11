@@ -15,13 +15,13 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import org.opensearch.security.DefaultObjectMapper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import tools.jackson.databind.JsonNode;
 
@@ -30,7 +30,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 @RunWith(Parameterized.class)
-public class ConfigV7Tests extends OpenSearchTestCase {
+public class ConfigV7Tests extends LuceneTestCase {
     private final boolean omitDefaults;
 
     @Parameterized.Parameters

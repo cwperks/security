@@ -21,6 +21,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assume;
 import org.junit.Test;
 import org.bouncycastle.asn1.DEROctetString;
@@ -35,7 +36,6 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 import org.opensearch.security.test.helper.file.FileHelper;
-import org.opensearch.test.OpenSearchTestCase;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -44,7 +44,7 @@ import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThrows;
 
-public class SanParserTests extends OpenSearchTestCase {
+public class SanParserTests extends LuceneTestCase {
 
     // ssl/reload/node.crt.pem contains SAN extension: [Other-Name: Unrecognized ObjectIdentifier: 2.5.4.3]
     private static final String CERT_RESOURCE = "ssl/reload/node.crt.pem";

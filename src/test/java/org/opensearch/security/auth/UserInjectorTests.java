@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,7 +25,6 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.tasks.Task;
-import org.opensearch.test.OpenSearchTestCase;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.TransportRequest;
 
@@ -36,7 +36,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 
-public class UserInjectorTests extends OpenSearchTestCase {
+public class UserInjectorTests extends LuceneTestCase {
 
     private ThreadPool threadPool;
     private ThreadContext threadContext;
