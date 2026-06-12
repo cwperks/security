@@ -33,7 +33,7 @@ public class RestApiAuthorizationEvaluatorTests extends LuceneTestCase {
     private RestApiAuthorizationEvaluator privilegesEvaluator;
 
     @Before
-    public void setUp() {
+    public void createPrivilegesEvaluator() {
         this.privilegesEvaluator = new RestApiAuthorizationEvaluator(
             Settings.EMPTY,
             mock(AdminDNs.class),

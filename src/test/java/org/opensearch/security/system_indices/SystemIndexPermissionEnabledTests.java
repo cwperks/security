@@ -28,7 +28,7 @@ import static org.junit.Assert.assertFalse;
 public class SystemIndexPermissionEnabledTests extends AbstractSystemIndicesTests {
 
     @Before
-    public void setup() throws Exception {
+    public void initializeSystemIndexPermissionEnabledCluster() throws Exception {
         setupWithSsl(true, true);
         createTestIndicesAndDocs();
     }

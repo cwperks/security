@@ -99,7 +99,7 @@ public class SecuritySSLReloadCertsActionTests extends SingleClusterTest {
     private final String newKeyFilePath = "ssl/reload/node-new.key.pem";
 
     @Before
-    public void setUp() throws IOException {
+    public void createTemporaryCertificateFiles() throws IOException {
         pemCertFilePath = testFolder.newFile("node-temp-cert.pem").getAbsolutePath();
         pemKeyFilePath = testFolder.newFile("node-temp-key.pem").getAbsolutePath();
     }

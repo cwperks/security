@@ -78,7 +78,7 @@ public class SslSettingsManagerReloadListenerTests extends LuceneTestCase {
     }
 
     @Before
-    public void setUp() throws Exception {
+    public void createThreadPoolAndResourceWatcher() throws Exception {
         threadPool = new TestThreadPool("reload tests");
         resourceWatcherService = new ResourceWatcherService(
             Settings.builder().put("resource.reload.interval.high", "1s").build(),

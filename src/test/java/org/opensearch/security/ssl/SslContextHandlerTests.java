@@ -56,7 +56,7 @@ public class SslContextHandlerTests extends LuceneTestCase {
     Path accessCertificatePrivateKeyPath;
 
     @Before
-    public void setUp() throws Exception {
+    public void writeDefaultCertificates() throws Exception {
         caCertificatePath = certificatesRule.configRootFolder().resolve("ca_certificate.pem");
         accessCertificatePath = certificatesRule.configRootFolder().resolve("access_certificate.pem");
         accessCertificatePrivateKeyPath = certificatesRule.configRootFolder().resolve("access_certificate_pk.pem");

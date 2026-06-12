@@ -72,7 +72,7 @@ public abstract class AbstractApiActionValidationTest extends LuceneTestCase {
     PasswordHasher passwordHasher;
 
     @Before
-    public void setup() {
+    public void createApiActionValidationDependencies() {
         mocks = MockitoAnnotations.openMocks(this);
         securityApiDependencies = new SecurityApiDependencies(
             null,

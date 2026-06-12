@@ -61,7 +61,7 @@ public class OpenSearchSecuritySSLPluginTests extends AbstractSecurityUnitTest {
     private Path osPathHome;
 
     @Before
-    public void setUp() {
+    public void createSslPluginDependencies() {
         osPathHome = FileHelper.resolveStore("ssl/kirk-keystore").path().getParent().getParent();
         settings = Settings.builder()
             .put(Environment.PATH_HOME_SETTING.getKey(), osPathHome)
