@@ -40,7 +40,7 @@ public class RestApiAuthorizationEvaluatorTests extends LuceneTestCase {
     private RestApiAuthorizationEvaluator privilegesEvaluator;
 
     @Before
-    public void setUp() {
+    public void createPrivilegesEvaluator() {
         threadContext = new ThreadContext(Settings.EMPTY);
         final ThreadPool threadPool = mock(ThreadPool.class);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
