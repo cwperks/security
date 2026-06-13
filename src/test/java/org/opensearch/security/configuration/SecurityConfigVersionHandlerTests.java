@@ -87,7 +87,7 @@ public class SecurityConfigVersionHandlerTests extends LuceneTestCase {
         SecurityDynamicConfiguration<Object>>) (Map) Map.of();
 
     @Before
-    public void setup() throws Exception {
+    public void createVersionHandler() throws Exception {
         MockitoAnnotations.openMocks(this);
         settings = Settings.builder()
             .put("path.home", ".")

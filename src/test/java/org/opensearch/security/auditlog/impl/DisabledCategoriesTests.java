@@ -16,6 +16,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import com.google.common.base.Joiner;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
@@ -43,6 +45,8 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises audit category routing warning paths")
+@ThreadLeakScope(Scope.NONE)
 public class DisabledCategoriesTests extends LuceneTestCase {
 
     ClusterService cs = mock(ClusterService.class);
@@ -52,7 +56,7 @@ public class DisabledCategoriesTests extends LuceneTestCase {
     public ExpectedException thrown = ExpectedException.none();
 
     @Before
-    public void setup() {
+    public void createClusterService() {
         when(dn.getHostAddress()).thenReturn("hostaddress");
         when(dn.getId()).thenReturn("hostaddress");
         when(dn.getHostName()).thenReturn("hostaddress");

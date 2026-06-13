@@ -109,13 +109,13 @@ public class HTTPSamlAuthenticatorTests extends LuceneTestCase {
     private static PrivateKey spSigningPrivateKey;
 
     @Before
-    public void setUp() throws Exception {
+    public void createAuthenticator() throws Exception {
         mockSamlIdpServer = new MockSamlIdpServer();
         mockSamlIdpServer.start();
     }
 
     @After
-    public void tearDown() {
+    public void stopMockServer() {
         if (mockSamlIdpServer != null) {
             try {
                 mockSamlIdpServer.close();

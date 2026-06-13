@@ -34,7 +34,7 @@ public class SecurityDynamicConfigurationTests extends LuceneTestCase {
     private ObjectNode objectNode = objectMapper.createObjectNode();
 
     @Before
-    public void setUp() throws IOException {
+    public void createObjectMapper() throws IOException {
         objectNode.set("_meta", objectMapper.createObjectNode().put("type", CType.ROLES.toLCString()).put("config_version", 2));
         securityDynamicConfiguration = SecurityDynamicConfiguration.fromJson(
             objectMapper.writeValueAsString(objectNode),

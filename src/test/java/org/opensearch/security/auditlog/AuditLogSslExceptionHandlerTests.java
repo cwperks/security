@@ -43,7 +43,7 @@ public class AuditLogSslExceptionHandlerTests extends LuceneTestCase {
     private static final String ACTION = "indices:data/read/search[can_match][n]";
 
     @Before
-    public void setUp() {
+    public void createHandler() {
         auditLog = mock(AuditLog.class);
         handler = new AuditLogSslExceptionHandler(auditLog);
         request = mock(TransportRequest.class);

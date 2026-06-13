@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -53,7 +52,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 
 @RunWith(Parameterized.class)
-public class LdapBackendOldStyleConfig2Tests extends LuceneTestCase {
+public class LdapBackendOldStyleConfig2Tests {
 
     private static final WildcardMatcher EXCEPTION_MATCHER = WildcardMatcher.from("*unsupported*ciphersuite*aaa*");
 

@@ -52,7 +52,7 @@ public class SslParametersTests extends LuceneTestCase {
     private static final CertType MOCK_AUX_CERT_TYPE_BAR = new CertType(MOCK_AUX_PREFIX_BAR);
 
     @Before
-    public void setup() throws NoSuchAlgorithmException {
+    public void createKeyManagerFactory() throws NoSuchAlgorithmException {
         final var defaultCiphers = List.of(ALLOWED_SSL_CIPHERS);
         finalDefaultCiphers = Stream.of(SSLContext.getDefault().getDefaultSSLParameters().getCipherSuites())
             .filter(defaultCiphers::contains)

@@ -143,7 +143,7 @@ public class SecurityInterceptorTests extends LuceneTestCase {
     private boolean crossClusterSearchEnabled;
 
     @Before
-    public void setup() {
+    public void createInterceptor() {
 
         // Build mocked objects
         mocks = MockitoAnnotations.openMocks(this);
