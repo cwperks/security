@@ -22,6 +22,7 @@ import org.opensearch.security.auditlog.sink.DebugSink;
 import org.opensearch.security.auditlog.sink.ExternalOpenSearchSink;
 import org.opensearch.security.auditlog.sink.InternalOpenSearchSink;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises invalid audit sink configuration logging")
 public class DelegateTests extends LuceneTestCase {
     @Test
     public void auditLogTypeTest() throws Exception {

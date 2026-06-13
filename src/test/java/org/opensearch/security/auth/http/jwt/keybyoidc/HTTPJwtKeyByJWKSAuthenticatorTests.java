@@ -14,6 +14,8 @@ package org.opensearch.security.auth.http.jwt.keybyoidc;
 import java.util.HashMap;
 import java.util.List;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import com.google.common.collect.ImmutableMap;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -37,6 +39,8 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises invalid JWKS authentication logging paths")
+@ThreadLeakScope(Scope.NONE)
 public class HTTPJwtKeyByJWKSAuthenticatorTests extends LuceneTestCase {
 
     @Test

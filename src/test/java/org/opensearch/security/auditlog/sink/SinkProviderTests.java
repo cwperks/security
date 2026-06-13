@@ -11,6 +11,8 @@
 
 package org.opensearch.security.auditlog.sink;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import org.apache.logging.log4j.Level;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
@@ -22,6 +24,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 
+@ThreadLeakScope(Scope.NONE)
 public class SinkProviderTests extends LuceneTestCase {
 
     @Test
