@@ -27,7 +27,7 @@ public class TLSUtilTests extends LuceneTestCase {
     private static final ByteBufAllocator ALLOCATOR = getAllocator();
 
     @Before
-    public void setup() {
+    public void createTestConfigDirectory() {
 
     }
 

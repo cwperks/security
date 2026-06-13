@@ -139,7 +139,7 @@ public class SecurityInterceptorTests extends LuceneTestCase {
     private AtomicReference<CountDownLatch> senderLatch = new AtomicReference<>(new CountDownLatch(1));
 
     @Before
-    public void setup() {
+    public void createInterceptor() {
 
         // Build mocked objects
         mocks = MockitoAnnotations.openMocks(this);

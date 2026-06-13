@@ -65,7 +65,7 @@ public class ResourceAccessHandlerTests extends LuceneTestCase {
     private static final String ACTION = "read";
 
     @Before
-    public void setup() {
+    public void createMocks() {
         mocks = MockitoAnnotations.openMocks(this);
         threadContext = new ThreadContext(Settings.EMPTY);
         when(threadPool.getThreadContext()).thenReturn(threadContext);

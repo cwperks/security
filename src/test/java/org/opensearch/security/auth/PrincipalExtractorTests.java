@@ -34,7 +34,7 @@ public class PrincipalExtractorTests extends LuceneTestCase {
     private ThreadPool threadPool;
 
     @Before
-    public void setup() {
+    public void createThreadPool() {
         threadPool = new ThreadPool(Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "name").build());
     }
 

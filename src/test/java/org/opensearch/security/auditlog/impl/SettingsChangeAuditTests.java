@@ -14,6 +14,8 @@ package org.opensearch.security.auditlog.impl;
 import java.util.List;
 import java.util.Map;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,13 +52,15 @@ import static org.mockito.Mockito.when;
  * - Empty/no-op requests producing no audit message
  * - Category disable filtering
  */
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises settings change audit logging paths")
+@ThreadLeakScope(Scope.NONE)
 public class SettingsChangeAuditTests extends LuceneTestCase {
 
     private ClusterService cs;
     private DiscoveryNode dn;
 
     @Before
-    public void setup() {
+    public void createClusterService() {
         dn = mock(DiscoveryNode.class);
         when(dn.getHostAddress()).thenReturn("hostaddress");
         when(dn.getId()).thenReturn("hostaddress");

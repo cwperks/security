@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,7 +29,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 @RunWith(Parameterized.class)
-public class ConfigV7Tests extends LuceneTestCase {
+public class ConfigV7Tests {
     private final boolean omitDefaults;
 
     @Parameterized.Parameters

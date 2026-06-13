@@ -35,7 +35,7 @@ public class SSLConnectionTestUtilTests extends LuceneTestCase {
     private InputStreamReader inputStreamReader;
 
     @Before
-    public void setup() {
+    public void createCertificatePaths() {
         socket = Mockito.mock(Socket.class);
         outputStream = Mockito.mock(OutputStream.class);
         inputStream = Mockito.mock(InputStream.class);

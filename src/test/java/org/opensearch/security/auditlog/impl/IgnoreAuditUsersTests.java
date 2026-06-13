@@ -12,8 +12,12 @@
 package org.opensearch.security.auditlog.impl;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,14 +46,23 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
 
     ClusterService cs = mock(ClusterService.class);
     DiscoveryNode dn = mock(DiscoveryNode.class);
+    private final List<ThreadPool> threadPools = new ArrayList<>();
 
     @Before
-    public void setup() {
+    public void createClusterService() {
         when(dn.getHostAddress()).thenReturn("hostaddress");
         when(dn.getId()).thenReturn("hostaddress");
         when(dn.getHostName()).thenReturn("hostaddress");
         when(cs.localNode()).thenReturn(dn);
         when(cs.getClusterName()).thenReturn(new ClusterName("cname"));
+    }
+
+    @After
+    public void terminateThreadPools() {
+        for (ThreadPool threadPool : threadPools) {
+            ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS);
+        }
+        threadPools.clear();
     }
 
     static String ignoreUser = "Wesley Crusher";
@@ -74,7 +87,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
+            createThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
             null,
             cs
         );
@@ -95,7 +108,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
+            createThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
             null,
             cs
         );
@@ -115,7 +128,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
+            createThreadPool(ConfigConstants.OPENDISTRO_SECURITY_USER, ignoreUserObj),
             null,
             cs
         );
@@ -148,7 +161,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(
+            createThreadPool(
                 ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS,
                 ta,
                 ConfigConstants.OPENDISTRO_SECURITY_USER,
@@ -173,7 +186,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(
+            createThreadPool(
                 ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS,
                 ta,
                 ConfigConstants.OPENDISTRO_SECURITY_USER,
@@ -198,7 +211,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(
+            createThreadPool(
                 ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS,
                 ta,
                 ConfigConstants.OPENDISTRO_SECURITY_USER,
@@ -225,7 +238,7 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
             settings,
             null,
             null,
-            newThreadPool(
+            createThreadPool(
                 ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS,
                 ta,
                 ConfigConstants.OPENDISTRO_SECURITY_USER,
@@ -241,10 +254,11 @@ public class IgnoreAuditUsersTests extends LuceneTestCase {
         assertThat(TestAuditlogImpl.messages.size(), is(1));
     }
 
-    private static ThreadPool newThreadPool(Object... transients) {
+    private ThreadPool createThreadPool(Object... transients) {
         ThreadPool tp = new ThreadPool(Settings.builder().put("node.name", "mock").build());
         for (int i = 0; i < transients.length; i = i + 2)
             tp.getThreadContext().putTransient((String) transients[i], transients[i + 1]);
+        threadPools.add(tp);
         return tp;
     }
 }

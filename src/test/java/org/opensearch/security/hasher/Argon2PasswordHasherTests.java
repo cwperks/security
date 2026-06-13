@@ -24,7 +24,7 @@ import static org.junit.Assert.assertThrows;
 public class Argon2PasswordHasherTests extends AbstractPasswordHasherTests {
 
     @Before
-    public void setup() {
+    public void createHasher() {
         passwordHasher = new Argon2PasswordHasher(
             ConfigConstants.SECURITY_PASSWORD_HASHING_ARGON2_MEMORY_DEFAULT,
             ConfigConstants.SECURITY_PASSWORD_HASHING_ARGON2_ITERATIONS_DEFAULT,

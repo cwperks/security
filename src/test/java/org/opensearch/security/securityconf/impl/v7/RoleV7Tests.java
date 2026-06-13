@@ -28,7 +28,7 @@ public class RoleV7Tests extends LuceneTestCase {
     private URL testYamlUrl;
 
     @Before
-    public void setUp() throws Exception {
+    public void createObjectMapper() throws Exception {
         // Create a test YAML file in resources
         testYamlUrl = RoleV7Tests.class.getResource("/test-role.yml");
     }

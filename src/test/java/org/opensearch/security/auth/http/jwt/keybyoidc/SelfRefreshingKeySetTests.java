@@ -39,7 +39,7 @@ public class SelfRefreshingKeySetTests extends LuceneTestCase {
     private int numThreads = 10;
 
     @Before
-    public void setUp() throws AuthenticatorUnavailableException, BadCredentialsException {
+    public void createKeySet() throws AuthenticatorUnavailableException, BadCredentialsException {
         selfRefreshingKeySet = new SelfRefreshingKeySet(new MockKeySetProvider());
         keyForKidA = TestJwk.OCT_1_K;
         keyForKidB = TestJwk.OCT_2_K;

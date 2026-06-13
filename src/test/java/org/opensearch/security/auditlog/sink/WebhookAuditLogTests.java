@@ -22,6 +22,8 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.impl.HttpProcessors;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
@@ -47,16 +49,20 @@ import org.opensearch.security.test.helper.file.FileHelper;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises webhook failure logging paths")
+@ThreadLeakScope(Scope.NONE)
 public class WebhookAuditLogTests extends LuceneTestCase {
 
     protected HttpServer server = null;
 
     @Before
     @After
-    public void tearDown() {
+    public void stopWebhookServer() {
         if (server != null) {
             try {
                 server.stop();
+                server.awaitTermination(TimeValue.ofSeconds(3));
+                server = null;
             } catch (Exception e) {
                 // ignore
             }

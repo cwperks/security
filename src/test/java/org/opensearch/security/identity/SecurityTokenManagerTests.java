@@ -69,7 +69,7 @@ public class SecurityTokenManagerTests extends LuceneTestCase {
     private UserService userService;
 
     @Before
-    public void setup() {
+    public void createTokenManager() {
         mocks = MockitoAnnotations.openMocks(this);
         tokenManager = spy(new SecurityTokenManager(cs, threadPool, userService, (user, caller) -> user.getSecurityRoles()));
     }

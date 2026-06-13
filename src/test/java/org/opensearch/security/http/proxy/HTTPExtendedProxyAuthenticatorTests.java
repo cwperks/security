@@ -67,7 +67,7 @@ public class HTTPExtendedProxyAuthenticatorTests extends LuceneTestCase {
     private Settings settings;
 
     @Before
-    public void setup() {
+    public void createAuthenticator() {
         context.putTransient(ConfigConstants.OPENDISTRO_SECURITY_XFF_DONE, Boolean.TRUE);
         settings = Settings.builder().put("user_header", "user").build();
         authenticator = new HTTPExtendedProxyAuthenticator(settings, null);

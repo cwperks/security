@@ -54,7 +54,7 @@ public class ResourceAccessEvaluatorTests extends LuceneTestCase {
     private static final String IDX = "resource-index";
 
     @Before
-    public void setup() {
+    public void createMocks() {
         mocks = MockitoAnnotations.openMocks(this);
         threadContext = new ThreadContext(Settings.EMPTY);
         evaluator = new ResourceAccessEvaluator(

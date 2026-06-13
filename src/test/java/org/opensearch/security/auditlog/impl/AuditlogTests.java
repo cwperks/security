@@ -41,7 +41,7 @@ public class AuditlogTests extends LuceneTestCase {
     DiscoveryNode dn = mock(DiscoveryNode.class);
 
     @Before
-    public void setup() {
+    public void createClusterService() {
         when(dn.getHostAddress()).thenReturn("hostaddress");
         when(dn.getId()).thenReturn("hostaddress");
         when(dn.getHostName()).thenReturn("hostaddress");

@@ -59,7 +59,7 @@ public class UserServiceUnitTests extends LuceneTestCase {
     String internalAccountUsername = "sarek";
 
     @Before
-    public void setup() throws Exception {
+    public void createUserService() throws Exception {
         String usersYmlFile = "./internal_users.yml";
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_PASSWORD_HASHING_ALGORITHM, ConfigConstants.BCRYPT).build();
         PasswordHasher passwordHasher = PasswordHasherFactory.createPasswordHasher(settings);

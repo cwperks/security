@@ -45,7 +45,7 @@ public class UserInjectorTests extends LuceneTestCase {
     private Task task;
 
     @Before
-    public void setup() {
+    public void createUserInjector() {
         threadPool = mock(ThreadPool.class);
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_UNSUPPORTED_INJECT_USER_ENABLED, true).build();
         threadContext = new ThreadContext(settings);

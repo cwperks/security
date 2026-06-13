@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.TreeSet;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.apache.lucene.tests.util.LuceneTestCase;
 import org.hamcrest.MatcherAssert;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -54,7 +53,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 
 @RunWith(Parameterized.class)
-public class LdapBackendNewStyleConfig2Tests extends LuceneTestCase {
+public class LdapBackendNewStyleConfig2Tests {
 
     static {
         System.setProperty("security.display_lic_none", "true");

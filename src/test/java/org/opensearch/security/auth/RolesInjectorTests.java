@@ -44,7 +44,7 @@ public class RolesInjectorTests extends LuceneTestCase {
     private ThreadPool threadPool;
 
     @Before
-    public void setup() {
+    public void createRolesInjector() {
         auditLog = mock(AuditLog.class);
         threadPool = new ThreadPool(Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "name").build());
     }

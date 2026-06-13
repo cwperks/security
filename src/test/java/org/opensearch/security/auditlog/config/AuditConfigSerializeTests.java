@@ -48,7 +48,7 @@ public class AuditConfigSerializeTests extends LuceneTestCase {
     private final WildcardMatcher DEFAULT_IGNORED_USER = WildcardMatcher.from(AuditConfig.DEFAULT_IGNORED_USERS);
 
     @Before
-    public void setUp() {
+    public void createObjectMapper() {
         InjectableValues.Std iv = new InjectableValues.Std();
         iv.addValue(Settings.class, Settings.EMPTY);
         objectMapper = JsonMapper.builder().injectableValues(iv).build();

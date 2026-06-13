@@ -74,7 +74,7 @@ public class BackendRegistryGrpcAuthTests extends LuceneTestCase {
     private BackendRegistry backendRegistry;
 
     @Before
-    public void setUp() {
+    public void createBackendRegistry() {
         MockitoAnnotations.openMocks(this);
         ThreadContext threadContext = new ThreadContext(Settings.EMPTY);
         // no admin user configured - ensure these checks are false

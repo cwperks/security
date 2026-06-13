@@ -51,6 +51,7 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises invalid request body logging paths")
 public class AuditMessageTests extends LuceneTestCase {
 
     private static final Map<String, List<String>> TEST_REST_HEADERS = ImmutableMap.of(
@@ -86,7 +87,7 @@ public class AuditMessageTests extends LuceneTestCase {
     private AuditMessage message;
 
     @Before
-    public void setUp() {
+    public void createAuditMessage() {
         when(clusterServiceMock.localNode()).thenReturn(discoveryNodeMock);
         when(clusterServiceMock.getClusterName()).thenReturn(clusterNameMock);
         when(auditConfig.getFilter()).thenReturn(auditFilterMock);

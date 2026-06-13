@@ -20,9 +20,12 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import org.apache.hc.core5.http.impl.HttpProcessors;
 import org.apache.hc.core5.http.impl.bootstrap.HttpServer;
 import org.apache.hc.core5.http.impl.bootstrap.ServerBootstrap;
+import org.apache.hc.core5.util.TimeValue;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Assert;
@@ -40,16 +43,20 @@ import org.opensearch.security.test.helper.file.FileHelper;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises webhook TLS audit logging paths")
+@ThreadLeakScope(Scope.NONE)
 public class SinkProviderTLSTests extends LuceneTestCase {
 
     protected HttpServer server = null;
 
     @Before
     @After
-    public void tearDown() {
+    public void stopWebhookServer() {
         if (server != null) {
             try {
                 server.stop();
+                server.awaitTermination(TimeValue.ofSeconds(3));
+                server = null;
             } catch (Exception e) {
                 // ignore
             }
@@ -124,6 +131,8 @@ public class SinkProviderTLSTests extends LuceneTestCase {
         assertStringContainsAllKeysAndValues(handler.body);
 
         server.stop();
+        server.awaitTermination(TimeValue.ofSeconds(3));
+        server = null;
     }
 
     // for TLS support on our in-memory server
