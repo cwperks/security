@@ -1,0 +1,208 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
+package org.opensearch.security.privileges;
+
+import java.util.Set;
+import java.util.function.Supplier;
+
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import org.opensearch.OpenSearchSecurityException;
+import org.opensearch.action.ActionRequest;
+import org.opensearch.action.support.ActionRequestMetadata;
+import org.opensearch.cluster.ClusterState;
+import org.opensearch.common.settings.Settings;
+import org.opensearch.core.xcontent.NamedXContentRegistry;
+import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
+import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPrivileges;
+import org.opensearch.security.privileges.dlsfls.FieldMasking;
+import org.opensearch.security.securityconf.FlattenedActionGroups;
+import org.opensearch.security.securityconf.impl.CType;
+import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
+import org.opensearch.security.securityconf.impl.v7.RoleV7;
+import org.opensearch.security.user.User;
+import org.opensearch.tasks.Task;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertThrows;
+
+public class RestLayerPrivilegesEvaluatorTests extends LuceneTestCase {
+
+    private static final User TEST_USER = new User("test_user").withSecurityRoles(Set.of("test_role"));
+
+    private void setLoggingLevel(final Level level) {
+        final Logger restLayerPrivilegesEvaluatorLogger = LogManager.getLogger(RestLayerPrivilegesEvaluator.class);
+        Configurator.setLevel(restLayerPrivilegesEvaluatorLogger, level);
+    }
+
+    @Before
+    public void setupLogging() {
+        setLoggingLevel(Level.DEBUG); // Enable debug logging scenarios for verification
+    }
+
+    @After
+    public void after() {
+        setLoggingLevel(Level.INFO);
+    }
+
+    @Test
+    public void testEvaluate_Initialized_Success() throws Exception {
+        String action = "action";
+        SecurityDynamicConfiguration<RoleV7> roles = SecurityDynamicConfiguration.fromYaml("test_role:\n" + //
+            "  cluster_permissions:\n" + //
+            "  - any", CType.ROLES);
+
+        PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
+        RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
+
+        PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
+
+        assertThat(response.isAllowed(), equalTo(false));
+        assertThat(response.getMissingPrivileges(), equalTo(Set.of(action)));
+    }
+
+    @Test
+    public void testEvaluate_NotInitialized_NullModel_ExceptionThrown() {
+        RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(
+            new PrivilegesConfiguration(new PrivilegesEvaluator.NotInitialized(() -> {
+                return "PrivilegesEvaluator not initialized";
+            }))
+        );
+        OpenSearchSecurityException exception = assertThrows(
+            OpenSearchSecurityException.class,
+            () -> restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", null)
+        );
+        assertThat(exception.getMessage(), equalTo("OpenSearch Security not initialized: PrivilegesEvaluator not initialized"));
+    }
+
+    @Test
+    public void testEvaluate_Successful_NewPermission() throws Exception {
+        String action = "hw:greet";
+        SecurityDynamicConfiguration<RoleV7> roles = SecurityDynamicConfiguration.fromYaml("test_role:\n" + //
+            "  cluster_permissions:\n" + //
+            "  - hw:greet", CType.ROLES);
+        PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
+        RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
+        PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
+        assertThat(response.isAllowed(), equalTo(true));
+    }
+
+    @Test
+    public void testEvaluate_Successful_LegacyPermission() throws Exception {
+        String action = "cluster:admin/opensearch/hw/greet";
+        SecurityDynamicConfiguration<RoleV7> roles = SecurityDynamicConfiguration.fromYaml("test_role:\n" + //
+            "  cluster_permissions:\n" + //
+            "  - cluster:admin/opensearch/hw/greet", CType.ROLES);
+        PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
+        RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
+        PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
+        assertThat(response.isAllowed(), equalTo(true));
+    }
+
+    @Test
+    public void testEvaluate_Unsuccessful() throws Exception {
+        String action = "action";
+        SecurityDynamicConfiguration<RoleV7> roles = SecurityDynamicConfiguration.fromYaml("test_role:\n" + //
+            "  cluster_permissions:\n" + //
+            "  - other_action", CType.ROLES);
+        PrivilegesConfiguration privilegesConfiguration = createPrivilegesConfiguration(roles);
+        RestLayerPrivilegesEvaluator restPrivilegesEvaluator = new RestLayerPrivilegesEvaluator(privilegesConfiguration);
+        PrivilegesEvaluatorResponse response = restPrivilegesEvaluator.evaluate(TEST_USER, "route_name", Set.of(action));
+        assertThat(response.isAllowed(), equalTo(false));
+    }
+
+    PrivilegesConfiguration createPrivilegesConfiguration(SecurityDynamicConfiguration<RoleV7> roles) {
+        return new PrivilegesConfiguration(createPrivilegesEvaluator(roles));
+    }
+
+    PrivilegesEvaluator createPrivilegesEvaluator(SecurityDynamicConfiguration<RoleV7> roles) {
+        ActionPrivileges actionPrivileges = new RoleBasedActionPrivileges(
+            new CompiledRoles(roles, FlattenedActionGroups.EMPTY, NamedXContentRegistry.EMPTY, FieldMasking.Config.DEFAULT, false),
+            RuntimeOptimizedActionPrivileges.SpecialIndexProtection.NONE,
+            Settings.EMPTY,
+            false
+        );
+
+        return new PrivilegesEvaluator() {
+
+            @Override
+            public PrivilegesEvaluationContext createContext(
+                User user,
+                String action,
+                ActionRequest actionRequest,
+                ActionRequestMetadata<?, ?> actionRequestMetadata,
+                Task task
+            ) {
+                return new PrivilegesEvaluationContext(
+                    user,
+                    user.getSecurityRoles(),
+                    action,
+                    actionRequest,
+                    ActionRequestMetadata.empty(),
+                    task,
+                    null,
+                    null,
+                    null,
+                    actionPrivileges
+                );
+            }
+
+            @Override
+            public PrivilegesEvaluatorResponse evaluate(PrivilegesEvaluationContext context) {
+                return null;
+            }
+
+            @Override
+            public boolean isClusterPermission(String action) {
+                return false;
+            }
+
+            @Override
+            public void updateConfiguration(
+                FlattenedActionGroups actionGroups,
+                CompiledRoles rolesConfiguration,
+                PrivilegesEvaluator.GlobalDynamicSettings generalConfiguration
+            ) {
+
+            }
+
+            @Override
+            public void updateClusterStateMetadata(Supplier<ClusterState> clusterStateSupplier) {
+
+            }
+
+            @Override
+            public void shutdown() {
+
+            }
+
+            @Override
+            public boolean notFailOnForbiddenEnabled() {
+                return false;
+            }
+
+            @Override
+            public PrivilegesEvaluatorType type() {
+                return PrivilegesEvaluatorType.LEGACY;
+            }
+        };
+
+    }
+}

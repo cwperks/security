@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 public class SystemIndexDisabledTests extends AbstractSystemIndicesTests {
 
     @Before
-    public void setup() throws Exception {
+    public void initializeSystemIndexDisabledCluster() throws Exception {
         setupWithSsl(false, false);
         createTestIndicesAndDocs();
     }

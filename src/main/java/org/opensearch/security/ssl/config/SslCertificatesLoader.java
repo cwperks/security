@@ -167,7 +167,7 @@ public class SslCertificatesLoader {
     }
 
     private Path resolvePath(final String filePath, final Environment environment) {
-        final var path = environment.configDir().resolve(Path.of(filePath));
+        final var path = environment.configDir().resolve(filePath);
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
             throw new OpenSearchException(filePath + " - is a directory");
         }

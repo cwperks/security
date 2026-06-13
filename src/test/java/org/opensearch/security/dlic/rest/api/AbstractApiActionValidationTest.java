@@ -14,9 +14,10 @@ package org.opensearch.security.dlic.rest.api;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
@@ -35,7 +36,7 @@ import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.threadpool.ThreadPool;
 
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -43,8 +44,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public abstract class AbstractApiActionValidationTest {
+public abstract class AbstractApiActionValidationTest extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     ClusterService clusterService;
@@ -70,7 +72,8 @@ public abstract class AbstractApiActionValidationTest {
     PasswordHasher passwordHasher;
 
     @Before
-    public void setup() {
+    public void createApiActionValidationDependencies() {
+        mocks = MockitoAnnotations.openMocks(this);
         securityApiDependencies = new SecurityApiDependencies(
             null,
             configurationRepository,
@@ -83,6 +86,11 @@ public abstract class AbstractApiActionValidationTest {
         passwordHasher = PasswordHasherFactory.createPasswordHasher(
             Settings.builder().put(ConfigConstants.SECURITY_PASSWORD_HASHING_ALGORITHM, ConfigConstants.BCRYPT).build()
         );
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     void setupRolesConfiguration() throws IOException {

@@ -13,9 +13,10 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.OpenSearchStatusException;
 import org.opensearch.common.settings.Settings;
@@ -31,7 +32,7 @@ import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
@@ -40,9 +41,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked") // action listener mock
-public class ResourceAccessHandlerTests {
+public class ResourceAccessHandlerTests extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private ThreadPool threadPool;
@@ -63,7 +65,8 @@ public class ResourceAccessHandlerTests {
     private static final String ACTION = "read";
 
     @Before
-    public void setup() {
+    public void createMocks() {
+        mocks = MockitoAnnotations.openMocks(this);
         threadContext = new ThreadContext(Settings.EMPTY);
         when(threadPool.getThreadContext()).thenReturn(threadContext);
         handler = new ResourceAccessHandler(threadPool, sharingIndexHandler, adminDNs, resourcePluginInfo);
@@ -71,6 +74,11 @@ public class ResourceAccessHandlerTests {
         // For tests that verify permission with action-group
         when(resourcePluginInfo.flattenedForType(any())).thenReturn(mock(FlattenedActionGroups.class));
         when(resourcePluginInfo.indexByType(TYPE)).thenReturn(INDEX);
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     private void injectUser(User user) {

@@ -42,7 +42,7 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SECURITY_SSL_H
  * Modify this test class as needed
  */
 @SuppressWarnings("unchecked")
-public class SecurityRestTestCase extends OpenSearchRestTestCase {
+public abstract class SecurityRestTestCase extends OpenSearchRestTestCase {
 
     private static final String CERT_FILE_DIRECTORY = "sanity-tests/";
 

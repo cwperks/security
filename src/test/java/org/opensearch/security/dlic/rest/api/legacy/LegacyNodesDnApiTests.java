@@ -11,11 +11,11 @@
 
 package org.opensearch.security.dlic.rest.api.legacy;
 
-import org.opensearch.security.dlic.rest.api.NodesDnApiTest;
+import org.opensearch.security.dlic.rest.api.NodesDnApiTests;
 
 import static org.opensearch.security.OpenSearchSecurityPlugin.LEGACY_OPENDISTRO_PREFIX;
 
-public class LegacyNodesDnApiTests extends NodesDnApiTest {
+public class LegacyNodesDnApiTests extends NodesDnApiTests {
     @Override
     protected String getEndpointPrefix() {
         return LEGACY_OPENDISTRO_PREFIX;

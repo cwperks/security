@@ -28,6 +28,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +44,7 @@ import static org.junit.Assert.fail;
 /**
  * Tests for the CertificateGenerator.
  */
-public class CertificateGeneratorTests {
+public class CertificateGeneratorTests extends LuceneTestCase {
 
     private static Installer installer;
 
@@ -62,7 +63,7 @@ public class CertificateGeneratorTests {
     }
 
     @Before
-    public void setUp() {
+    public void setupCertificateGenerator() {
         installer = Installer.getInstance();
         installer.buildOptions();
         installer.OPENSEARCH_CONF_DIR = System.getProperty("user.dir") + File.separator + "test-conf";
@@ -70,7 +71,7 @@ public class CertificateGeneratorTests {
     }
 
     @After
-    public void tearDown() {
+    public void cleanupCertificateGenerator() {
         deleteDirectoryRecursive(installer.OPENSEARCH_CONF_DIR);
         Installer.resetInstance();
     }
