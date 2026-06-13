@@ -13,6 +13,8 @@ package org.opensearch.security.auth.http.jwt.keybyoidc;
 
 import java.util.HashMap;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import com.google.common.collect.ImmutableMap;
 import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
@@ -26,6 +28,8 @@ import org.opensearch.security.util.FakeRestRequest;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises invalid JWKS authentication logging paths")
+@ThreadLeakScope(Scope.NONE)
 public class HTTPJwtKeyByJWKSAuthenticatorTests extends LuceneTestCase {
 
     @Test

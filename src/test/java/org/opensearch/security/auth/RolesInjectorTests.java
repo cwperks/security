@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,6 +48,11 @@ public class RolesInjectorTests extends LuceneTestCase {
     public void createRolesInjector() {
         auditLog = mock(AuditLog.class);
         threadPool = new ThreadPool(Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "name").build());
+    }
+
+    @After
+    public void terminateThreadPool() {
+        ThreadPool.terminate(threadPool, 5, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     @Test

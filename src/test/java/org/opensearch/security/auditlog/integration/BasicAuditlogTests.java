@@ -269,16 +269,16 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         setupStarfleetIndex();
         TestAuditlogImpl.clear();
 
-        testMsearch();
+        verifyMsearch();
         TestAuditlogImpl.clear();
 
-        testBulkAuth();
+        verifyBulkAuth();
         TestAuditlogImpl.clear();
 
-        testBulkNonAuth();
+        verifyBulkNonAuth();
         TestAuditlogImpl.clear();
 
-        testUpdateSettings();
+        verifyUpdateSettings();
         TestAuditlogImpl.clear();
     }
 
@@ -291,24 +291,24 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         setupStarfleetIndex();
         TestAuditlogImpl.clear();
 
-        testJustAuthenticated();
+        verifyJustAuthenticated();
         TestAuditlogImpl.clear();
-        testBadHeader();
+        verifyBadHeader();
         TestAuditlogImpl.clear();
-        testMissingPriv();
+        verifyMissingPriv();
         TestAuditlogImpl.clear();
-        testSecurityIndexAttempt();
+        verifySecurityIndexAttempt();
         TestAuditlogImpl.clear();
-        testUnauthenticated();
+        verifyUnauthenticated();
         TestAuditlogImpl.clear();
-        testUnknownAuthorization();
+        verifyUnknownAuthorization();
         TestAuditlogImpl.clear();
-        testWrongUser();
+        verifyWrongUser();
         TestAuditlogImpl.clear();
 
     }
 
-    public void testWrongUser() throws Exception {
+    private void verifyWrongUser() throws Exception {
 
         HttpResponse response = rh.executeGetRequest("", encodeBasicHeader("wronguser", "admin"));
         assertThat(response.getStatusCode(), is(HttpStatus.SC_UNAUTHORIZED));
@@ -321,7 +321,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testUnknownAuthorization() throws Exception {
+    private void verifyUnknownAuthorization() throws Exception {
 
         HttpResponse response = rh.executeGetRequest("", encodeBasicHeader("unknown", "unknown"));
         assertThat(response.getStatusCode(), is(HttpStatus.SC_UNAUTHORIZED));
@@ -333,7 +333,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testUnauthenticated() throws Exception {
+    private void verifyUnauthenticated() throws Exception {
 
         /// testUnauthenticated
         HttpResponse response = rh.executeGetRequest("_search");
@@ -350,14 +350,14 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
 
     }
 
-    public void testJustAuthenticated() throws Exception {
+    private void verifyJustAuthenticated() throws Exception {
         HttpResponse response = rh.executeGetRequest("", encodeBasicHeader("admin", "admin"));
         assertThat(response.getStatusCode(), is(HttpStatus.SC_OK));
         assertThat(TestAuditlogImpl.messages.size(), is(0));
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testSecurityIndexAttempt() throws Exception {
+    private void verifySecurityIndexAttempt() throws Exception {
 
         HttpResponse response = rh.executePutRequest(".opendistro_security/_doc/0", "{}", encodeBasicHeader("admin", "admin"));
         assertThat(response.getStatusCode(), is(HttpStatus.SC_FORBIDDEN));
@@ -370,7 +370,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testBadHeader() throws Exception {
+    private void verifyBadHeader() throws Exception {
 
         HttpResponse response = rh.executeGetRequest(
             "",
@@ -385,7 +385,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testMissingPriv() throws Exception {
+    private void verifyMissingPriv() throws Exception {
 
         HttpResponse response = rh.executeGetRequest("sf/_search", encodeBasicHeader("worf", "worf"));
         assertThat(response.getStatusCode(), is(HttpStatus.SC_FORBIDDEN));
@@ -399,7 +399,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testMsearch() throws Exception {
+    private void verifyMsearch() throws Exception {
 
         String msearch = "{\"index\":\"sf\", \"ignore_unavailable\": true}"
             + System.lineSeparator()
@@ -423,7 +423,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testBulkAuth() throws Exception {
+    private void verifyBulkAuth() throws Exception {
 
         // testBulkAuth
         String bulkBody = "{ \"index\" : { \"_index\" : \"test\", \"_id\" : \"1\" } }"
@@ -462,7 +462,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testBulkNonAuth() throws Exception {
+    private void verifyBulkNonAuth() throws Exception {
 
         String bulkBody = "{ \"index\" : { \"_index\" : \"test\", \"_id\" : \"1\" } }"
             + System.lineSeparator()
@@ -500,7 +500,7 @@ public class BasicAuditlogTests extends AbstractAuditlogUnitTest {
         validateMsgs(TestAuditlogImpl.messages);
     }
 
-    public void testUpdateSettings() throws Exception {
+    private void verifyUpdateSettings() throws Exception {
 
         String json = "{"
             + "\"persistent\" : {"
