@@ -88,7 +88,8 @@ public class PrivilegesInterceptor {
         "indices:data/read/search",
         "indices:data/read/msearch",
         "indices:data/read/mget",
-        "indices:data/read/mget[shard]"
+        "indices:data/read/mget[shard]",
+        "osd:admin/advanced_settings/get"
     );
 
     protected final Logger log = LogManager.getLogger(this.getClass());
@@ -267,7 +268,9 @@ public class PrivilegesInterceptor {
     }
 
     static TenantPrivileges.ActionType getActionTypeForAction(String action) {
-        if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
+        if ("osd:admin/advanced_settings/write".equals(action)) {
+            return TenantPrivileges.ActionType.ADMIN;
+        } else if (READ_ONLY_ALLOWED_ACTIONS.contains(action)) {
             return TenantPrivileges.ActionType.READ;
         } else {
             return TenantPrivileges.ActionType.WRITE;
