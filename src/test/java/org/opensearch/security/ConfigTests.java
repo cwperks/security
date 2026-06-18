@@ -17,13 +17,14 @@
 
 package org.opensearch.security;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
 import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.securityconf.impl.SecurityDynamicConfiguration;
 
-public class ConfigTests {
+public class ConfigTests extends LuceneTestCase {
 
     @Test
     public void testEmptyConfig() throws Exception {
