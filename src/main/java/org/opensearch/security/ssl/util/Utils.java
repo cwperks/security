@@ -24,4 +24,12 @@ public class Utils {
     public static char[] toCharArray(String str) {
         return Strings.isNullOrEmpty(str) ? null : str.toCharArray();
     }
+
+    static String format(Object obj) {
+        return switch (obj) {
+            case Integer i -> "int: " + i;
+            case String s -> "string: " + s;
+            default -> "unknown";
+        };
+    }
 }
