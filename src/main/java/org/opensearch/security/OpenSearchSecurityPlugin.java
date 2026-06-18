@@ -252,7 +252,6 @@ import static org.opensearch.http.HttpTransportSettings.SETTING_HTTP_HTTP3_ENABL
 import static org.opensearch.security.dlic.rest.api.RestApiAuthorizationEvaluator.ENDPOINTS_WITH_PERMISSIONS;
 import static org.opensearch.security.dlic.rest.api.RestApiAuthorizationEvaluator.SECURITY_CONFIG_UPDATE;
 import static org.opensearch.security.privileges.dlsfls.FieldMasking.Config.BLAKE2B_LEGACY_DEFAULT;
-import static org.opensearch.security.resources.ResourceSharingIndexHandler.getSharingIndex;
 import static org.opensearch.security.setting.DeprecatedSettings.checkForDeprecatedSetting;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER;
 import static org.opensearch.security.support.ConfigConstants.SECURITY_ALLOW_DEFAULT_INIT_SECURITYINDEX;
@@ -835,7 +834,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                 resourceSharingEnabledSetting
             );
             Set<String> resourceIndices = resourcePluginInfo.getResourceIndices();
-            if (resourceIndices.contains(indexModule.getIndex().getName())) {
+            if (resourcePluginInfo.isResourceIndex(indexModule.getIndex().getName())) {
                 indexModule.addIndexOperationListener(resourceIndexListener);
                 log.info("Security plugin started listening to operations on resource-index {}", indexModule.getIndex().getName());
             }
@@ -2408,11 +2407,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             // create resource sharing index if absent
             // TODO check if this should be wrapped in an atomic completable future
             log.debug("Attempting to create Resource Sharing index");
-            Set<String> resourceIndices = new HashSet<>();
+            Set<String> sharingIndices = new HashSet<>();
             if (resourcePluginInfo != null) {
-                resourceIndices = resourcePluginInfo.getResourceIndices();
+                sharingIndices = resourcePluginInfo.getResourceSharingIndices();
             }
-            rsIndexHandler.createResourceSharingIndicesIfAbsent(resourceIndices);
+            rsIndexHandler.createResourceSharingIndicesIfAbsent(sharingIndices);
 
         }
 
@@ -2485,10 +2484,10 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         systemIndexDescriptors.add(securityIndexDescriptor);
         systemIndexDescriptors.add(apiTokenSystemIndexDescriptor);
 
-        for (String resourceIndex : resourcePluginInfo.getResourceIndices()) {
+        for (String sharingIndex : resourcePluginInfo.getResourceSharingIndices()) {
             final SystemIndexDescriptor resourceSharingIndexDescriptor = new SystemIndexDescriptor(
-                getSharingIndex(resourceIndex),
-                "Resource Sharing index for index: " + resourceIndex
+                sharingIndex,
+                "Resource Sharing index: " + sharingIndex
             );
             systemIndexDescriptors.add(resourceSharingIndexDescriptor);
         }

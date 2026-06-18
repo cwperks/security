@@ -21,6 +21,17 @@ public interface ResourceProvider {
     String resourceIndexName();
 
     /**
+     * Returns the name of the sharing index for this resource type.
+     * For plugins using wildcard index patterns (e.g. {@code .kibana*}),
+     * this must return a concrete index name (e.g. {@code .kibana-sharing}).
+     *
+     * @return the sharing index name, defaults to {@code resourceIndexName() + "-sharing"}
+     */
+    default String resourceSharingIndexName() {
+        return resourceIndexName() + "-sharing";
+    }
+
+    /**
      * Returns the name of the field representing the resource type in the resource document.
      *
      * @return the field name containing the resource type

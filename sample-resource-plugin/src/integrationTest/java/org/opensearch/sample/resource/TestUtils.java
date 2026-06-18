@@ -104,6 +104,20 @@ public final class TestUtils {
     }
 
     public static LocalCluster newCluster(boolean featureEnabled, boolean systemIndexEnabled, List<String> protectedResourceTypes) {
+        return newCluster(featureEnabled, systemIndexEnabled, protectedResourceTypes, Map.of());
+    }
+
+    public static LocalCluster newCluster(
+        boolean featureEnabled,
+        boolean systemIndexEnabled,
+        List<String> protectedResourceTypes,
+        Map<String, Object> extraSettings
+    ) {
+        Map<String, Object> settings = new HashMap<>();
+        settings.put(OPENSEARCH_RESOURCE_SHARING_ENABLED, featureEnabled);
+        settings.put(SECURITY_SYSTEM_INDICES_ENABLED_KEY, systemIndexEnabled);
+        settings.put(OPENSEARCH_RESOURCE_SHARING_PROTECTED_TYPES, protectedResourceTypes);
+        settings.putAll(extraSettings);
         return new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS_COORDINATOR)
             .plugin(
                 new PluginInfo(
@@ -121,16 +135,7 @@ public final class TestUtils {
             .anonymousAuth(true)
             .authc(AUTHC_HTTPBASIC_INTERNAL)
             .users(USER_ADMIN, FULL_ACCESS_USER, LIMITED_ACCESS_USER, NO_ACCESS_USER)
-            .nodeSettings(
-                Map.of(
-                    OPENSEARCH_RESOURCE_SHARING_ENABLED,
-                    featureEnabled,
-                    SECURITY_SYSTEM_INDICES_ENABLED_KEY,
-                    systemIndexEnabled,
-                    OPENSEARCH_RESOURCE_SHARING_PROTECTED_TYPES,
-                    protectedResourceTypes
-                )
-            )
+            .nodeSettings(settings)
             .build();
     }
 
@@ -447,6 +452,20 @@ public final class TestUtils {
         public TestRestClient.HttpResponse searchResources(TestSecurityConfig.User user) {
             try (TestRestClient client = cluster.getRestClient(user)) {
                 return client.get(SAMPLE_RESOURCE_SEARCH_ENDPOINT);
+            }
+        }
+
+        public TestRestClient.HttpResponse searchResourcesByAlias(String alias, TestSecurityConfig.User user) {
+            try (TestRestClient client = cluster.getRestClient(user)) {
+                return client.get(SAMPLE_RESOURCE_SEARCH_ENDPOINT + "?index=" + alias);
+            }
+        }
+
+        public void createIndexWithAlias(String concreteIndex, String alias) {
+            try (TestRestClient client = cluster.getRestClient(USER_ADMIN)) {
+                String body = "{\"aliases\":{\"" + alias + "\":{}}}";
+                TestRestClient.HttpResponse response = client.putJson(concreteIndex, body);
+                assertThat(response.getStatusCode(), is(200));
             }
         }
 

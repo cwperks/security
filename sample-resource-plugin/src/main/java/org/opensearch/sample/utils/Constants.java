@@ -13,6 +13,8 @@ package org.opensearch.sample.utils;
  */
 public class Constants {
     public static final String RESOURCE_INDEX_NAME = ".sample_resource";
+    public static final String RESOURCE_INDEX_PATTERN = ".sample_resource_*";
+    public static final String RESOURCE_INDEX_CONCRETE = ".sample_resource_1";
     public static final String RESOURCE_TYPE = "sample-resource";
     public static final String RESOURCE_GROUP_TYPE = "sample-resource-group";
 

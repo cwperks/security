@@ -13,6 +13,7 @@ package org.opensearch.security.configuration;
 
 import java.lang.reflect.Field;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -184,9 +185,11 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                 WildcardMatcher resourceIndicesMatcher = WildcardMatcher.from(protectedIndices);
                 Set<String> resolvedIndexNames = resolvedIndices.local().namesOfIndices(context.clusterState());
                 if (resourceIndicesMatcher.matchAll(resolvedIndexNames)) {
+                    Set<String> allIndexNames = new HashSet<>(resolvedIndexNames);
+                    allIndexNames.addAll(resolvedIndices.local().names(context.clusterState()));
                     IndexToRuleMap<DlsRestriction> sharedResourceMap = ResourceSharingDlsUtils.resourceRestrictions(
                         namedXContentRegistry,
-                        resolvedIndexNames,
+                        allIndexNames,
                         userSubject.getUser()
                     );
 

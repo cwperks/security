@@ -33,6 +33,7 @@ import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.spi.resources.ResourceProvider;
 import org.opensearch.security.spi.resources.ResourceSharingExtension;
 import org.opensearch.security.spi.resources.client.ResourceSharingClient;
+import org.opensearch.security.support.WildcardMatcher;
 
 /**
  * This class provides information about resource plugins and their associated resource providers and indices.
@@ -170,7 +171,7 @@ public class ResourcePluginInfo {
             // If typeField is not present, assume single resource type per index and return type from provider
             var provider = typeToProvider.values()
                 .stream()
-                .filter(p -> p.resourceIndexName().equals(resourceIndex))
+                .filter(p -> WildcardMatcher.from(p.resourceIndexName()).test(resourceIndex))
                 .findFirst()
                 .orElse(null);
             if (provider == null) {
@@ -315,6 +316,71 @@ public class ResourcePluginInfo {
         lock.readLock().lock();
         try {
             return typeToProvider.values().stream().map(ResourceProvider::resourceIndexName).collect(Collectors.toSet());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Checks whether a concrete index name matches any registered resource index pattern.
+     */
+    public boolean isResourceIndex(String concreteIndexName) {
+        lock.readLock().lock();
+        try {
+            return WildcardMatcher.from(
+                typeToProvider.values().stream().map(ResourceProvider::resourceIndexName).collect(Collectors.toSet())
+            ).test(concreteIndexName);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Checks whether a concrete index name matches any protected resource index pattern.
+     */
+    public boolean isProtectedResourceIndex(String concreteIndexName) {
+        return WildcardMatcher.from(getResourceIndicesForProtectedTypes()).test(concreteIndexName);
+    }
+
+    /**
+     * Returns the sharing index name for the given resource type.
+     */
+    public String sharingIndexByType(String type) {
+        lock.readLock().lock();
+        try {
+            if (!typeToProvider.containsKey(type)) {
+                return null;
+            }
+            return typeToProvider.get(type).resourceSharingIndexName();
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Returns the sharing index name for a concrete resource index name by finding the matching provider.
+     */
+    public String sharingIndexForResourceIndex(String concreteResourceIndex) {
+        lock.readLock().lock();
+        try {
+            for (ResourceProvider p : typeToProvider.values()) {
+                if (WildcardMatcher.from(p.resourceIndexName()).test(concreteResourceIndex)) {
+                    return p.resourceSharingIndexName();
+                }
+            }
+            return null;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Returns the set of all sharing index names for registered resource types.
+     */
+    public Set<String> getResourceSharingIndices() {
+        lock.readLock().lock();
+        try {
+            return typeToProvider.values().stream().map(ResourceProvider::resourceSharingIndexName).collect(Collectors.toSet());
         } finally {
             lock.readLock().unlock();
         }
