@@ -910,6 +910,26 @@ integTestRemote.enabled = System.getProperty("tests.rest.cluster") != null
 
 tasks.integTestRemote.finalizedBy(jacocoTestReport) // report is always generated after integration tests run
 
+tasks.register("sandboxAnalyticsSecurityTest", Test) {
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    systemProperty "tests.security.manager", "false"
+    systemProperty "tests.rest.cluster", System.getProperty("tests.rest.cluster")
+    systemProperty "tests.cluster", System.getProperty("tests.cluster")
+    systemProperty "tests.clustername", System.getProperty("tests.clustername")
+    systemProperty "user", System.getProperty("user")
+    systemProperty "password", System.getProperty("password")
+    systemProperty "https", System.getProperty("https")
+    systemProperty "security.enabled", "true"
+
+    filter {
+        includeTestsMatching "org.opensearch.security.sandbox.*IT"
+    }
+}
+
+sandboxAnalyticsSecurityTest.enabled = System.getProperty("tests.rest.cluster") != null
+
 // should be updated appropriately, when we add integTests in future
 integTest.enabled = false
 
