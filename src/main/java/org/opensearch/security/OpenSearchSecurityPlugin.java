@@ -146,7 +146,9 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auditlog.AuditLogSslExceptionHandler;
 import org.opensearch.security.auditlog.NullAuditLog;
+import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.auditlog.config.AuditConfig.Filter.FilterEntries;
+import org.opensearch.security.auditlog.filter.AuditActionFilter;
 import org.opensearch.security.auditlog.impl.AuditLogImpl;
 import org.opensearch.security.auth.BackendRegistry;
 import org.opensearch.security.auth.RolesInjector;
@@ -299,6 +301,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile DynamicConfigFactory dcf;
     private final List<String> demoCertHashes = new ArrayList<String>(3);
     private volatile SecurityFilter sf;
+    private volatile AuditActionFilter auditActionFilter;
     private final AtomicReference<NamedXContentRegistry> namedXContentRegistry = new AtomicReference<>(NamedXContentRegistry.EMPTY);;
     private volatile DlsFlsRequestValve dlsFlsValve = null;
     private final OpensearchDynamicSetting<Boolean> transportPassiveAuthSetting;
@@ -343,6 +346,42 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     private static boolean isDisabled(final Settings settings) {
         return settings.getAsBoolean(ConfigConstants.SECURITY_DISABLED, false);
+    }
+
+    private static boolean isStandaloneAuditEnabled(final Settings settings) {
+        return settings != null && settings.getAsBoolean(ConfigConstants.SECURITY_AUDIT_STANDALONE_ENABLED, false);
+    }
+
+    private void initStandaloneAuditIfEnabled(
+        Client localClient,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        Environment environment
+    ) {
+        final Settings effectiveSettings = this.settings != null ? this.settings : environment.settings();
+        if (isStandaloneAuditEnabled(effectiveSettings)) {
+            this.threadPool = threadPool;
+            this.cs = clusterService;
+            this.localClient = localClient;
+            final IndexNameExpressionResolver resolver = new IndexNameExpressionResolver(threadPool.getThreadContext());
+            UserFactory userFactory = new UserFactory.Simple();
+            auditLog = new AuditLogImpl(
+                effectiveSettings,
+                configPath,
+                localClient,
+                threadPool,
+                resolver,
+                clusterService,
+                environment,
+                userFactory
+            );
+            auditLog.setConfig(AuditConfig.from(effectiveSettings));
+            sslExceptionHandler = new AuditLogSslExceptionHandler(auditLog);
+            auditActionFilter = new AuditActionFilter(auditLog, threadPool);
+            log.info("Standalone audit logging enabled");
+        } else {
+            auditLog = new NullAuditLog();
+        }
     }
 
     private static boolean useClusterStateToInitSecurityConfig(final Settings settings) {
@@ -966,6 +1005,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         List<ActionFilter> filters = new ArrayList<>(1);
         if (!client && !disabled && !SSLConfig.isSslOnlyMode()) {
             filters.add(Objects.requireNonNull(sf));
+        } else if (auditActionFilter != null) {
+            filters.add(auditActionFilter);
         }
         return filters;
     }
@@ -1179,6 +1220,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     ) {
         SSLConfig.registerClusterSettingsChangeListener(clusterService.getClusterSettings());
         if (SSLConfig.isSslOnlyMode()) {
+            initStandaloneAuditIfEnabled(localClient, clusterService, threadPool, environment);
+
             return super.createComponents(
                 localClient,
                 clusterService,
@@ -1201,6 +1244,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         final List<Object> components = new ArrayList<Object>();
 
         if (client || disabled) {
+            if (disabled) {
+                initStandaloneAuditIfEnabled(localClient, clusterService, threadPool, environment);
+            }
             return components;
         }
 
@@ -1462,6 +1508,31 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         settings.addAll(super.getSettings());
 
         settings.add(Setting.boolSetting(ConfigConstants.SECURITY_SSL_ONLY, false, Property.NodeScope, Property.Filtered));
+        settings.add(Setting.boolSetting(ConfigConstants.SECURITY_AUDIT_STANDALONE_ENABLED, false, Property.NodeScope, Property.Filtered));
+
+        // Audit settings needed in SSL-only mode when audit is enabled
+        settings.add(Setting.simpleString(ConfigConstants.SECURITY_AUDIT_TYPE_DEFAULT, Property.NodeScope, Property.Filtered));
+        settings.add(Setting.intSetting(ConfigConstants.SECURITY_AUDIT_THREADPOOL_SIZE, 10, Property.NodeScope, Property.Filtered));
+        settings.add(
+            Setting.intSetting(ConfigConstants.SECURITY_AUDIT_THREADPOOL_MAX_QUEUE_LEN, 100 * 1000, Property.NodeScope, Property.Filtered)
+        );
+        final List<String> defaultDisabledCategories = List.of("AUTHENTICATED", "GRANTED_PRIVILEGES");
+        settings.add(
+            Setting.listSetting(
+                ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_TRANSPORT_CATEGORIES,
+                defaultDisabledCategories,
+                Function.identity(),
+                Property.NodeScope
+            )
+        );
+        settings.add(
+            Setting.listSetting(
+                ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_REST_CATEGORIES,
+                defaultDisabledCategories,
+                Function.identity(),
+                Property.NodeScope
+            )
+        );
 
         // currently dual mode is supported only when ssl_only is enabled, but this stance would change in future
         settings.add(SecuritySettings.SSL_DUAL_MODE_SETTING);
@@ -1703,18 +1774,8 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             );
 
             // Security - Audit
-            settings.add(Setting.simpleString(ConfigConstants.SECURITY_AUDIT_TYPE_DEFAULT, Property.NodeScope, Property.Filtered));
             settings.add(Setting.groupSetting(ConfigConstants.SECURITY_AUDIT_CONFIG_ROUTES + ".", Property.NodeScope));
             settings.add(Setting.groupSetting(ConfigConstants.SECURITY_AUDIT_CONFIG_ENDPOINTS + ".", Property.NodeScope));
-            settings.add(Setting.intSetting(ConfigConstants.SECURITY_AUDIT_THREADPOOL_SIZE, 10, Property.NodeScope, Property.Filtered));
-            settings.add(
-                Setting.intSetting(
-                    ConfigConstants.SECURITY_AUDIT_THREADPOOL_MAX_QUEUE_LEN,
-                    100 * 1000,
-                    Property.NodeScope,
-                    Property.Filtered
-                )
-            );
             settings.add(
                 Setting.boolSetting(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_LOG_REQUEST_BODY, true, Property.NodeScope, Property.Filtered)
             );
@@ -1733,22 +1794,6 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             final List<String> disabledCategories = new ArrayList<String>(2);
             disabledCategories.add("AUTHENTICATED");
             disabledCategories.add("GRANTED_PRIVILEGES");
-            settings.add(
-                Setting.listSetting(
-                    ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_TRANSPORT_CATEGORIES,
-                    disabledCategories,
-                    Function.identity(),
-                    Property.NodeScope
-                )
-            ); // not filtered here
-            settings.add(
-                Setting.listSetting(
-                    ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_REST_CATEGORIES,
-                    disabledCategories,
-                    Function.identity(),
-                    Property.NodeScope
-                )
-            ); // not filtered here
             final List<String> ignoredUsers = new ArrayList<String>(2);
             ignoredUsers.add("kibanaserver");
             settings.add(
