@@ -44,6 +44,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import org.opensearch.action.ActionRequest;
+import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.IndicesRequest;
 import org.opensearch.action.admin.cluster.shards.ClusterSearchShardsRequest;
 import org.opensearch.action.admin.cluster.snapshots.restore.RestoreSnapshotRequest;
@@ -346,6 +347,20 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             // tenants.
             // No further access check for the default tenant is necessary, as access will be also checked on the TransportShardBulkAction
             // level.
+
+            // Check if the bulk request targets another user's concrete tenant index directly.
+            BulkRequest bulkRequest = (BulkRequest) request;
+            String userTenantPrefix = ".kibana_"
+                + user.getName().hashCode()
+                + "_"
+                + user.getName().toLowerCase().replaceAll("[^a-z0-9]+", "");
+            for (DocWriteRequest<?> docRequest : bulkRequest.requests()) {
+                String index = docRequest.index();
+                if (index != null && index.startsWith(".kibana_") && !index.startsWith(userTenantPrefix)) {
+                    auditLog.logMissingPrivileges(action0, request, task);
+                    return PrivilegesEvaluatorResponse.insufficient(action0);
+                }
+            }
 
             presponse = actionPrivileges.hasClusterPrivilege(context, action0);
 

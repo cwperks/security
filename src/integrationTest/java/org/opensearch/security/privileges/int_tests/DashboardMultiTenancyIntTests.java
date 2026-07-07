@@ -959,6 +959,50 @@ public class DashboardMultiTenancyIntTests {
         this.clusterConfig = clusterConfig;
     }
 
+    @Test
+    public void mget_concreteIndexWithoutTenantHeader_shouldBeDenied() {
+        try (TestRestClient restClient = cluster.getRestClient(user)) {
+            String docId = dashboards_index_human_resources.anyDocument().id();
+
+            TestRestClient.HttpResponse response = restClient.postJson("_mget/?pretty", """
+                {
+                  "docs": [
+                    {
+                      "_index": "%s",
+                      "_id": "%s"
+                    }
+                  ]
+                }
+                """.formatted(dashboards_index_human_resources.name(), docId));
+
+            assertThat(response, isForbidden());
+        }
+    }
+
+    @Test
+    public void msearch_concreteIndexWithoutTenantHeader_shouldBeDenied() {
+        try (TestRestClient restClient = cluster.getRestClient(user)) {
+            TestRestClient.HttpResponse response = restClient.postJson("_msearch", """
+                {"index":"%s"}
+                {"size":10, "query":{"match_all":{}}}
+                """.formatted(dashboards_index_human_resources.name()));
+
+            assertThat(response, isForbidden());
+        }
+    }
+
+    @Test
+    public void bulk_concreteIndexWithoutTenantHeader_shouldBeDenied() {
+        try (TestRestClient restClient = cluster.getRestClient(user)) {
+            TestRestClient.HttpResponse response = restClient.postJson("_bulk", """
+                { "index" : { "_index" : "%s", "_id" : "test_no_header_1" } }
+                { "type": "dashboard", "title": "test" }
+                """.formatted(dashboards_index_human_resources.name()));
+
+            assertThat(response, isForbidden());
+        }
+    }
+
     private void delete(String... paths) {
         try (TestRestClient adminRestClient = cluster.getAdminCertRestClient()) {
             for (String path : paths) {
