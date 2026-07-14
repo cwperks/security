@@ -8,6 +8,7 @@ sample_full_access:
   hidden: false
   static: true
   description: "Provide full access to the sample resource plugin"
+  application_id: "sample-resource-plugin"
   cluster_permissions:
     - "cluster:admin/sample-resource-plugin/*"
 
@@ -16,5 +17,6 @@ sample_read_access:
   hidden: false
   static: true
   description: "Provide read access to the sample resource plugin"
+  application_id: "sample-resource-plugin"
   cluster_permissions:
     - "cluster:admin/sample-resource-plugin/get"

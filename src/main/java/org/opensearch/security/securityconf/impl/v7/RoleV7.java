@@ -52,6 +52,7 @@ public class RoleV7 implements Hideable, StaticDefinable {
     @JsonProperty(value = "static")
     private boolean _static;
     private String description;
+    private String application_id;
     private List<String> cluster_permissions = Collections.emptyList();
     private List<Index> index_permissions = Collections.emptyList();
     private List<Tenant> tenant_permissions = Collections.emptyList();
@@ -263,6 +264,14 @@ public class RoleV7 implements Hideable, StaticDefinable {
         this.description = description;
     }
 
+    public String getApplication_id() {
+        return application_id;
+    }
+
+    public void setApplication_id(String application_id) {
+        this.application_id = application_id;
+    }
+
     public List<String> getCluster_permissions() {
         return cluster_permissions;
     }
@@ -315,6 +324,8 @@ public class RoleV7 implements Hideable, StaticDefinable {
             + _static
             + ", description="
             + description
+            + ", application_id="
+            + application_id
             + ", cluster_permissions="
             + cluster_permissions
             + ", index_permissions="

@@ -1,0 +1,3 @@
+cluster_permissions:
+  - "cluster:admin/sample-resource-plugin/*"
+application_id: "sample-resource-plugin"
