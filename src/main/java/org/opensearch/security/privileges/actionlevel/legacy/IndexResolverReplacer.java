@@ -39,6 +39,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.function.Supplier;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
@@ -312,15 +313,9 @@ public class IndexResolverReplacer {
                 final Set<String> dateResolvedLocalRequestedPatterns = localRequestedPatterns.stream()
                     .map(resolver::resolveDateMathExpression)
                     .collect(Collectors.toSet());
-                final WildcardMatcher dateResolvedMatcher = WildcardMatcher.from(dateResolvedLocalRequestedPatterns);
                 // fill matchingAliases
-                final Map<String, IndexAbstraction> lookup = state.metadata().getIndicesLookup();
-                matchingAliases = lookup.entrySet()
-                    .stream()
-                    .filter(e -> e.getValue().getType() == ALIAS)
-                    .map(Map.Entry::getKey)
-                    .filter(dateResolvedMatcher)
-                    .collect(Collectors.toSet());
+                final SortedMap<String, IndexAbstraction> lookup = state.metadata().getIndicesLookup();
+                matchingAliases = resolveMatchingAliases(lookup, dateResolvedLocalRequestedPatterns);
 
                 final boolean isDebugEnabled = log.isDebugEnabled();
                 try {
@@ -426,6 +421,49 @@ public class IndexResolverReplacer {
 
             return resolved;
         }
+    }
+
+    static Set<String> resolveMatchingAliases(SortedMap<String, IndexAbstraction> lookup, Set<String> dateResolvedLocalRequestedPatterns) {
+        final Set<String> matchingAliases = new HashSet<>();
+        boolean canUseBoundedLookup = true;
+        for (String pattern : dateResolvedLocalRequestedPatterns) {
+            if (WildcardMatcher.isExact(pattern) == false && WildcardMatcher.isPrefixPattern(pattern) == false) {
+                canUseBoundedLookup = false;
+                break;
+            }
+        }
+
+        if (canUseBoundedLookup) {
+            // The indices lookup is sorted, so exact names and simple prefix patterns do not need to scan the full cluster metadata.
+            for (String pattern : dateResolvedLocalRequestedPatterns) {
+                if (WildcardMatcher.isExact(pattern)) {
+                    final IndexAbstraction indexAbstraction = lookup.get(pattern);
+                    if (indexAbstraction != null && indexAbstraction.getType() == ALIAS) {
+                        matchingAliases.add(pattern);
+                    }
+                } else {
+                    final String prefix = pattern.substring(0, pattern.length() - 1);
+                    final char[] upperBound = prefix.toCharArray();
+                    upperBound[upperBound.length - 1]++;
+                    for (Map.Entry<String, IndexAbstraction> entry : lookup.subMap(prefix, new String(upperBound)).entrySet()) {
+                        if (entry.getValue().getType() == ALIAS) {
+                            matchingAliases.add(entry.getKey());
+                        }
+                    }
+                }
+            }
+
+            return matchingAliases;
+        }
+
+        final WildcardMatcher dateResolvedMatcher = WildcardMatcher.from(dateResolvedLocalRequestedPatterns);
+        lookup.entrySet()
+            .stream()
+            .filter(entry -> entry.getValue().getType() == ALIAS)
+            .map(Map.Entry::getKey)
+            .filter(dateResolvedMatcher)
+            .forEach(matchingAliases::add);
+        return matchingAliases;
     }
 
     // dnfof
