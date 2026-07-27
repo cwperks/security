@@ -279,8 +279,8 @@ public class SystemIndexAccessEvaluator {
         final User user
     ) {
         // Perform access check is system index permissions are enabled
-        boolean containsSystemIndex = requestContainsAnySystemIndices(requestedResolved);
-        boolean containsRegularIndex = requestContainsAnyRegularIndices(requestedResolved);
+        boolean containsSystemIndex = !requestedResolved.isLocalAll() && requestContainsAnySystemIndices(requestedResolved);
+        boolean containsRegularIndex = !requestedResolved.isLocalAll() && requestContainsAnyRegularIndices(requestedResolved);
         boolean serviceAccountUser = user.isServiceAccount();
 
         // Calculate plugin-related information once for reuse
@@ -305,7 +305,7 @@ public class SystemIndexAccessEvaluator {
                 }
                 return PrivilegesEvaluatorResponse.insufficient("").reason("Service account cannot access regular indices");
             }
-            boolean containsProtectedIndex = requestContainsAnyProtectedSystemIndices(requestedResolved);
+            boolean containsProtectedIndex = !requestedResolved.isLocalAll() && requestContainsAnyProtectedSystemIndices(requestedResolved);
             if (containsProtectedIndex) {
                 auditLog.logSecurityIndexAttempt(request, action, task);
                 if (log.isInfoEnabled()) {

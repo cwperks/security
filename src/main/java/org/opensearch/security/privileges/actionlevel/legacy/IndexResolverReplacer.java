@@ -603,18 +603,46 @@ public class IndexResolverReplacer {
             Map<String, OriginalIndices> remoteIndicesAsMap,
             IndicesOptions indicesOptions
         ) {
+            this(aliases, allIndices, originalRequested, remoteIndices, remoteIndicesAsMap, indicesOptions, false);
+        }
+
+        private Resolved(
+            final ImmutableSet<String> aliases,
+            final ImmutableSet<String> allIndices,
+            final ImmutableSet<String> originalRequested,
+            final ImmutableSet<String> remoteIndices,
+            Map<String, OriginalIndices> remoteIndicesAsMap,
+            IndicesOptions indicesOptions,
+            boolean forceLocalAll
+        ) {
             this.aliases = aliases;
             this.allIndices = allIndices;
             this.originalRequested = originalRequested;
             this.remoteIndices = remoteIndices;
             this.remoteIndicesAsMap = remoteIndicesAsMap;
-            this.isLocalAll = IndexResolverReplacer.isLocalAll(originalRequested.toArray(new String[0]))
+            this.isLocalAll = forceLocalAll
+                || IndexResolverReplacer.isLocalAll(originalRequested.toArray(new String[0]))
                 || (aliases.contains("*") && allIndices.contains("*"));
             this.indicesOptions = indicesOptions;
         }
 
         public boolean isLocalAll() {
             return isLocalAll;
+        }
+
+        Resolved asLocalAll() {
+            if (isLocalAll) {
+                return this;
+            }
+            return new Resolved(
+                ImmutableSet.copyOf(aliases),
+                ImmutableSet.copyOf(allIndices),
+                All_SET,
+                ImmutableSet.copyOf(remoteIndices),
+                remoteIndicesAsMap,
+                indicesOptions,
+                true
+            );
         }
 
         public Set<String> getAliases() {
