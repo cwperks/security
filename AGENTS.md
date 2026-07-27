@@ -194,6 +194,8 @@ Commit title ≤ 50 characters. Leave a blank line before the body; wrap body at
 
 - Always push to your personal fork. Never push directly to `opensearch-project/security` or to `main`.
 - Tests run automatically on all PRs across all supported JDK versions. All checks must pass before merging.
+- Dependabot PRs rely on the normal CI and automatic-merge workflows. Configure their labels in `.github/dependabot.yml`; GitHub
+  Actions updates receive the `skip-changelog` label directly from Dependabot.
 
 ## Backports
 
