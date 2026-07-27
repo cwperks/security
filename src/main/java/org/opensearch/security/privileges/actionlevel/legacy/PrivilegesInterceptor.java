@@ -241,10 +241,12 @@ public class PrivilegesInterceptor {
             // We check originalRequested (what the user explicitly specified) rather than allIndices
             // (the fully resolved set) to avoid false positives from broad queries like _cat/indices
             // where tenant indices are incidentally included in the resolution.
-            if ((request instanceof BulkRequest
-                || request instanceof MultiGetRequest
-                || request instanceof MultiSearchRequest
-                || request instanceof MultiTermVectorsRequest) && !requestedResolved.isLocalAll()) {
+            final boolean localAllMonitorRequest = LocalAllIndicesRequestHelper.isTrustedLocalAllMonitorRequest(
+                request,
+                action,
+                threadPool.getThreadContext()
+            );
+            if (!requestedResolved.isLocalAll() && !localAllMonitorRequest) {
                 final Set<String> originalRequested = requestedResolved.getOriginalRequested();
 
                 for (String idx : originalRequested) {

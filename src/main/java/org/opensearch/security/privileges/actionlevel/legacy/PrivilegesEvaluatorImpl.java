@@ -360,7 +360,10 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             return presponse;
         }
 
-        final Resolved requestedResolved = this.irr.resolveRequest(request);
+        Resolved requestedResolved = this.irr.resolveRequest(request);
+        if (LocalAllIndicesRequestHelper.isTrustedLocalAllMonitorRequest(request, action0, threadContext)) {
+            requestedResolved = requestedResolved.asLocalAll();
+        }
 
         log.debug("RequestedResolved : {}", requestedResolved);
 

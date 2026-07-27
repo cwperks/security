@@ -34,6 +34,7 @@ import org.opensearch.test.framework.matcher.RestIndexMatchers;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.opensearch.test.framework.TestSecurityConfig.AuthcDomain.AUTHC_HTTPBASIC_INTERNAL;
+import static org.opensearch.test.framework.TestSecurityConfig.Role.ALL_ACCESS;
 import static org.opensearch.test.framework.cluster.TestRestClient.json;
 import static org.opensearch.test.framework.matcher.RestIndexMatchers.OnResponseIndexMatcher.containsExactly;
 import static org.opensearch.test.framework.matcher.RestIndexMatchers.OnUserIndexMatcher.limitedTo;
@@ -47,6 +48,8 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(Parameterized.class)
 public class DashboardMultiTenancyIntTests {
+
+    static final TestSecurityConfig.User ADMIN_USER = new TestSecurityConfig.User("admin").roles(ALL_ACCESS);
 
     // -------------------------------------------------------------------------------------------------------
     // Tenants
@@ -349,6 +352,7 @@ public class DashboardMultiTenancyIntTests {
         return new LocalCluster.Builder().clusterManager(ClusterManager.THREE_CLUSTER_MANAGERS)
             .authc(AUTHC_HTTPBASIC_INTERNAL)
             .users(USERS)
+            .users(ADMIN_USER)
             .tenants(TENANT_HUMAN_RESOURCES, TENANT_BUSINESS_INTELLIGENCE, TENANT_FINANCE)
             .indices(
                 dashboards_index_global,
@@ -1000,8 +1004,8 @@ public class DashboardMultiTenancyIntTests {
     }
 
     /**
-     * Verifies that the paginated list indices API is not denied when its internal monitor
-     * requests operate on a concrete page that includes dashboards tenant indices.
+     * Verifies that the paginated list indices API preserves the local-all provenance of its
+     * original request when internal monitor requests operate on a concrete page.
      */
     @Test
     public void listIndices_withTenantHeader_shouldNotBeDenied() {
@@ -1010,13 +1014,25 @@ public class DashboardMultiTenancyIntTests {
             return;
         }
 
-        try (TestRestClient restClient = cluster.getRestClient(WILDCARD_TENANT_USER)) {
-            TestRestClient.HttpResponse response = restClient.get(
-                "_list/indices/.kib*",
-                new BasicHeader("securitytenant", "human_resources")
-            );
+        try (TestRestClient restClient = cluster.getRestClient(ADMIN_USER)) {
+            TestRestClient.HttpResponse response = restClient.get("_list/indices", new BasicHeader("securitytenant", "__user__"));
 
             assertThat(response, isOk());
+        }
+    }
+
+    @Test
+    public void monitorActions_directlyTargetingConcreteTenantIndex_shouldBeDenied() {
+        // Only run once (not for every parameterized user)
+        if (!user.equals(WILDCARD_TENANT_USER)) {
+            return;
+        }
+
+        try (TestRestClient restClient = cluster.getRestClient(ADMIN_USER)) {
+            BasicHeader tenantHeader = new BasicHeader("securitytenant", "__user__");
+
+            assertThat(restClient.get(dashboards_index_human_resources.name() + "/_stats", tenantHeader), isForbidden());
+            assertThat(restClient.get("_cluster/health/" + dashboards_index_human_resources.name(), tenantHeader), isForbidden());
         }
     }
 

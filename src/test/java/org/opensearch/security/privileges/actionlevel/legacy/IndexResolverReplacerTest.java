@@ -16,15 +16,19 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import com.google.common.collect.ImmutableSet;
 import org.junit.Test;
 
+import org.opensearch.action.support.IndicesOptions;
 import org.opensearch.cluster.metadata.IndexAbstraction;
+import org.opensearch.security.privileges.actionlevel.legacy.IndexResolverReplacer.Resolved;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.util.MockIndexMetadataBuilder;
 
@@ -32,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 
 public class IndexResolverReplacerTest {
 
@@ -39,6 +44,25 @@ public class IndexResolverReplacerTest {
     private static final String INDEX = "alias-scale-index";
     private static final String ALIAS_PREFIX = "alias-scale-";
     private static final SortedMap<String, IndexAbstraction> ALIAS_HEAVY_LOOKUP = createAliasHeavyLookup();
+
+    @Test
+    public void asLocalAllPreservesResolutionAndSetsLocalAllFlag() {
+        Resolved resolved = new Resolved(
+            ImmutableSet.of("alias"),
+            ImmutableSet.of("index"),
+            ImmutableSet.of("index"),
+            ImmutableSet.of(),
+            Map.of(),
+            IndicesOptions.STRICT_EXPAND_OPEN
+        );
+
+        Resolved localAll = resolved.asLocalAll();
+
+        assertThat(resolved.isLocalAll(), is(false));
+        assertThat(localAll.isLocalAll(), is(true));
+        assertThat(localAll.getAliases(), equalTo(resolved.getAliases()));
+        assertThat(localAll.getAllIndices(), equalTo(resolved.getAllIndices()));
+    }
 
     // ---------------------------------------------------------------------
     // Instrumentation tests: prove the bounded path does NOT scan the full
