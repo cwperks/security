@@ -24,12 +24,14 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.DocWriteRequest;
 import org.opensearch.action.IndicesRequest.Replaceable;
+import org.opensearch.action.admin.cluster.health.ClusterHealthAction;
 import org.opensearch.action.admin.indices.alias.Alias;
 import org.opensearch.action.admin.indices.create.CreateIndexRequest;
 import org.opensearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.opensearch.action.admin.indices.mapping.get.GetFieldMappingsIndexRequest;
 import org.opensearch.action.admin.indices.mapping.get.GetFieldMappingsRequest;
 import org.opensearch.action.admin.indices.refresh.RefreshRequest;
+import org.opensearch.action.admin.indices.stats.IndicesStatsAction;
 import org.opensearch.action.bulk.BulkRequest;
 import org.opensearch.action.delete.DeleteRequest;
 import org.opensearch.action.get.MultiGetRequest;
@@ -37,6 +39,7 @@ import org.opensearch.action.get.MultiGetRequest.Item;
 import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.search.MultiSearchRequest;
 import org.opensearch.action.search.SearchRequest;
+import org.opensearch.action.support.LocalAllIndicesRequest;
 import org.opensearch.action.support.replication.ReplicationRequest;
 import org.opensearch.action.support.single.shard.SingleShardRequest;
 import org.opensearch.action.termvectors.MultiTermVectorsRequest;
@@ -241,10 +244,10 @@ public class PrivilegesInterceptor {
             // We check originalRequested (what the user explicitly specified) rather than allIndices
             // (the fully resolved set) to avoid false positives from broad queries like _cat/indices
             // where tenant indices are incidentally included in the resolution.
-            if ((request instanceof BulkRequest
-                || request instanceof MultiGetRequest
-                || request instanceof MultiSearchRequest
-                || request instanceof MultiTermVectorsRequest) && !requestedResolved.isLocalAll()) {
+            final boolean localAllMonitorRequest = request instanceof LocalAllIndicesRequest
+                && ((LocalAllIndicesRequest) request).isDerivedFromLocalAllIndices()
+                && (IndicesStatsAction.NAME.equals(action) || ClusterHealthAction.NAME.equals(action));
+            if (!requestedResolved.isLocalAll() && !localAllMonitorRequest) {
                 final Set<String> originalRequested = requestedResolved.getOriginalRequested();
 
                 for (String idx : originalRequested) {
