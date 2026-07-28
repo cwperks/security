@@ -61,6 +61,7 @@ import org.opensearch.security.privileges.IndicesRequestResolver;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.RoleMapper;
+import org.opensearch.security.privileges.actionlevel.DashboardsTenantIndicesRequestFilter;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileges;
@@ -125,6 +126,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
     private final IndexNameExpressionResolver indexNameExpressionResolver;
     private final ThreadContext threadContext;
     private final DashboardsMultitenancySystemIndexHandler dashboardsMultitenancySystemIndexHandler;
+    private final DashboardsTenantIndicesRequestFilter dashboardsTenantIndicesRequestFilter;
     private final Settings settings;
     private final AtomicReference<RoleBasedActionPrivileges> actionPrivileges = new AtomicReference<>();
     private final ImmutableMap<String, ActionPrivileges> pluginIdToActionPrivileges;
@@ -144,6 +146,9 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         this.threadPool = coreDependencies.threadPool();
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
         this.settings = coreDependencies.settings();
+        this.dashboardsTenantIndicesRequestFilter = new DashboardsTenantIndicesRequestFilter(
+            dynamicDependencies.multiTenancyConfigurationSupplier()
+        );
         this.specialIndexProtection = new RuntimeOptimizedActionPrivileges.SpecialIndexProtection(
             dynamicDependencies.specialIndices()::isUniversallyDeniedIndex,
             dynamicDependencies.specialIndices()::isSystemIndex,
@@ -249,6 +254,13 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         String action = this.actionConfiguration.normalize(context.getAction());
         User user = context.getUser();
         ActionRequest request = context.getRequest();
+        if (dashboardsTenantIndicesRequestFilter.isApplicable(action, user)) {
+            OptionallyResolvedIndices resolvedIndices = context.getResolvedIndices();
+            if (resolvedIndices instanceof ResolvedIndices resolved
+                && dashboardsTenantIndicesRequestFilter.filter(request, action, user, resolved.local().names(context.clusterState()))) {
+                context.invalidateResolvedIndices();
+            }
+        }
 
         if (request instanceof PitSegmentsRequest pitSegmentsRequest && isAllPitsRequest(pitSegmentsRequest)) {
             // We treat this as a separate cluster action. This is because there is no way to reduce the requested

@@ -33,6 +33,7 @@ import org.opensearch.test.framework.matcher.RestIndexMatchers;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.opensearch.test.framework.TestSecurityConfig.AuthcDomain.AUTHC_HTTPBASIC_INTERNAL;
 import static org.opensearch.test.framework.cluster.TestRestClient.json;
 import static org.opensearch.test.framework.matcher.RestIndexMatchers.OnResponseIndexMatcher.containsExactly;
@@ -1017,6 +1018,45 @@ public class DashboardMultiTenancyIntTests {
             );
 
             assertThat(response, isOk());
+        }
+    }
+
+    /**
+     * Treats Dashboards tenant indices like hidden indices when they are incidentally included
+     * in otherwise broad stats and health requests.
+     */
+    @Test
+    public void broadMonitorRequests_shouldFilterConcreteTenantIndices() {
+        // Only run once (not for every parameterized user)
+        if (!user.equals(WILDCARD_TENANT_USER)) {
+            return;
+        }
+
+        String visibleIndex = "visible-monitor-index";
+        try (TestRestClient adminRestClient = cluster.getAdminCertRestClient()) {
+            assertThat(adminRestClient.putJson(visibleIndex, "{}"), isOk());
+        }
+
+        try (TestRestClient restClient = cluster.getRestClient(WILDCARD_TENANT_USER)) {
+            String indices = visibleIndex + "," + dashboards_index_human_resources.name();
+
+            TestRestClient.HttpResponse statsResponse = restClient.get(
+                indices + "/_stats",
+                new BasicHeader("securitytenant", "human_resources")
+            );
+            assertThat(statsResponse, isOk());
+            assertThat(statsResponse.getBody(), containsString(visibleIndex));
+            assertThat(statsResponse.getBody(), not(containsString(dashboards_index_human_resources.name())));
+
+            TestRestClient.HttpResponse healthResponse = restClient.get(
+                "_cluster/health/" + indices + "?level=indices",
+                new BasicHeader("securitytenant", "human_resources")
+            );
+            assertThat(healthResponse, isOk());
+            assertThat(healthResponse.getBody(), containsString(visibleIndex));
+            assertThat(healthResponse.getBody(), not(containsString(dashboards_index_human_resources.name())));
+        } finally {
+            delete(visibleIndex);
         }
     }
 
