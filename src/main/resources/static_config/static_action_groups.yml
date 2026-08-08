@@ -8,14 +8,26 @@ kibana_all_write:
   static: true
   allowed_actions:
   - "kibana:saved_objects/*/write"
+  - "osd:admin/advanced_settings/get"
+  - "osd:admin/advanced_settings/write"
   type: "kibana"
-  description: "Allow writing in all OpenSearch Dashboards apps"
+  description: "Allow writing in all OpenSearch Dashboards apps including advanced settings"
+kibana_only_write:
+  reserved: true
+  hidden: false
+  static: true
+  allowed_actions:
+  - "kibana:saved_objects/*/write"
+  - "osd:admin/advanced_settings/get"
+  type: "kibana"
+  description: "Allow writing in OpenSearch Dashboards apps except config (advanced settings)"
 kibana_all_read:
   reserved: true
   hidden: false
   static: true
   allowed_actions:
   - "kibana:saved_objects/*/read"
+  - "osd:admin/advanced_settings/get"
   type: "kibana"
   description: "Allow reading in all OpenSearch Dashboards apps"
 cluster_all:
