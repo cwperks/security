@@ -15,10 +15,10 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.cluster.ClusterName;
@@ -38,7 +38,7 @@ import org.opensearch.threadpool.ThreadPool;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -53,10 +53,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class SecurityTokenManagerTest {
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises failure paths that log exceptions")
+public class SecurityTokenManagerTest extends LuceneTestCase {
 
     private SecurityTokenManager tokenManager;
+    private AutoCloseable mocks;
 
     @Mock
     private JwtVendor jwtVendor;
@@ -69,12 +70,14 @@ public class SecurityTokenManagerTest {
 
     @Before
     public void setup() {
+        mocks = MockitoAnnotations.openMocks(this);
         tokenManager = spy(new SecurityTokenManager(cs, threadPool, userService, (user, caller) -> user.getSecurityRoles()));
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         verifyNoMoreInteractions(userService);
+        mocks.close();
     }
 
     final static String signingKey =

@@ -15,6 +15,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 
+import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,7 +30,8 @@ import com.password4j.types.Argon2;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class HasherTests {
+@ThreadLeakScope(ThreadLeakScope.Scope.NONE)
+public class HasherTests extends LuceneTestCase {
     private final ByteArrayOutputStream out = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
     private final InputStream originalIn = System.in;

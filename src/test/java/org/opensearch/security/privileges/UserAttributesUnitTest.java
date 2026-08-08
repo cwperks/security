@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.action.support.ActionRequestMetadata;
@@ -23,7 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class UserAttributesUnitTest {
+public class UserAttributesUnitTest extends LuceneTestCase {
     @Test
     public void testNeedsAttributeSubstitution() {
         assertTrue(UserAttributes.needsAttributeSubstitution("""

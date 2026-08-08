@@ -28,12 +28,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import com.carrotsearch.randomizedtesting.RandomizedRunner;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.tools.Hasher;
@@ -54,8 +53,7 @@ import static org.opensearch.security.tools.democonfig.util.DemoConfigHelperUtil
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 
-@RunWith(RandomizedRunner.class)
-public class SecuritySettingsConfigurerTests {
+public class SecuritySettingsConfigurerTests extends LuceneTestCase {
 
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
@@ -85,7 +83,7 @@ public class SecuritySettingsConfigurerTests {
     }
 
     @Before
-    public void setUp() throws IOException {
+    public void setupSecuritySettingsConfigurer() throws IOException {
         System.setOut(new PrintStream(outContent));
         System.setErr(new PrintStream(outContent));
         installer = Installer.getInstance();
@@ -96,7 +94,7 @@ public class SecuritySettingsConfigurerTests {
     }
 
     @After
-    public void tearDown() throws NoSuchFieldException, IllegalAccessException {
+    public void cleanupSecuritySettingsConfigurer() throws NoSuchFieldException, IllegalAccessException {
         outContent.reset();
         System.setOut(originalOut);
         System.setErr(originalErr);

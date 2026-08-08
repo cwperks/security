@@ -13,6 +13,7 @@ package org.opensearch.security.ssl.util;
 
 import java.io.FileNotFoundException;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,7 +22,7 @@ import org.opensearch.security.test.helper.file.FileHelper;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class CertFromFileTests {
+public class CertFromFileTests extends LuceneTestCase {
 
     @Test
     public void testLoadSameCertForClientServerUsage() throws Exception {

@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.rules.ExternalResource;
@@ -333,6 +334,7 @@ public class CertificatesRule extends ExternalResource {
             serialNumber,
             Date.from(startDate),
             Date.from(endDate),
+            Locale.ROOT,
             subjectName,
             SubjectPublicKeyInfo.getInstance(certificatePublicKey.getEncoded())
         ).addExtension(Extension.authorityKeyIdentifier, false, extUtils.createAuthorityKeyIdentifier(parentPublicKey))

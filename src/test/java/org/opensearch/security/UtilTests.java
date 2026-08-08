@@ -28,6 +28,7 @@ package org.opensearch.security;
 
 import java.util.Map;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
@@ -42,7 +43,7 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class UtilTests {
+public class UtilTests extends LuceneTestCase {
 
     static private WildcardMatcher wc(String pattern) {
         return WildcardMatcher.from(pattern);

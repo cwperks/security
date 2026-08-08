@@ -13,6 +13,7 @@ package org.opensearch.security.auth;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.security.user.User;
@@ -24,7 +25,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_USER;
 import static org.junit.Assert.assertNull;
 
-public class UserSubjectImplTests {
+public class UserSubjectImplTests extends LuceneTestCase {
 
     public static boolean terminate(ThreadPool threadPool) {
         return ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS);
@@ -34,19 +35,22 @@ public class UserSubjectImplTests {
     public void testSecurityUserSubjectRunAs() throws Exception {
         final ThreadPool threadPool = new TestThreadPool(getClass().getName());
 
-        User user = new User("testUser");
+        try {
+            User user = new User("testUser");
 
-        UserSubjectImpl subject = new UserSubjectImpl(threadPool, user);
+            UserSubjectImpl subject = new UserSubjectImpl(threadPool, user);
 
-        assertThat(subject.getUser().getName(), equalTo(user.getName()));
-        assertThat(subject.getPrincipal().getName(), equalTo(user.getName()));
+            assertThat(subject.getUser().getName(), equalTo(user.getName()));
+            assertThat(subject.getPrincipal().getName(), equalTo(user.getName()));
 
-        assertNull(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER));
+            assertNull(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER));
 
-        subject.runAs(() -> { assertThat(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER), equalTo(user)); });
+            subject.runAs(() -> { assertThat(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER), equalTo(user)); });
 
-        assertNull(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER));
+            assertNull(threadPool.getThreadContext().getTransient(OPENDISTRO_SECURITY_USER));
 
-        terminate(threadPool);
+        } finally {
+            terminate(threadPool);
+        }
     }
 }

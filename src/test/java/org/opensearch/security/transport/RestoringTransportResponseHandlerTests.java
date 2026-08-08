@@ -11,6 +11,7 @@ package org.opensearch.security.transport;
 import java.io.IOException;
 import java.util.function.Supplier;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
@@ -28,7 +29,7 @@ import static org.junit.Assert.assertSame;
  * Verifies that RestoringTransportResponseHandler delegates all interface methods
  * identically to the inner handler.
  */
-public class RestoringTransportResponseHandlerTests {
+public class RestoringTransportResponseHandlerTests extends LuceneTestCase {
 
     @Test
     public void testWrappedHandlerBehavesIdenticallyToInnerHandler() throws IOException {

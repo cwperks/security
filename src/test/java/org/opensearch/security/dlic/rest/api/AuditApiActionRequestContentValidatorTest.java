@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
@@ -33,6 +34,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Test intentionally exercises failure paths that log exceptions")
 public class AuditApiActionRequestContentValidatorTest extends AbstractApiActionValidationTest {
 
     @Test

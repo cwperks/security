@@ -18,6 +18,7 @@ import java.util.Arrays;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class InternalAuthBackendTests {
+public class InternalAuthBackendTests extends LuceneTestCase {
 
     private InternalUsersModel internalUsersModel;
 
