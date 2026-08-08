@@ -29,3 +29,4 @@ updates:
     labels:
       - "dependabot"
       - "dependencies"
+      - "skip-changelog"
