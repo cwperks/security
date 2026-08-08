@@ -154,6 +154,7 @@ public class SecurityInterceptor {
         final String injectedRolesValidationString = getThreadContext().getTransient(
             ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES_VALIDATION
         );
+        final String ccrReplicatedSystemIndex = getThreadContext().getTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT);
         final String origin0 = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN);
         final Object remoteAddress0 = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS);
         final String origCCSTransientDls = getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_CCS);
@@ -267,7 +268,16 @@ public class SecurityInterceptor {
 
             getThreadContext().putHeader(headerMap);
 
-            ensureCorrectHeaders(remoteAddress0, user0, authUserSubj, origin0, injectedUserString, injectedRolesString, isSameNodeRequest);
+            ensureCorrectHeaders(
+                remoteAddress0,
+                user0,
+                authUserSubj,
+                origin0,
+                injectedUserString,
+                injectedRolesString,
+                ccrReplicatedSystemIndex,
+                isSameNodeRequest
+            );
 
             if (actionTraceEnabled.get()) {
                 getThreadContext().putHeader(
@@ -295,6 +305,7 @@ public class SecurityInterceptor {
         final String origin,
         final String injectedUserString,
         final String injectedRolesString,
+        final String ccrReplicatedSystemIndex,
         final boolean isSameNodeRequest
     ) {
         // keep original address
@@ -332,6 +343,10 @@ public class SecurityInterceptor {
             } else if (StringUtils.isNotEmpty(injectedUserString)) {
                 getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, injectedUserString);
             }
+            if (StringUtils.isNotEmpty(ccrReplicatedSystemIndex)) {
+                log.debug("Preserving CCR replicated system index [{}] as same-node transport transient", ccrReplicatedSystemIndex);
+                getThreadContext().putTransient(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_THREAD_CONTEXT, ccrReplicatedSystemIndex);
+            }
         } else {
             if (transportAddress != null) {
                 getThreadContext().putHeader(
@@ -368,6 +383,11 @@ public class SecurityInterceptor {
                 } else if (StringUtils.isNotEmpty(injectedUserString)) {
                     getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER_HEADER, injectedUserString);
                 }
+            }
+            if (StringUtils.isNotEmpty(ccrReplicatedSystemIndex)
+                && getThreadContext().getHeader(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_HEADER) == null) {
+                log.debug("Preserving CCR replicated system index [{}] as transport header", ccrReplicatedSystemIndex);
+                getThreadContext().putHeader(ConfigConstants.CCR_REPLICATED_SYSTEM_INDEX_HEADER, ccrReplicatedSystemIndex);
             }
         }
     }
