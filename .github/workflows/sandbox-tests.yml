@@ -1,0 +1,113 @@
+name: Sandbox Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  GRADLE_OPTS: -Dhttp.keepAlive=false
+  SECURITY_ADMIN_USER: admin
+  SECURITY_ADMIN_PASSWORD: admin
+
+jobs:
+  analytics-security:
+    name: analytics-security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK for build and test
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install native build dependencies
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+
+      - name: Checkout security
+        uses: actions/checkout@v6
+        with:
+          path: security
+
+      - name: Checkout OpenSearch
+        uses: actions/checkout@v6
+        with:
+          repository: opensearch-project/OpenSearch
+          path: OpenSearch
+
+      - name: Publish security plugin to Maven local
+        working-directory: security
+        run: ./gradlew -Pcrypto.standard=FIPS-140-3 publishPluginZipPublicationToMavenLocal
+
+      - name: Build OpenSearch native library
+        working-directory: OpenSearch
+        run: ./gradlew -Pcrypto.standard=FIPS-140-3 -Dsandbox.enabled=true :sandbox:libs:dataformat-native:buildRustLibrary
+
+      - name: Start OpenSearch sandbox cluster
+        working-directory: OpenSearch
+        run: |
+          ./gradlew run \
+            -Pcrypto.standard=FIPS-140-3 \
+            -Dsandbox.enabled=true \
+            -Dtests.jvm.argline='-Dopensearch.experimental.feature.transport.stream.enabled=true' \
+            -PinstalledPlugins="['arrow-base','arrow-flight-rpc','opensearch-security','analytics-engine','parquet-data-format','analytics-backend-datafusion','analytics-backend-lucene','dsl-query-executor','composite-engine','test-ppl-frontend']" \
+            -x javadoc -x test -x missingJavadoc \
+            > ../opensearch-sandbox.log 2>&1 &
+          echo "$!" > ../opensearch-sandbox.pid
+
+      - name: Wait for OpenSearch
+        run: |
+          for attempt in {1..120}; do
+            status=$(curl -k -s -o /tmp/security-role-response.txt -w "%{http_code}" \
+              -u "${SECURITY_ADMIN_USER}:${SECURITY_ADMIN_PASSWORD}" \
+              https://localhost:9200/_plugins/_security/api/roles/all_access || true)
+            if [ "$status" = "200" ]; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          cat /tmp/security-role-response.txt || true
+          tail -n 200 opensearch-sandbox.log
+          exit 1
+
+      - name: Run sandbox analytics security tests
+        working-directory: security
+        run: |
+          ./gradlew sandboxAnalyticsSecurityTest \
+            -Pcrypto.standard=FIPS-140-3 \
+            -Dtests.rest.cluster=localhost:9200 \
+            -Dtests.cluster=localhost:9200 \
+            -Dtests.clustername=runTask \
+            -Dhttps=true \
+            -Duser="${SECURITY_ADMIN_USER}" \
+            -Dpassword="${SECURITY_ADMIN_PASSWORD}"
+
+      - name: Stop OpenSearch
+        if: always()
+        run: |
+          if [ -f opensearch-sandbox.pid ]; then
+            kill "$(cat opensearch-sandbox.pid)" || true
+          fi
+          pkill -f org.opensearch.bootstrap.OpenSearch || true
+
+      - name: Upload sandbox logs
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sandbox-analytics-security-logs
+          path: |
+            opensearch-sandbox.log
+            OpenSearch/build/testclusters/runTask-0/logs/
+            security/build/reports/tests/sandboxAnalyticsSecurityTest/
