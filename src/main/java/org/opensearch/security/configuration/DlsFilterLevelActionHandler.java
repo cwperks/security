@@ -84,7 +84,7 @@ public class DlsFilterLevelActionHandler {
         ClusterService clusterService,
         IndicesService indicesService,
         ThreadContext threadContext,
-        boolean applyDlsFilterToHybridQuery
+        DlsFilterApplication dlsFilterApplication
     ) {
 
         if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE) != null
@@ -123,7 +123,7 @@ public class DlsFilterLevelActionHandler {
             clusterService,
             indicesService,
             threadContext,
-            applyDlsFilterToHybridQuery
+            dlsFilterApplication
         ).handle();
     }
 
@@ -137,7 +137,7 @@ public class DlsFilterLevelActionHandler {
     private final ClusterService clusterService;
     private final IndicesService indicesService;
     private final ThreadContext threadContext;
-    private final boolean applyDlsFilterToHybridQuery;
+    private final DlsFilterApplication dlsFilterApplication;
     private BoolQueryBuilder filterLevelQueryBuilder;
     private DocumentAllowList documentAllowlist;
 
@@ -149,7 +149,7 @@ public class DlsFilterLevelActionHandler {
         ClusterService clusterService,
         IndicesService indicesService,
         ThreadContext threadContext,
-        boolean applyDlsFilterToHybridQuery
+        DlsFilterApplication dlsFilterApplication
     ) {
         this.action = context.getAction();
         this.request = context.getRequest();
@@ -160,7 +160,7 @@ public class DlsFilterLevelActionHandler {
         this.clusterService = clusterService;
         this.indicesService = indicesService;
         this.threadContext = threadContext;
-        this.applyDlsFilterToHybridQuery = applyDlsFilterToHybridQuery;
+        this.dlsFilterApplication = dlsFilterApplication;
 
         this.requiresIndexScoping = resolved instanceof ResolvedIndices resolvedIndices
             ? resolvedIndices.local().names().size() != 1
@@ -175,7 +175,7 @@ public class DlsFilterLevelActionHandler {
         try (StoredContext ctx = threadContext.newStoredContext(true)) {
 
             threadContext.putHeader(
-                applyDlsFilterToHybridQuery
+                dlsFilterApplication.preservesTopLevelQuery()
                     ? ConfigConstants.OPENDISTRO_SECURITY_DLS_QUERY_FILTER_APPLIED
                     : ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE,
                 "true"
@@ -251,7 +251,7 @@ public class DlsFilterLevelActionHandler {
             }
         }
 
-        if (!tryApplyFilterLevelDls(searchSource, filterLevelQueryBuilder, applyDlsFilterToHybridQuery, listener)) {
+        if (!tryApplyFilterLevelDls(searchSource, filterLevelQueryBuilder, dlsFilterApplication, listener)) {
             return false;
         }
 
@@ -291,35 +291,40 @@ public class DlsFilterLevelActionHandler {
     }
 
     /**
-     * Applies the filter level DLS query. When {@code applyDlsFilterToHybridQuery} is true, hybrid queries remain top-level
-     * and their filter method propagates the DLS restriction to every subquery. Reader-level DLS must remain active in
-     * that case to retain existing DLS behavior for search features which do not use the top-level query.
+     * Applies the filter-level DLS query according to the selected application strategy. A top-level-capable query remains
+     * at the root and propagates the restriction through its filter method. Reader-level DLS remains active in that case
+     * to protect search features which do not use the top-level query.
      * @param searchSource
      * @param filterLevelQueryBuilder
-     * @param applyDlsFilterToHybridQuery whether to push the DLS filter into a top-level hybrid query
+     * @param dlsFilterApplication how to apply DLS to the request query
      */
     static void applyFilterLevelDls(
         SearchSourceBuilder searchSource,
         BoolQueryBuilder filterLevelQueryBuilder,
-        boolean applyDlsFilterToHybridQuery
+        DlsFilterApplication dlsFilterApplication
     ) {
+        if (!dlsFilterApplication.appliesToQuery()) {
+            throw new IllegalArgumentException("DLS filter application must modify the query");
+        }
         QueryBuilder query = searchSource.query();
-        if (query == null) {
+        if (dlsFilterApplication.preservesTopLevelQuery()) {
+            if (!supportsTopLevelFilter(query)) {
+                throw new OpenSearchSecurityException("Query does not support top-level DLS filtering");
+            }
+            if (ParentChildrenQueryDetector.hasParentOrChildQuery(query)) {
+                throw new OpenSearchSecurityException("Unable to preserve a top-level query containing parent or child clauses");
+            }
+            QueryBuilder filteredQuery = query.filter(filterLevelQueryBuilder);
+            if (filteredQuery == null) {
+                throw new OpenSearchSecurityException("Top-level query returned no query after applying the DLS filter");
+            }
+            if (!supportsTopLevelFilter(filteredQuery)) {
+                throw new OpenSearchSecurityException("Top-level query capability was not preserved after applying the DLS filter");
+            }
+            searchSource.query(filteredQuery);
+        } else if (query == null) {
             // No query set, apply filter level DLS query directly
             searchSource.query(filterLevelQueryBuilder);
-        } else if (applyDlsFilterToHybridQuery && supportsTopLevelFilter(query)) {
-            if (ParentChildrenQueryDetector.hasParentOrChildQuery(query)) {
-                throw new OpenSearchSecurityException("Unable to handle filter level DLS for hybrid queries with parent or child clauses");
-            }
-            // Hybrid queries must remain top-level, so apply filter level DLS query directly
-            QueryBuilder filteredHybridQuery = query.filter(filterLevelQueryBuilder);
-            if (filteredHybridQuery == null) {
-                throw new OpenSearchSecurityException("Hybrid query returned no query after applying the DLS filter");
-            }
-            if (!supportsTopLevelFilter(filteredHybridQuery)) {
-                throw new OpenSearchSecurityException("Hybrid query was not preserved after applying the DLS filter");
-            }
-            searchSource.query(filteredHybridQuery);
         } else {
             // Wrap the query in a bool query and apply filter level DLS query to it
             filterLevelQueryBuilder.must(query);
@@ -330,11 +335,11 @@ public class DlsFilterLevelActionHandler {
     static boolean tryApplyFilterLevelDls(
         SearchSourceBuilder searchSource,
         BoolQueryBuilder filterLevelQueryBuilder,
-        boolean applyDlsFilterToHybridQuery,
+        DlsFilterApplication dlsFilterApplication,
         ActionListener<?> listener
     ) {
         try {
-            applyFilterLevelDls(searchSource, filterLevelQueryBuilder, applyDlsFilterToHybridQuery);
+            applyFilterLevelDls(searchSource, filterLevelQueryBuilder, dlsFilterApplication);
             return true;
         } catch (Exception e) {
             log.error("Unable to apply filter-level DLS", e);
