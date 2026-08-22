@@ -71,8 +71,6 @@ import org.opensearch.transport.client.Client;
 
 public class DlsFilterLevelActionHandler {
     private static final Logger log = LogManager.getLogger(DlsFilterLevelActionHandler.class);
-    private static final String HYBRID_QUERY_NAME = "hybrid";
-
     private static final Function<SearchRequest, String> LOCAL_CLUSTER_ALIAS_GETTER = ReflectiveAttributeAccessors.protectedObjectAttr(
         "localClusterAlias",
         String.class
@@ -309,7 +307,7 @@ public class DlsFilterLevelActionHandler {
         if (query == null) {
             // No query set, apply filter level DLS query directly
             searchSource.query(filterLevelQueryBuilder);
-        } else if (applyDlsFilterToHybridQuery && isHybridQuery(query)) {
+        } else if (applyDlsFilterToHybridQuery && supportsTopLevelFilter(query)) {
             if (ParentChildrenQueryDetector.hasParentOrChildQuery(query)) {
                 throw new OpenSearchSecurityException("Unable to handle filter level DLS for hybrid queries with parent or child clauses");
             }
@@ -318,7 +316,7 @@ public class DlsFilterLevelActionHandler {
             if (filteredHybridQuery == null) {
                 throw new OpenSearchSecurityException("Hybrid query returned no query after applying the DLS filter");
             }
-            if (!isHybridQuery(filteredHybridQuery)) {
+            if (!supportsTopLevelFilter(filteredHybridQuery)) {
                 throw new OpenSearchSecurityException("Hybrid query was not preserved after applying the DLS filter");
             }
             searchSource.query(filteredHybridQuery);
@@ -348,14 +346,12 @@ public class DlsFilterLevelActionHandler {
     }
 
     /**
-     * Neural Search is an optional plugin, so Security identifies its hybrid query through the public query type name
-     * instead of depending on its query builder class. {@link QueryBuilder#getName()} is OpenSearch's unique query type
-     * identifier. A query builder registered as {@code hybrid} must honor {@link QueryBuilder#filter(QueryBuilder)} by
-     * applying the supplied filter to every subquery and must expose every subquery through its visitor. Reader-level DLS
-     * remains active whenever this special path is selected, independently of the query builder's filter implementation.
+     * Returns whether the query explicitly opts into receiving a security filter while remaining the top-level query.
+     * The Core capability avoids a dependency on an optional query implementation and prevents an unrelated query from
+     * selecting this security-sensitive path merely by using the same query name.
      */
-    static boolean isHybridQuery(QueryBuilder query) {
-        return query != null && HYBRID_QUERY_NAME.equals(query.getName());
+    static boolean supportsTopLevelFilter(QueryBuilder query) {
+        return query != null && query.supportsTopLevelFilter();
     }
 
     private boolean handle(GetRequest getRequest, StoredContext ctx) {

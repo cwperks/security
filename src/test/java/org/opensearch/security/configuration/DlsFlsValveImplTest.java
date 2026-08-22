@@ -60,7 +60,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void appliesDlsFilterToTopLevelHybridQueryInAdaptiveMode() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(hybridQuery));
 
         boolean result = DlsFlsValveImpl.shouldApplyDlsFilterToHybridQueryInAdaptiveMode(searchRequest, true, false, true, true);
@@ -78,7 +78,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void doesNotApplyHybridQueryFilterForTermLookupQuery() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(hybridQuery));
 
         boolean result = DlsFlsValveImpl.shouldApplyDlsFilterToHybridQueryInAdaptiveMode(searchRequest, true, true, true, true);
@@ -190,7 +190,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void doesNotSelectDlsModeForHybridQueryWithoutDlsRestrictions() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(hybridQuery));
 
         boolean result = DlsFlsValveImpl.shouldApplyDlsFilterToHybridQueryInAdaptiveMode(searchRequest, false, false, true, true);
@@ -201,7 +201,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void doesNotApplyHybridQueryFilterWhenClusterContainsOlderNode() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(hybridQuery));
 
         boolean result = DlsFlsValveImpl.shouldApplyDlsFilterToHybridQueryInAdaptiveMode(searchRequest, true, false, false, true);
@@ -212,7 +212,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void doesNotApplyHybridQueryFilterForCrossClusterSearch() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(hybridQuery));
 
         boolean result = DlsFlsValveImpl.shouldApplyDlsFilterToHybridQueryInAdaptiveMode(searchRequest, true, false, true, false);
@@ -223,7 +223,7 @@ public class DlsFlsValveImplTest {
     @Test
     public void doesNotApplyHybridQueryFilterWhenHybridQueryIsNotTopLevel() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         BoolQueryBuilder outerQuery = new BoolQueryBuilder().must(hybridQuery);
         SearchRequest searchRequest = new SearchRequest().source(SearchSourceBuilder.searchSource().query(outerQuery));
 
@@ -237,7 +237,7 @@ public class DlsFlsValveImplTest {
         QueryBuilder parentChildQuery = mock(QueryBuilder.class);
         when(parentChildQuery.getWriteableName()).thenReturn("has_child");
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         doAnswer(invocation -> {
             QueryBuilderVisitor visitor = invocation.getArgument(0);
             visitor.accept(parentChildQuery);

@@ -490,7 +490,7 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
             return false;
         }
         QueryBuilder query = source.query();
-        return DlsFilterLevelActionHandler.isHybridQuery(query) && !ParentChildrenQueryDetector.hasParentOrChildQuery(query);
+        return DlsFilterLevelActionHandler.supportsTopLevelFilter(query) && !ParentChildrenQueryDetector.hasParentOrChildQuery(query);
     }
 
     @Override

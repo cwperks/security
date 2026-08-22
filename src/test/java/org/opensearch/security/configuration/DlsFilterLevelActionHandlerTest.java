@@ -49,7 +49,7 @@ public class DlsFilterLevelActionHandlerTest {
         BoolQueryBuilder dlsQuery = createDlsQuery();
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         when(hybridQuery.filter(dlsQuery)).thenReturn(hybridQuery);
 
         DlsFilterLevelActionHandler.applyFilterLevelDls(searchSource, dlsQuery, true);
@@ -67,8 +67,8 @@ public class DlsFilterLevelActionHandlerTest {
         BoolQueryBuilder dlsQuery = createDlsQuery();
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
-        when(filteredHybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
+        when(filteredHybridQuery.supportsTopLevelFilter()).thenReturn(true);
         when(hybridQuery.filter(dlsQuery)).thenReturn(filteredHybridQuery);
 
         DlsFilterLevelActionHandler.applyFilterLevelDls(searchSource, dlsQuery, true);
@@ -83,7 +83,7 @@ public class DlsFilterLevelActionHandlerTest {
         BoolQueryBuilder dlsQuery = createDlsQuery();
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         when(hybridQuery.filter(dlsQuery)).thenReturn(null);
 
         OpenSearchSecurityException exception = assertThrows(
@@ -102,8 +102,7 @@ public class DlsFilterLevelActionHandlerTest {
         BoolQueryBuilder dlsQuery = createDlsQuery();
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
-        when(nonHybridQuery.getName()).thenReturn("bool");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         when(hybridQuery.filter(dlsQuery)).thenReturn(nonHybridQuery);
 
         OpenSearchSecurityException exception = assertThrows(
@@ -123,7 +122,7 @@ public class DlsFilterLevelActionHandlerTest {
         @SuppressWarnings("unchecked")
         ActionListener<Object> listener = mock(ActionListener.class);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         when(hybridQuery.filter(dlsQuery)).thenReturn(null);
 
         boolean applied = DlsFilterLevelActionHandler.tryApplyFilterLevelDls(searchSource, dlsQuery, true, listener);
@@ -146,7 +145,7 @@ public class DlsFilterLevelActionHandlerTest {
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
         when(parentChildQuery.getWriteableName()).thenReturn("has_child");
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
         doAnswer(invocation -> {
             QueryBuilderVisitor visitor = invocation.getArgument(0);
             visitor.accept(hybridQuery);
@@ -187,6 +186,21 @@ public class DlsFilterLevelActionHandlerTest {
 
         assertThat(searchSource.query(), sameInstance(dlsQuery));
         assertThat(dlsQuery.must(), contains(sameInstance(originalQuery)));
+    }
+
+    @Test
+    public void queryNameDoesNotOptIntoTopLevelFiltering() {
+        QueryBuilder query = mock(QueryBuilder.class);
+        BoolQueryBuilder dlsQuery = createDlsQuery();
+        SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(query);
+
+        when(query.getName()).thenReturn("hybrid");
+
+        DlsFilterLevelActionHandler.applyFilterLevelDls(searchSource, dlsQuery, true);
+
+        assertThat(searchSource.query(), sameInstance(dlsQuery));
+        assertThat(dlsQuery.must(), contains(sameInstance(query)));
+        verify(query, never()).filter(dlsQuery);
     }
 
     @Test
@@ -253,7 +267,7 @@ public class DlsFilterLevelActionHandlerTest {
         BoolQueryBuilder dlsQuery = createDlsQuery();
         SearchSourceBuilder searchSource = SearchSourceBuilder.searchSource().query(hybridQuery);
 
-        when(hybridQuery.getName()).thenReturn("hybrid");
+        when(hybridQuery.supportsTopLevelFilter()).thenReturn(true);
 
         DlsFilterLevelActionHandler.applyFilterLevelDls(searchSource, dlsQuery, false);
 
