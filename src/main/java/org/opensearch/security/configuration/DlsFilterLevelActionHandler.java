@@ -71,7 +71,6 @@ import org.opensearch.transport.client.Client;
 
 public class DlsFilterLevelActionHandler {
     private static final Logger log = LogManager.getLogger(DlsFilterLevelActionHandler.class);
-
     private static final Function<SearchRequest, String> LOCAL_CLUSTER_ALIAS_GETTER = ReflectiveAttributeAccessors.protectedObjectAttr(
         "localClusterAlias",
         String.class
@@ -84,7 +83,8 @@ public class DlsFilterLevelActionHandler {
         Client nodeClient,
         ClusterService clusterService,
         IndicesService indicesService,
-        ThreadContext threadContext
+        ThreadContext threadContext,
+        DlsFilterApplication dlsFilterApplication
     ) {
 
         if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE) != null) {
@@ -121,7 +121,8 @@ public class DlsFilterLevelActionHandler {
             nodeClient,
             clusterService,
             indicesService,
-            threadContext
+            threadContext,
+            dlsFilterApplication
         ).handle();
     }
 
@@ -135,6 +136,7 @@ public class DlsFilterLevelActionHandler {
     private final ClusterService clusterService;
     private final IndicesService indicesService;
     private final ThreadContext threadContext;
+    private final DlsFilterApplication dlsFilterApplication;
     private BoolQueryBuilder filterLevelQueryBuilder;
     private DocumentAllowList documentAllowlist;
 
@@ -145,7 +147,8 @@ public class DlsFilterLevelActionHandler {
         Client nodeClient,
         ClusterService clusterService,
         IndicesService indicesService,
-        ThreadContext threadContext
+        ThreadContext threadContext,
+        DlsFilterApplication dlsFilterApplication
     ) {
         this.action = context.getAction();
         this.request = context.getRequest();
@@ -156,6 +159,7 @@ public class DlsFilterLevelActionHandler {
         this.clusterService = clusterService;
         this.indicesService = indicesService;
         this.threadContext = threadContext;
+        this.dlsFilterApplication = dlsFilterApplication;
 
         this.requiresIndexScoping = resolved instanceof ResolvedIndices resolvedIndices
             ? resolvedIndices.local().names().size() != 1
@@ -164,11 +168,14 @@ public class DlsFilterLevelActionHandler {
 
     private boolean handle() {
 
+        // Snapshot the outer context without clearing the current one. The internal header added below remains active
+        // while nodeClient dispatches the child request and is propagated to local search work; closing the stored
+        // context restores the caller's headers.
         try (StoredContext ctx = threadContext.newStoredContext(true)) {
 
             threadContext.putHeader(
                 ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE,
-                log.isDebugEnabled() ? request.toString() : "true"
+                dlsFilterApplication.preservesTopLevelQuery() ? ConfigConstants.OPENDISTRO_SECURITY_TOP_LEVEL_QUERY_DLS_DONE : "true"
             );
 
             try {
@@ -177,7 +184,12 @@ public class DlsFilterLevelActionHandler {
                 }
 
                 if (log.isDebugEnabled()) {
-                    log.debug("Created filterLevelQuery for " + request + ":\n" + filterLevelQueryBuilder);
+                    // Do not log the request or query builder: either can contain sensitive request or DLS rule data.
+                    log.debug(
+                        "Created filter-level DLS query for request type {}; index scoping required: {}",
+                        request.getClass().getSimpleName(),
+                        requiresIndexScoping
+                    );
                 }
 
             } catch (Exception e) {
@@ -227,16 +239,18 @@ public class DlsFilterLevelActionHandler {
             }
         }
 
-        if (searchRequest.source().query() != null) {
-            QueryBuilder query = searchRequest.source().query();
+        SearchSourceBuilder searchSource = getOrCreateSearchSource(searchRequest);
+        QueryBuilder query = searchSource.query();
+        if (query != null) {
             if (ParentChildrenQueryDetector.hasParentOrChildQuery(query)) {
                 listener.onFailure(new OpenSearchSecurityException("Unable to handle filter level DLS for parent or child queries"));
                 return false;
             }
-            filterLevelQueryBuilder.must(query);
         }
 
-        searchRequest.source().query(filterLevelQueryBuilder);
+        if (!tryApplyFilterLevelDls(searchSource, filterLevelQueryBuilder, dlsFilterApplication, listener)) {
+            return false;
+        }
 
         nodeClient.search(searchRequest, new ActionListener<SearchResponse>() {
             @Override
@@ -260,6 +274,86 @@ public class DlsFilterLevelActionHandler {
         });
 
         return false;
+    }
+
+    static SearchSourceBuilder getOrCreateSearchSource(SearchRequest searchRequest) {
+        SearchSourceBuilder searchSource = searchRequest.source();
+        if (searchSource == null) {
+            // A source-less search is an implicit match-all. Materialize its source so filter-level DLS can replace that
+            // implicit query with the DLS restriction while retaining SearchSourceBuilder's normal defaults.
+            searchSource = SearchSourceBuilder.searchSource();
+            searchRequest.source(searchSource);
+        }
+        return searchSource;
+    }
+
+    /**
+     * Applies the filter-level DLS query according to the selected application strategy. A top-level-capable query remains
+     * at the root and propagates the restriction through its filter method. Reader-level DLS remains active in that case
+     * to protect search features which do not use the top-level query.
+     * @param searchSource
+     * @param filterLevelQueryBuilder
+     * @param dlsFilterApplication how to apply DLS to the request query
+     */
+    static void applyFilterLevelDls(
+        SearchSourceBuilder searchSource,
+        BoolQueryBuilder filterLevelQueryBuilder,
+        DlsFilterApplication dlsFilterApplication
+    ) {
+        if (!dlsFilterApplication.appliesToQuery()) {
+            throw new IllegalArgumentException("DLS filter application must modify the query");
+        }
+        QueryBuilder query = searchSource.query();
+        if (dlsFilterApplication.preservesTopLevelQuery()) {
+            if (!supportsTopLevelFilter(query)) {
+                throw new OpenSearchSecurityException("Query does not support top-level DLS filtering");
+            }
+            if (ParentChildrenQueryDetector.hasParentOrChildQuery(query)) {
+                throw new OpenSearchSecurityException("Unable to preserve a top-level query containing parent or child clauses");
+            }
+            QueryBuilder filteredQuery = query.filter(filterLevelQueryBuilder);
+            if (filteredQuery == null) {
+                throw new OpenSearchSecurityException("Top-level query returned no query after applying the DLS filter");
+            }
+            if (!supportsTopLevelFilter(filteredQuery)) {
+                throw new OpenSearchSecurityException("Top-level query capability was not preserved after applying the DLS filter");
+            }
+            searchSource.query(filteredQuery);
+        } else if (query == null) {
+            // No query set, apply filter level DLS query directly
+            searchSource.query(filterLevelQueryBuilder);
+        } else {
+            // Wrap the query in a bool query and apply filter level DLS query to it
+            filterLevelQueryBuilder.must(query);
+            searchSource.query(filterLevelQueryBuilder);
+        }
+    }
+
+    static boolean tryApplyFilterLevelDls(
+        SearchSourceBuilder searchSource,
+        BoolQueryBuilder filterLevelQueryBuilder,
+        DlsFilterApplication dlsFilterApplication,
+        ActionListener<?> listener
+    ) {
+        try {
+            applyFilterLevelDls(searchSource, filterLevelQueryBuilder, dlsFilterApplication);
+            return true;
+        } catch (Exception e) {
+            log.error("Unable to apply filter-level DLS", e);
+            listener.onFailure(
+                e instanceof OpenSearchSecurityException ? e : new OpenSearchSecurityException("Unable to apply filter-level DLS", e)
+            );
+            return false;
+        }
+    }
+
+    /**
+     * Returns whether the query explicitly opts into receiving a security filter while remaining the top-level query.
+     * The Core capability avoids a dependency on an optional query implementation and prevents an unrelated query from
+     * selecting this security-sensitive path merely by using the same query name.
+     */
+    static boolean supportsTopLevelFilter(QueryBuilder query) {
+        return query != null && query.supportsTopLevelFilter();
     }
 
     private boolean handle(GetRequest getRequest, StoredContext ctx) {

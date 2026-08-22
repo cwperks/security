@@ -8,6 +8,7 @@
 
 package org.opensearch.security.transport;
 
+import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -24,6 +25,7 @@ import org.junit.Test;
 import org.opensearch.Version;
 import org.opensearch.action.admin.cluster.shards.ClusterSearchShardsResponse;
 import org.opensearch.action.search.PitService;
+import org.opensearch.action.search.SearchAction;
 import org.opensearch.cluster.ClusterName;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.service.ClusterService;
@@ -48,6 +50,7 @@ import org.opensearch.security.user.UserFactory;
 import org.opensearch.telemetry.tracing.noop.NoopTracer;
 import org.opensearch.test.transport.MockTransport;
 import org.opensearch.threadpool.ThreadPool;
+import org.opensearch.transport.RemoteClusterService;
 import org.opensearch.transport.Transport.Connection;
 import org.opensearch.transport.TransportException;
 import org.opensearch.transport.TransportInterceptor.AsyncSender;
@@ -307,6 +310,19 @@ public class SecurityInterceptorTests {
         senderLatch.set(new CountDownLatch(1));
     }
 
+    private void enableCrossClusterSearch() {
+        try {
+            RemoteClusterService remoteClusterService = OpenSearchSecurityPlugin.GuiceHolder.getRemoteClusterService();
+            Field remoteClustersField = RemoteClusterService.class.getDeclaredField("remoteClusters");
+            remoteClustersField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> remoteClusters = (Map<String, Object>) remoteClustersField.get(remoteClusterService);
+            remoteClusters.put("test-remote-cluster", new Object());
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError("Could not configure the test remote cluster", e);
+        }
+    }
+
     @Test
     public void testSendRequestDecorateLocalConnection() {
 
@@ -446,6 +462,64 @@ public class SecurityInterceptorTests {
 
         // this is a local request
         completableRequestDecorate(sender, connection1, action, request, options, handler, localNode);
+    }
+
+    @Test
+    public void testTopLevelQueryDlsStateIsCopiedToLocalNodes() {
+        enableCrossClusterSearch();
+        String headerValue = ConfigConstants.OPENDISTRO_SECURITY_TOP_LEVEL_QUERY_DLS_DONE;
+        threadPool.getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE, headerValue);
+        when(clusterInfoHolder.isInitialized()).thenReturn(true);
+        when(clusterInfoHolder.hasNode(localNode)).thenReturn(true);
+        when(clusterInfoHolder.hasNode(otherNode)).thenReturn(true);
+
+        AsyncSender headerVerifyingSender = new AsyncSender() {
+            @Override
+            public <T extends TransportResponse> void sendRequest(
+                Connection connection,
+                String action,
+                TransportRequest request,
+                TransportRequestOptions options,
+                TransportResponseHandler<T> handler
+            ) {
+                assertThat(
+                    threadPool.getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE),
+                    is(headerValue)
+                );
+                senderLatch.get().countDown();
+            }
+        };
+
+        completableRequestDecorate(headerVerifyingSender, connection1, SearchAction.NAME, request, options, handler, localNode);
+        completableRequestDecorate(headerVerifyingSender, connection2, SearchAction.NAME, request, options, handler, localNode);
+    }
+
+    @Test
+    public void testTopLevelQueryDlsStateIsRemovedForRemoteCluster() {
+        enableCrossClusterSearch();
+        threadPool.getThreadContext()
+            .putHeader(
+                ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE,
+                ConfigConstants.OPENDISTRO_SECURITY_TOP_LEVEL_QUERY_DLS_DONE
+            );
+        when(clusterInfoHolder.isInitialized()).thenReturn(true);
+        when(clusterInfoHolder.hasNode(remoteNode)).thenReturn(false);
+
+        AsyncSender headerVerifyingSender = new AsyncSender() {
+            @Override
+            public <T extends TransportResponse> void sendRequest(
+                Connection connection,
+                String action,
+                TransportRequest request,
+                TransportRequestOptions options,
+                TransportResponseHandler<T> handler
+            ) {
+                assertNull(threadPool.getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE));
+                senderLatch.get().countDown();
+            }
+        };
+
+        completableRequestDecorate(headerVerifyingSender, connection3, SearchAction.NAME, request, options, handler, localNode);
     }
 
     @Test
