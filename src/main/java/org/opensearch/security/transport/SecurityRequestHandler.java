@@ -104,26 +104,21 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
         final TransportChannel transportChannel,
         Task task
     ) throws Exception {
-        final String resolvedActionClass = resolveActionClass(request);
+        final String requestClass = resolveRequestClass(request);
 
-        String initialActionClassValue = getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INITIAL_ACTION_CLASS_HEADER);
+        try (ThreadContext.StoredContext originalContext = getThreadContext().newStoredContext(false)) {
+            TransportIdentityContext.restoreOrigin(getThreadContext());
 
-        final ThreadContext.StoredContext sgContext = getThreadContext().newStoredContext(false);
-
-        TransportIdentityContext.restoreOrigin(getThreadContext());
-
-        // restore headers used for DLS
-        final var dlsRequestHeadersAsString = getThreadContext().getHeader(ConfigConstants.OPENSEARCH_SECURITY_DLS_REQUEST_HEADERS);
-        if (!Strings.isNullOrEmpty(dlsRequestHeadersAsString)) {
-            final List<DlsRequestHeadersUtil.DlsRequestHeader> dlsRequestHeaders = DefaultObjectMapper.readValue(
-                dlsRequestHeadersAsString,
-                new TypeReference<>() {
-                }
-            );
-            getThreadContext().putTransient(ConfigConstants.OPENSEARCH_SECURITY_DLS_REQUEST_HEADERS, dlsRequestHeaders);
-        }
-
-        try {
+            // restore headers used for DLS
+            final var dlsRequestHeadersAsString = getThreadContext().getHeader(ConfigConstants.OPENSEARCH_SECURITY_DLS_REQUEST_HEADERS);
+            if (!Strings.isNullOrEmpty(dlsRequestHeadersAsString)) {
+                final List<DlsRequestHeadersUtil.DlsRequestHeader> dlsRequestHeaders = DefaultObjectMapper.readValue(
+                    dlsRequestHeadersAsString,
+                    new TypeReference<>() {
+                    }
+                );
+                getThreadContext().putTransient(ConfigConstants.OPENSEARCH_SECURITY_DLS_REQUEST_HEADERS, dlsRequestHeaders);
+            }
 
             if (transportChannel.getChannelType() == null) {
                 throw new RuntimeException("Can not determine channel type (null)");
@@ -140,9 +135,9 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
             if (TransportIdentityContext.hasTransientIdentity(getThreadContext())) {
                 TransportIdentityContext.restoreRolesValidation(getThreadContext());
 
-                addActionTrace("DIR", channelType, false);
+                addActionTrace("DIRECT", channelType);
 
-                putInitialActionClassHeader(initialActionClassValue, resolvedActionClass);
+                putInitiatingRequestClassHeader(requestClass);
             } else {
                 TransportIdentityContext.restoreSerializedIdentity(
                     getThreadContext(),
@@ -225,31 +220,21 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
                     return;
                 }
 
-                addActionTrace("NETTI", channelType, true);
+                addActionTrace("NETWORK", channelType);
 
-                putInitialActionClassHeader(initialActionClassValue, resolvedActionClass);
+                putInitiatingRequestClassHeader(requestClass);
             }
             super.messageReceivedDecorate(request, handler, transportChannel, task);
-        } finally {
-
-            addActionTrace("FIN", transportChannel.getChannelType(), false);
-
-            if (sgContext != null) {
-                sgContext.close();
-            }
         }
     }
 
-    private void putInitialActionClassHeader(String initialActionClassValue, String resolvedActionClass) {
+    private void putInitiatingRequestClassHeader(String requestClass) {
         if (getThreadContext().getHeader(ConfigConstants.OPENDISTRO_SECURITY_INITIAL_ACTION_CLASS_HEADER) == null) {
-            getThreadContext().putHeader(
-                ConfigConstants.OPENDISTRO_SECURITY_INITIAL_ACTION_CLASS_HEADER,
-                initialActionClassValue == null ? resolvedActionClass : initialActionClassValue
-            );
+            getThreadContext().putHeader(ConfigConstants.OPENDISTRO_SECURITY_INITIAL_ACTION_CLASS_HEADER, requestClass);
         }
     }
 
-    private String resolveActionClass(TransportRequest request) {
+    private String resolveRequestClass(TransportRequest request) {
         if (request instanceof BulkShardRequest bulkShardRequest && bulkShardRequest.items().length == 1) {
             return bulkShardRequest.items()[0].request().getClass().getSimpleName();
         }
@@ -287,22 +272,19 @@ public class SecurityRequestHandler<T extends TransportRequest> extends Security
         }
     }
 
-    private void addActionTrace(String stage, String channelType, boolean excludeTraceHeaders) {
+    private void addActionTrace(String stage, String channelType) {
         if (!isActionTraceEnabled()) {
             return;
         }
-        final Map<String, String> headers = excludeTraceHeaders
-            ? getThreadContext().getHeaders()
-                .entrySet()
-                .stream()
-                .filter(entry -> !entry.getKey().startsWith(TransportHeaderConstants.ACTION_TRACE_HEADER_PREFIX))
-                .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()))
-            : getThreadContext().getHeaders();
+        final Map<String, String> headers = getThreadContext().getHeaders()
+            .entrySet()
+            .stream()
+            .filter(entry -> !entry.getKey().startsWith(TransportHeaderConstants.ACTION_TRACE_HEADER_PREFIX))
+            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
         getThreadContext().putHeader(
             TransportHeaderConstants.ACTION_TRACE_HEADER_PREFIX + System.currentTimeMillis() + "#" + UUID.randomUUID(),
             Thread.currentThread().getName() + " " + stage + " -> " + channelType + " " + headers
         );
-
     }
 
     @Override
