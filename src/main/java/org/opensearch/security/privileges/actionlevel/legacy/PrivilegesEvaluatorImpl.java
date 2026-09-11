@@ -92,6 +92,7 @@ import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluator;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.RoleMapper;
+import org.opensearch.security.privileges.actionlevel.DashboardsTenantIndicesRequestFilter;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileges;
@@ -132,6 +133,7 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
 
     protected final Logger log = LogManager.getLogger(this.getClass());
     private final Supplier<ClusterState> clusterStateSupplier;
+    private final DashboardsTenantIndicesRequestFilter dashboardsTenantIndicesRequestFilter;
 
     private final IndexNameExpressionResolver resolver;
 
@@ -169,6 +171,9 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
         this.threadContext = coreDependencies.threadContext();
         this.threadPool = coreDependencies.threadPool();
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
+        this.dashboardsTenantIndicesRequestFilter = new DashboardsTenantIndicesRequestFilter(
+            dynamicDependencies.multiTenancyConfigurationSupplier()
+        );
         this.settings = coreDependencies.settings();
         this.indicesRequestResolver = new IndicesRequestResolver(coreDependencies.indexNameExpressionResolver());
 
@@ -362,7 +367,10 @@ public class PrivilegesEvaluatorImpl implements PrivilegesEvaluator {
             return presponse;
         }
 
-        final Resolved requestedResolved = this.irr.resolveRequest(request);
+        Resolved requestedResolved = this.irr.resolveRequest(request);
+        if (dashboardsTenantIndicesRequestFilter.filter(request, action0, user, requestedResolved.getAllIndices())) {
+            requestedResolved = this.irr.resolveRequest(request);
+        }
 
         log.debug("RequestedResolved : {}", requestedResolved);
 
