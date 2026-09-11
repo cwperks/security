@@ -63,6 +63,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.lucene.search.QueryCachingPolicy;
 import org.apache.lucene.search.Weight;
+import org.apache.lucene.util.automaton.Automaton;
+import org.apache.lucene.util.automaton.Operations;
 import org.bouncycastle.util.encoders.Hex;
 
 import org.opensearch.OpenSearchException;
@@ -86,6 +88,7 @@ import org.opensearch.common.lifecycle.LifecycleListener;
 import org.opensearch.common.logging.DeprecationLogger;
 import org.opensearch.common.network.NetworkModule;
 import org.opensearch.common.network.NetworkService;
+import org.opensearch.common.regex.Regex;
 import org.opensearch.common.settings.ClusterSettings;
 import org.opensearch.common.settings.IndexScopedSettings;
 import org.opensearch.common.settings.Setting;
@@ -2897,7 +2900,57 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             systemIndexDescriptors.add(new SystemIndexDescriptor(securityVersionsIndexPattern, "Security config versions index"));
         }
 
+        validateProtectedIndicesDoNotOverlapSystemIndices(settings, systemIndexDescriptors);
+
         return ImmutableList.copyOf(systemIndexDescriptors);
+    }
+
+    static void validateProtectedIndicesDoNotOverlapSystemIndices(
+        Settings settings,
+        Collection<SystemIndexDescriptor> systemIndexDescriptors
+    ) {
+        if (!settings.getAsBoolean(
+            ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_KEY,
+            ConfigConstants.SECURITY_PROTECTED_INDICES_ENABLED_DEFAULT
+        )) {
+            return;
+        }
+
+        List<String> protectedIndexPatterns = settings.getAsList(
+            ConfigConstants.SECURITY_PROTECTED_INDICES_KEY,
+            ConfigConstants.SECURITY_PROTECTED_INDICES_DEFAULT
+        );
+        List<String> systemIndexPatterns = systemIndexDescriptors.stream()
+            .map(SystemIndexDescriptor::getIndexPattern)
+            .collect(Collectors.toList());
+        if (settings.getAsBoolean(
+            ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_KEY,
+            ConfigConstants.SECURITY_SYSTEM_INDICES_ENABLED_DEFAULT
+        )) {
+            systemIndexPatterns.addAll(
+                settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
+            );
+        }
+
+        for (String protectedIndexPattern : protectedIndexPatterns) {
+            for (String systemIndexPattern : systemIndexPatterns) {
+                if (indexPatternsOverlap(protectedIndexPattern, systemIndexPattern)) {
+                    throw new IllegalStateException(
+                        "Protected index pattern ["
+                            + protectedIndexPattern
+                            + "] overlaps system index pattern ["
+                            + systemIndexPattern
+                            + "]. An index cannot be configured as both protected and system."
+                    );
+                }
+            }
+        }
+    }
+
+    private static boolean indexPatternsOverlap(String firstPattern, String secondPattern) {
+        Automaton first = Regex.simpleMatchToAutomaton(firstPattern);
+        Automaton second = Regex.simpleMatchToAutomaton(secondPattern);
+        return !Operations.isEmpty(Operations.intersection(first, second));
     }
 
     @Override
