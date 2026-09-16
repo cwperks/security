@@ -11,6 +11,7 @@
 package org.opensearch.security.user;
 
 import java.util.HashMap;
+import java.util.Set;
 import java.util.StringJoiner;
 
 import org.apache.logging.log4j.LogManager;
@@ -38,6 +39,19 @@ import static org.opensearch.security.support.SecurityUtils.escapePipe;
  * Moved from https://github.com/opensearch-project/security/blob/d29095f26dba1a26308c69b608dc926bd40c0f52/src/main/java/org/opensearch/security/privileges/PrivilegesEvaluator.java#L293
  */
 public class ThreadContextUserInfo {
+    private static final String PRINCIPAL_INFO = "_opendistro_security_principal_info";
+
+    /** Immutable principal values for request-local consumers, without legacy string encoding. */
+    public record PrincipalInfo(String username, Set<String> mappedRoles) {
+        public PrincipalInfo {
+            mappedRoles = Set.copyOf(mappedRoles);
+        }
+    }
+
+    public static PrincipalInfo getPrincipalInfo(ThreadContext threadContext) {
+        return threadContext.getTransient(PRINCIPAL_INFO);
+    }
+
     protected static final Logger log = LogManager.getLogger(ThreadContextUserInfo.class);
 
     private static final String READ_ACCESS = "READ";
@@ -72,6 +86,10 @@ public class ThreadContextUserInfo {
     }
 
     public void setUserInfoInThreadContext(PrivilegesEvaluationContext context) {
+        // Capture typed values once per request; preserve the legacy encoding for existing consumers.
+        if (getPrincipalInfo(threadContext) == null) {
+            threadContext.putTransient(PRINCIPAL_INFO, new PrincipalInfo(context.getUser().getName(), context.getMappedRoles()));
+        }
         if (threadContext.getTransient(OPENDISTRO_SECURITY_USER_INFO_THREAD_CONTEXT) == null) {
             StringJoiner joiner = new StringJoiner("|");
             // Escape any pipe characters in the values before joining
