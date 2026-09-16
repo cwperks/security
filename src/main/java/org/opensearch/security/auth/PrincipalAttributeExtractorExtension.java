@@ -25,6 +25,6 @@ public class PrincipalAttributeExtractorExtension implements AttributeExtractorE
 
     @Override
     public AttributeExtractor<String> getAttributeExtractor() {
-        return new PrincipalExtractor(plugin.getThreadPool());
+        return new PrincipalExtractor(plugin.getThreadPool(), plugin::getMappedSecurityRoles);
     }
 }

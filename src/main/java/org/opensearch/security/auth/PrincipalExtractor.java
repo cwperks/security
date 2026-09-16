@@ -18,21 +18,26 @@ package org.opensearch.security.auth;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.rule.attribute_extractor.AttributeExtractor;
 import org.opensearch.rule.autotagging.Attribute;
-import org.opensearch.security.user.ThreadContextUserInfo;
+import org.opensearch.security.support.ConfigConstants;
+import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
 
 /**
- * Extracts the exact username and mapped Security roles from the request's typed principal snapshot.
+ * Extracts the exact username and mapped Security roles from the current request's user.
  */
 public class PrincipalExtractor implements AttributeExtractor<String> {
     private final ThreadPool threadPool;
+    private final Function<User, Set<String>> mappedRolesResolver;
 
-    public PrincipalExtractor(ThreadPool threadPool) {
+    public PrincipalExtractor(ThreadPool threadPool, Function<User, Set<String>> mappedRolesResolver) {
         this.threadPool = threadPool;
+        this.mappedRolesResolver = mappedRolesResolver;
     }
 
     @Override
@@ -43,11 +48,12 @@ public class PrincipalExtractor implements AttributeExtractor<String> {
     @Override
     public Iterable<String> extract() {
         ThreadContext threadContext = threadPool.getThreadContext();
-        ThreadContextUserInfo.PrincipalInfo principalInfo = ThreadContextUserInfo.getPrincipalInfo(threadContext);
+        User user = threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER);
         List<String> principals = new ArrayList<>();
-        if (principalInfo != null) {
-            principals.add(String.join("|", PrincipalAttribute.USERNAME, principalInfo.username()));
-            for (String role : principalInfo.mappedRoles()) {
+        if (user != null) {
+            principals.add(String.join("|", PrincipalAttribute.USERNAME, user.getName()));
+            // Backend roles are not necessarily the effective Security roles used by WLM rules.
+            for (String role : mappedRolesResolver.apply(user)) {
                 principals.add(String.join("|", PrincipalAttribute.ROLE, role));
             }
         }

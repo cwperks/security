@@ -2922,6 +2922,11 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
         return (Subject) threadPool.getThreadContext().getPersistent(OPENDISTRO_SECURITY_AUTHENTICATED_USER);
     }
 
+    /** Resolves effective roles for WLM using the active evaluator and current request's caller address. */
+    public Set<String> getMappedSecurityRoles(User user) {
+        return privilegesConfiguration.privilegesEvaluator().createContext(user, null).getMappedRoles();
+    }
+
     @Override
     public SecurityTokenManager getTokenManager() {
         return tokenManager;
