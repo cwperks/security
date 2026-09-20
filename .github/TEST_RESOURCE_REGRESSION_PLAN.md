@@ -1,6 +1,12 @@
 # Test resource regression monitoring
 
-Status: Proposed
+Status: Prototype
+
+The first observation-only prototype is included with this document. It
+provides a label/manual-triggered workflow around `dlicRestApiTest`, samples
+the Linux process tree, publishes summary and raw artifacts, and does not
+enforce resource thresholds. Paired merge-base/head execution remains a
+follow-up after the observer has been validated.
 
 ## Context
 

@@ -121,6 +121,19 @@ opensearch_version = System.getProperty("opensearch.version", "3.8.0-SNAPSHOT")
   ./gradlew integrationTest --tests "org.opensearch.security.ssl.OpenSSLTest"
   ```
 
+### Test Resource Observer
+
+- The label/manual-triggered `.github/workflows/test-resource-observer.yml`
+  workflow records Linux process-tree memory and CPU usage for
+  `dlicRestApiTest` without enforcing resource thresholds.
+- Test the monitor locally on Linux with:
+  ```bash
+  python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+  python3 scripts/test_resource_monitor.py --output-dir build/test-resource-usage -- ./gradlew dlicRestApiTest --no-daemon
+  ```
+- Generated observations belong under `build/test-resource-usage/` and must
+  not be committed.
+
 ### Writing Good Tests
 
 - Prefer unit tests over integration tests when equivalent coverage is achievable.
