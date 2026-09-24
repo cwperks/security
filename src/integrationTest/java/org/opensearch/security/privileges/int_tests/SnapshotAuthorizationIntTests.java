@@ -14,6 +14,7 @@ package org.opensearch.security.privileges.int_tests;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.hc.core5.http.HttpEntity;
@@ -25,6 +26,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import org.opensearch.action.admin.indices.refresh.RefreshRequest;
+import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.test.framework.TestSecurityConfig;
 import org.opensearch.test.framework.cluster.ClusterManager;
 import org.opensearch.test.framework.cluster.LocalCluster;
@@ -54,6 +56,10 @@ public class SnapshotAuthorizationIntTests {
     static final TestIndex index_b3 = TestIndex.name("index_br3").documentCount(6).seed(6).build();
 
     static final TestIndex system_index_plugin_not_existing = TestIndex.name(".system_index_plugin_not_existing")
+        .hidden()
+        .documentCount(0)
+        .build(); // not initially created
+    static final TestIndex system_index_plugin_not_allowlisted = TestIndex.name(".system_index_plugin_not_allowlisted")
         .hidden()
         .documentCount(0)
         .build(); // not initially created
@@ -165,6 +171,17 @@ public class SnapshotAuthorizationIntTests {
             limitedTo(index_a1, index_a2, index_a3, index_awx1, index_awx2, index_b1, index_b2, index_b3, index_bwx1, index_bwx2)
         );
 
+    static final TestSecurityConfig.User REST_API_ADMIN = new TestSecurityConfig.User("rest_api_admin")//
+        .description("REST API administrator")//
+        .roles(
+            new TestSecurityConfig.Role("all_access")//
+                .clusterPermissions("*")
+                .indexPermissions("*")
+                .on("*")
+        )//
+        .reference(READ, unlimitedIncludingOpenSearchSecurityIndex())//
+        .reference(WRITE, unlimitedIncludingOpenSearchSecurityIndex());
+
     /**
      * The SUPER_UNLIMITED_USER authenticates with an admin cert, which will cause all access control code to be skipped.
      * This serves as a base for comparison with the default behavior.
@@ -182,12 +199,21 @@ public class SnapshotAuthorizationIntTests {
         LIMITED_USER_AB,
         LIMITED_USER_NONE,
         UNLIMITED_USER,
+        REST_API_ADMIN,
         SUPER_UNLIMITED_USER
     );
 
     static LocalCluster.Builder clusterBuilder() {
         return new LocalCluster.Builder().clusterManager(ClusterManager.DEFAULT)
             .authc(AUTHC_HTTPBASIC_INTERNAL)
+            .nodeSettings(
+                Map.of(
+                    ConfigConstants.SECURITY_RESTAPI_ROLES_ENABLED,
+                    List.copyOf(REST_API_ADMIN.getRoleNames()),
+                    ConfigConstants.SECURITY_SYSTEM_INDICES_RESTORE_INDICES_KEY,
+                    List.of(system_index_plugin_not_existing.name())
+                )
+            )
             .users(USERS)//
             .indices(index_a1, index_a2, index_a3, index_b1, index_b2, index_b3)//
             .snapshotRepositories("test_repository")
@@ -272,7 +298,7 @@ public class SnapshotAuthorizationIntTests {
                 json("rename_pattern", "index_awx1", "rename_replacement", system_index_plugin_not_existing.name())
             );
 
-            if (clusterConfig.systemIndexPrivilegeEnabled || user == SUPER_UNLIMITED_USER) {
+            if (clusterConfig.systemIndexPrivilegeEnabled || user == REST_API_ADMIN || user == SUPER_UNLIMITED_USER) {
                 assertThat(
                     httpResponse,
                     containsExactly(system_index_plugin_not_existing).at("snapshot.indices").butForbiddenIfIncomplete(user.reference(WRITE))
@@ -283,6 +309,28 @@ public class SnapshotAuthorizationIntTests {
         } finally {
             delete("_snapshot/test_repository/single_index_snapshot");
             delete(index_awx1, system_index_plugin_not_existing);
+        }
+    }
+
+    @Test
+    public void restore_singleIndex_renameToNonAllowlistedSystemIndex() throws Exception {
+        try (TestRestClient restClient = cluster.getRestClient(user)) {
+            createInitialTestObjects(index_awx1);
+            createInitialTestSnapshot("_snapshot/test_repository/single_index_snapshot", json("indices", "index_awx1"));
+
+            TestRestClient.HttpResponse httpResponse = restClient.post(
+                "_snapshot/test_repository/single_index_snapshot/_restore?wait_for_completion=true",
+                json("rename_pattern", "index_awx1", "rename_replacement", system_index_plugin_not_allowlisted.name())
+            );
+
+            if (user == SUPER_UNLIMITED_USER) {
+                assertThat(httpResponse, containsExactly(system_index_plugin_not_allowlisted).at("snapshot.indices"));
+            } else {
+                assertThat(httpResponse, isForbidden());
+            }
+        } finally {
+            delete("_snapshot/test_repository/single_index_snapshot");
+            delete(index_awx1, system_index_plugin_not_allowlisted);
         }
     }
 

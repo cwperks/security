@@ -45,6 +45,7 @@ import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.privileges.ActionPrivileges;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
+import org.opensearch.security.privileges.SystemIndexRestoreAccessEvaluator;
 import org.opensearch.security.privileges.actionlevel.legacy.IndexResolverReplacer.Resolved;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
@@ -74,6 +75,7 @@ public class SystemIndexAccessEvaluator {
 
     private final boolean isSystemIndexEnabled;
     private final boolean isSystemIndexPermissionEnabled;
+    private final SystemIndexRestoreAccessEvaluator systemIndexRestoreAccessEvaluator;
     private final static ImmutableSet<String> SYSTEM_INDEX_PERMISSION_SET = ImmutableSet.of(ConfigConstants.SYSTEM_INDEX_PERMISSION);
 
     public SystemIndexAccessEvaluator(final Settings settings, AuditLog auditLog, IndexResolverReplacer irr) {
@@ -83,6 +85,7 @@ public class SystemIndexAccessEvaluator {
         );
         this.auditLog = auditLog;
         this.irr = irr;
+        this.systemIndexRestoreAccessEvaluator = new SystemIndexRestoreAccessEvaluator(settings);
         this.filterSecurityIndex = settings.getAsBoolean(ConfigConstants.SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS, false);
         this.systemIndexMatcher = WildcardMatcher.from(
             settings.getAsList(ConfigConstants.SECURITY_SYSTEM_INDICES_KEY, ConfigConstants.SECURITY_SYSTEM_INDICES_DEFAULT)
@@ -279,9 +282,14 @@ public class SystemIndexAccessEvaluator {
         final User user
     ) {
         // Perform access check is system index permissions are enabled
-        boolean containsSystemIndex = requestContainsAnySystemIndices(requestedResolved);
+        Set<String> systemIndices = getAllSystemIndices(requestedResolved);
+        boolean containsSystemIndex = !systemIndices.isEmpty();
         boolean containsRegularIndex = requestContainsAnyRegularIndices(requestedResolved);
         boolean serviceAccountUser = user.isServiceAccount();
+
+        if (systemIndexRestoreAccessEvaluator.isAllowed(context, request, systemIndices)) {
+            return null;
+        }
 
         // Calculate plugin-related information once for reuse
         final Set<String> matchingPluginIndices = getMatchingPluginIndices(user, requestedResolved);
