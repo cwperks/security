@@ -199,6 +199,7 @@ import org.opensearch.security.privileges.RestLayerPrivilegesEvaluator;
 import org.opensearch.security.privileges.RoleMapper;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.dlsfls.DlsFlsBaseContext;
+import org.opensearch.security.privileges.dlsfls.DlsFlsProcessedConfig;
 import org.opensearch.security.resources.PluginDefaultRolesHelper;
 import org.opensearch.security.resources.ResourceAccessControlClient;
 import org.opensearch.security.resources.ResourceAccessHandler;
@@ -2534,7 +2535,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
                     Property.Filtered
                 )
             );
-            settings.add(SecuritySettings.DFM_EMPTY_OVERRIDES_ALL_SETTING);
+            settings.add(DlsFlsProcessedConfig.DFM_EMPTY_OVERRIDES_ALL);
             settings.add(Setting.groupSetting(ConfigConstants.SECURITY_AUTHCZ_REST_IMPERSONATION_USERS + ".", Property.NodeScope)); // not
                                                                                                                                     // filtered
                                                                                                                                     // here
@@ -2750,7 +2751,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             );
 
             settings.add(SecuritySettings.USER_ATTRIBUTE_SERIALIZATION_ENABLED_SETTING);
-            settings.add(SecuritySettings.DLS_WRITE_BLOCKED);
+            settings.add(DlsFlsValveImpl.DLS_WRITE_BLOCKED);
 
             settings.add(Setting.groupSetting(ConfigConstants.OPENSEARCH_SECURITY_DLS_REQUEST_HEADERS_CONFIG + ".", Property.NodeScope
             // do not make this Property.Dynamic - as a security measure,

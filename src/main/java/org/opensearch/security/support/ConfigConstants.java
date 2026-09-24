@@ -357,13 +357,9 @@ public class ConfigConstants {
     public static final String SECURITY_SSL_CERTIFICATES_HOT_RELOAD_ENABLED = SECURITY_SETTINGS_PREFIX
         + "ssl.certificates_hot_reload.enabled";
     public static final String SECURITY_DISABLE_ENVVAR_REPLACEMENT = SECURITY_SETTINGS_PREFIX + "disable_envvar_replacement";
-    public static final String SECURITY_DFM_EMPTY_OVERRIDES_ALL = SECURITY_SETTINGS_PREFIX + "dfm_empty_overrides_all";
 
     public static final String SECURITY_FILTER_SECURITYINDEX_FROM_ALL_REQUESTS = SECURITY_SETTINGS_PREFIX
         + "filter_securityindex_from_all_requests";
-    public static final String SECURITY_DLS_MODE = SECURITY_SETTINGS_PREFIX + "dls.mode";
-    public static final String SECURITY_DLS_WRITE_BLOCKED = SECURITY_SETTINGS_PREFIX + "dls.write_blocked";
-    public static final boolean SECURITY_DLS_WRITE_BLOCKED_ENABLED_DEFAULT = false;
     // REST API
     public static final String SECURITY_RESTAPI_ROLES_ENABLED = SECURITY_SETTINGS_PREFIX + "restapi.roles_enabled";
     public static final String SECURITY_RESTAPI_ADMIN_ENABLED = SECURITY_SETTINGS_PREFIX + "restapi.admin.enabled";

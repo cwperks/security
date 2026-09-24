@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 
 import org.opensearch.cluster.metadata.IndexAbstraction;
 import org.opensearch.cluster.metadata.Metadata;
+import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.xcontent.NamedXContentRegistry;
 import org.opensearch.security.privileges.ClusterStateMetadataDependentPrivileges;
@@ -27,6 +28,15 @@ import org.opensearch.security.privileges.CompiledRoles;
  * The current instance is held and managed by DlsFlsValveImpl.
  */
 public class DlsFlsProcessedConfig extends ClusterStateMetadataDependentPrivileges {
+    /** Allows a role without DLS/FLS/masking restrictions to override restrictions from other roles. */
+    public static final Setting<Boolean> DFM_EMPTY_OVERRIDES_ALL = Setting.boolSetting(
+        "plugins.security.dfm_empty_overrides_all",
+        false,
+        Setting.Property.NodeScope,
+        Setting.Property.Dynamic,
+        Setting.Property.Sensitive
+    );
+
     private static final Logger log = LogManager.getLogger(DlsFlsProcessedConfig.class);
 
     private final DocumentPrivileges documentPrivileges;

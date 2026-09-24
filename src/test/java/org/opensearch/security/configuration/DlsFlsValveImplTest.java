@@ -78,6 +78,20 @@ import static org.mockito.Mockito.when;
 public class DlsFlsValveImplTest {
 
     @Test
+    public void testDlsModeParsing() {
+        assertThat(DlsFlsValveImpl.Mode.get(Settings.EMPTY), is(DlsFlsValveImpl.Mode.ADAPTIVE));
+        assertDlsMode("adaptive", DlsFlsValveImpl.Mode.ADAPTIVE);
+        assertDlsMode("LUCENE_LEVEL", DlsFlsValveImpl.Mode.LUCENE_LEVEL);
+        assertDlsMode("filter_level", DlsFlsValveImpl.Mode.FILTER_LEVEL);
+        assertDlsMode("unknown", DlsFlsValveImpl.Mode.ADAPTIVE);
+        assertDlsMode("", DlsFlsValveImpl.Mode.ADAPTIVE);
+    }
+
+    private static void assertDlsMode(String value, DlsFlsValveImpl.Mode expected) {
+        assertThat(DlsFlsValveImpl.Mode.get(Settings.builder().put("plugins.security.dls.mode", value).build()), is(expected));
+    }
+
+    @Test
     public void appliesDlsFilterToTopLevelHybridQueryInAdaptiveMode() {
         QueryBuilder hybridQuery = mock(QueryBuilder.class);
         when(hybridQuery.getName()).thenReturn("hybrid");
