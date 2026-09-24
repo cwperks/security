@@ -430,38 +430,9 @@ public class ConfigConstants {
     public static final List<String> SECURITY_SYSTEM_INDICES_DEFAULT = Collections.emptyList();
     public static final String SECURITY_SYSTEM_INDICES_RESTORE_INDICES_KEY = SECURITY_SETTINGS_PREFIX + "system_indices.restore.indices";
     public static final List<String> SECURITY_SYSTEM_INDICES_RESTORE_INDICES_DEFAULT = List.of(
-        ".plugins-ml-agent",
-        ".plugins-ml-config",
-        ".plugins-ml-connector",
-        ".plugins-ml-controller",
-        ".plugins-ml-model-group",
-        ".plugins-ml-model",
-        ".plugins-ml-task",
-        ".plugins-ml-conversation-meta",
-        ".plugins-ml-conversation-interactions",
-        ".plugins-ml-memory-meta",
-        ".plugins-ml-memory-message",
-        ".plugins-ml-stop-words",
         ".opendistro-alerting-config",
         ".opendistro-alerting-alert*",
-        ".opendistro-anomaly-results*",
-        ".opendistro-anomaly-detector*",
-        ".opendistro-anomaly-checkpoints",
-        ".opendistro-anomaly-detection-state",
-        ".opendistro-reports-*",
-        ".opensearch-notifications-*",
-        ".opensearch-notebooks",
-        ".opensearch-observability",
-        ".ql-datasources",
-        ".opendistro-asynchronous-search-response*",
-        ".replication-metadata-store",
-        ".opensearch-knn-models",
-        ".geospatial-ip2geo-data*",
-        ".plugins-flow-framework-config",
-        ".plugins-flow-framework-templates",
-        ".plugins-flow-framework-state",
-        ".plugins-search-relevance-experiment",
-        ".plugins-search-relevance-judgment-cache"
+        ".opendistro-reports-*"
     );
     public static final String SECURITY_MASKED_FIELDS_ALGORITHM_DEFAULT = SECURITY_SETTINGS_PREFIX + "masked_fields.algorithm.default";
 

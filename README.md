@@ -142,6 +142,7 @@ cluster administrators to restore. It does not allow restoring the Security conf
 plugins.security.system_indices.restore.indices:
   - ".opendistro-alerting-config"
   - ".opendistro-alerting-alert*"
+  - ".opendistro-reports-*"
 ```
 
 The user must still have the snapshot restore cluster permission and the index create and write permissions for every restored target.
