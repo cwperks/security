@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
@@ -359,11 +360,13 @@ public abstract class RuntimeOptimizedActionPrivileges implements ActionPrivileg
     protected abstract static class StaticIndexPrivileges {
         protected final Predicate<String> universallyDeniedIndices;
         protected final Predicate<String> indicesNeedingSystemIndexPrivileges;
+        protected final BiPredicate<PrivilegesEvaluationContext, String> systemIndexAccessException;
         protected final SpecialIndexProtection.IndicesNeedingSpecialRoles indicesNeedingSpecialRoles;
 
         protected StaticIndexPrivileges(SpecialIndexProtection specialIndexProtection) {
             this.universallyDeniedIndices = specialIndexProtection.universallyDeniedIndices;
             this.indicesNeedingSystemIndexPrivileges = specialIndexProtection.indicesNeedingSystemIndexPrivileges;
+            this.systemIndexAccessException = specialIndexProtection.systemIndexAccessException;
             this.indicesNeedingSpecialRoles = specialIndexProtection.indicesNeedingSpecialRoles;
         }
 
@@ -563,19 +566,17 @@ public abstract class RuntimeOptimizedActionPrivileges implements ActionPrivileg
             List<PrivilegesEvaluationException> exceptions
         ) {
             if (this.indicesNeedingSystemIndexPrivileges.test(indexOrAlias)) {
-                return !providesExplicitPrivilege(context, indexOrAlias, ConfigConstants.SYSTEM_INDEX_PERMISSION, exceptions);
+                return !this.systemIndexAccessException.test(context, indexOrAlias)
+                    && !providesExplicitPrivilege(context, indexOrAlias, ConfigConstants.SYSTEM_INDEX_PERMISSION, exceptions);
             }
 
             IndexAbstraction indexAbstraction = context.getIndicesLookup().get(indexOrAlias);
             if (indexAbstraction instanceof IndexAbstraction.Alias alias) {
                 for (IndexMetadata index : alias.getIndices()) {
-                    if (this.indicesNeedingSystemIndexPrivileges.test(index.getIndex().getName())) {
-                        if (!providesExplicitPrivilege(
-                            context,
-                            index.getIndex().getName(),
-                            ConfigConstants.SYSTEM_INDEX_PERMISSION,
-                            exceptions
-                        )) {
+                    String indexName = index.getIndex().getName();
+                    if (this.indicesNeedingSystemIndexPrivileges.test(indexName)) {
+                        if (!this.systemIndexAccessException.test(context, indexName)
+                            && !providesExplicitPrivilege(context, indexName, ConfigConstants.SYSTEM_INDEX_PERMISSION, exceptions)) {
                             return true;
                         }
                     }
@@ -650,6 +651,11 @@ public abstract class RuntimeOptimizedActionPrivileges implements ActionPrivileg
         protected final Predicate<String> indicesNeedingSystemIndexPrivileges;
 
         /**
+         * Allows narrowly scoped exceptions to the system index privilege requirement.
+         */
+        protected final BiPredicate<PrivilegesEvaluationContext, String> systemIndexAccessException;
+
+        /**
          * This is the former "protected indices" feature; see https://github.com/opensearch-project/security/pull/126
          * Indices specified here need special user roles to get any privileges granted from this class.
          * Note: It is a bit questionable if these are still necessary; see https://github.com/opensearch-project/security/issues/5598
@@ -661,9 +667,19 @@ public abstract class RuntimeOptimizedActionPrivileges implements ActionPrivileg
             Predicate<String> indicesNeedingSystemIndexPrivileges,
             IndicesNeedingSpecialRoles indicesNeedingSpecialRoles
         ) {
+            this(universallyDeniedIndices, indicesNeedingSystemIndexPrivileges, indicesNeedingSpecialRoles, (context, index) -> false);
+        }
+
+        public SpecialIndexProtection(
+            Predicate<String> universallyDeniedIndices,
+            Predicate<String> indicesNeedingSystemIndexPrivileges,
+            IndicesNeedingSpecialRoles indicesNeedingSpecialRoles,
+            BiPredicate<PrivilegesEvaluationContext, String> systemIndexAccessException
+        ) {
             this.universallyDeniedIndices = universallyDeniedIndices;
             this.indicesNeedingSystemIndexPrivileges = indicesNeedingSystemIndexPrivileges;
             this.indicesNeedingSpecialRoles = indicesNeedingSpecialRoles;
+            this.systemIndexAccessException = systemIndexAccessException;
         }
 
         /**

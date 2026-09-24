@@ -2316,7 +2316,8 @@ public class IndexAuthorizationReadOnlyIntTests {
         public Collection<SystemIndexDescriptor> getSystemIndexDescriptors(Settings settings) {
             return List.of(
                 new SystemIndexDescriptor(".system_index_plugin", "for testing system index exclusion"),
-                new SystemIndexDescriptor(".system_index_plugin_not_existing", "for testing system index exclusion")
+                new SystemIndexDescriptor(".system_index_plugin_not_existing", "for testing system index exclusion"),
+                new SystemIndexDescriptor(".system_index_plugin_not_allowlisted", "for testing system index exclusion")
             );
         }
     }
