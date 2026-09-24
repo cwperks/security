@@ -36,7 +36,6 @@ import org.opensearch.security.privileges.PrivilegesConfigurationValidationExcep
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluationException;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
-import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.WildcardMatcher;
 
 import com.selectivem.collections.CompactMapGroupBuilder;
@@ -108,7 +107,7 @@ abstract class AbstractRuleBasedPrivileges<SingleRule, JoinedRule extends Abstra
         this.compiledRoles = compiledRoles;
         this.roleToRuleFunction = roleToRuleFunction;
         this.staticRules = new StaticRules<>(compiledRoles, roleToRuleFunction);
-        this.dfmEmptyOverridesAll = settings.getAsBoolean(ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL, false);
+        this.dfmEmptyOverridesAll = DlsFlsProcessedConfig.DFM_EMPTY_OVERRIDES_ALL.get(settings);
         this.statefulIndexEnabled = RoleBasedActionPrivileges.PRECOMPUTED_PRIVILEGES_ENABLED.get(settings);
         this.statefulRules = this.statefulIndexEnabled ? new StatefulRules<>(compiledRoles, indexMetadata, roleToRuleFunction) : null;
     }

@@ -18,7 +18,6 @@ import org.opensearch.action.index.IndexRequest;
 import org.opensearch.action.support.WriteRequest.RefreshPolicy;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.xcontent.XContentType;
-import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.DynamicSecurityConfig;
 import org.opensearch.security.test.helper.rest.RestHelper.HttpResponse;
 import org.opensearch.transport.client.Client;
@@ -84,7 +83,7 @@ public class DfmOverwritesAllTest extends AbstractDlsFlsTest {
      */
     @Test
     public void testDFMUnrestrictedUser() throws Exception {
-        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL, true).build();
+        final Settings settings = Settings.builder().put("plugins.security.dfm_empty_overrides_all", true).build();
 
         setup(
             settings,
@@ -126,7 +125,7 @@ public class DfmOverwritesAllTest extends AbstractDlsFlsTest {
      */
     @Test
     public void testDFMRestrictedUser() throws Exception {
-        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL, true).build();
+        final Settings settings = Settings.builder().put("plugins.security.dfm_empty_overrides_all", true).build();
 
         setup(
             settings,
@@ -175,7 +174,7 @@ public class DfmOverwritesAllTest extends AbstractDlsFlsTest {
     @Test
     public void testDFMRestrictedAndUnrestrictedAllIndices() throws Exception {
 
-        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL, true).build();
+        final Settings settings = Settings.builder().put("plugins.security.dfm_empty_overrides_all", true).build();
 
         setup(
             settings,
@@ -222,7 +221,7 @@ public class DfmOverwritesAllTest extends AbstractDlsFlsTest {
      */
     @Test
     public void testDFMRestrictedAndUnrestrictedOneIndex() throws Exception {
-        final Settings settings = Settings.builder().put(ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL, true).build();
+        final Settings settings = Settings.builder().put("plugins.security.dfm_empty_overrides_all", true).build();
         setup(
             settings,
             new DynamicSecurityConfig().setConfig("securityconfig_dfm_empty_overwrites_all.yml")

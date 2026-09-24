@@ -49,21 +49,6 @@ public class SecuritySettings {
         Setting.Property.Dynamic
     ); // Not filtered
 
-    public static final Setting<Boolean> DLS_WRITE_BLOCKED = Setting.boolSetting(
-        ConfigConstants.SECURITY_DLS_WRITE_BLOCKED,
-        false,
-        Setting.Property.NodeScope,
-        Setting.Property.Dynamic
-    );
-
-    public static final Setting<Boolean> DFM_EMPTY_OVERRIDES_ALL_SETTING = Setting.boolSetting(
-        ConfigConstants.SECURITY_DFM_EMPTY_OVERRIDES_ALL,
-        false,
-        Setting.Property.NodeScope,
-        Setting.Property.Dynamic,
-        Setting.Property.Sensitive
-    );
-
     public static final Setting<Boolean> AUDIT_ENABLED_SETTING = Setting.boolSetting(
         ConfigConstants.SECURITY_AUDIT_ENABLED,
         true,

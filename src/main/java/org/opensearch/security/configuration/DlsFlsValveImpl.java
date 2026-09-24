@@ -42,6 +42,7 @@ import org.opensearch.action.update.UpdateRequest;
 import org.opensearch.cluster.metadata.OptionallyResolvedIndices;
 import org.opensearch.cluster.metadata.ResolvedIndices;
 import org.opensearch.cluster.service.ClusterService;
+import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.action.ActionListener;
@@ -85,17 +86,24 @@ import org.opensearch.security.resources.ResourceSharingDlsUtils;
 import org.opensearch.security.setting.OpensearchDynamicSetting;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.support.HeaderHelper;
-import org.opensearch.security.support.SecuritySettings;
 import org.opensearch.security.support.WildcardMatcher;
 import org.opensearch.security.user.User;
 import org.opensearch.security.util.ParentChildrenQueryDetector;
 import org.opensearch.threadpool.ThreadPool;
 import org.opensearch.transport.client.Client;
 
-import static org.opensearch.security.support.ConfigConstants.SECURITY_DLS_WRITE_BLOCKED;
-import static org.opensearch.security.support.ConfigConstants.SECURITY_DLS_WRITE_BLOCKED_ENABLED_DEFAULT;
-
 public class DlsFlsValveImpl implements DlsFlsRequestValve {
+
+    /** Blocks writes to indices with DLS, FLS, or field-masking restrictions when enabled. */
+    public static final Setting<Boolean> DLS_WRITE_BLOCKED = Setting.boolSetting(
+        "plugins.security.dls.write_blocked",
+        false,
+        Setting.Property.NodeScope,
+        Setting.Property.Dynamic
+    );
+
+    /** Legacy internal mode override; remains unregistered and defaults to adaptive for unknown values. */
+    static final Setting<Mode> DLS_MODE = new Setting<>("plugins.security.dls.mode", "adaptive", Mode::parse, Setting.Property.NodeScope);
 
     private static final String MAP_EXECUTION_HINT = "map";
     private static final Logger log = LogManager.getLogger(DlsFlsValveImpl.class);
@@ -143,13 +151,13 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
                 config.updateClusterStateMetadataAsync(clusterService::state, threadPool);
             }
         });
-        this.dlsWriteBlockedEnabled = settings.getAsBoolean(SECURITY_DLS_WRITE_BLOCKED, SECURITY_DLS_WRITE_BLOCKED_ENABLED_DEFAULT);
+        this.dlsWriteBlockedEnabled = DLS_WRITE_BLOCKED.get(settings);
         if (clusterService.getClusterSettings() != null) {
-            clusterService.getClusterSettings().addSettingsUpdateConsumer(SecuritySettings.DLS_WRITE_BLOCKED, newDlsWriteBlockedEnabled -> {
+            clusterService.getClusterSettings().addSettingsUpdateConsumer(DLS_WRITE_BLOCKED, newDlsWriteBlockedEnabled -> {
                 dlsWriteBlockedEnabled = newDlsWriteBlockedEnabled;
             });
             clusterService.getClusterSettings()
-                .addSettingsUpdateConsumer(SecuritySettings.DFM_EMPTY_OVERRIDES_ALL_SETTING, newDfmEmptyOverridesAll -> {
+                .addSettingsUpdateConsumer(DlsFlsProcessedConfig.DFM_EMPTY_OVERRIDES_ALL, newDfmEmptyOverridesAll -> {
                     DlsFlsProcessedConfig config = dlsFlsBaseContext.config();
                     if (config != null) {
                         config.getDocumentPrivileges().setDfmEmptyOverridesAll(newDfmEmptyOverridesAll);
@@ -850,8 +858,10 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         FILTER_LEVEL;
 
         static Mode get(Settings settings) {
-            String modeString = settings.get(ConfigConstants.SECURITY_DLS_MODE);
+            return DLS_MODE.get(settings);
+        }
 
+        private static Mode parse(String modeString) {
             if ("adaptive".equalsIgnoreCase(modeString)) {
                 return Mode.ADAPTIVE;
             } else if ("lucene_level".equalsIgnoreCase(modeString)) {
