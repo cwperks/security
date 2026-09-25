@@ -156,6 +156,13 @@ public class PrivilegesEvaluationContext {
         return result;
     }
 
+    /**
+     * Invalidates the cached resolution after the request's index expressions have been rewritten.
+     */
+    public void invalidateResolvedIndices() {
+        this.resolvedIndices = null;
+    }
+
     public Task getTask() {
         return task;
     }
