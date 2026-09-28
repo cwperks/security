@@ -18,6 +18,8 @@ package org.opensearch.security.configuration;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -68,6 +70,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.IndexService;
 import org.opensearch.index.mapper.FieldNamesFieldMapper;
+import org.opensearch.index.mapper.MappedFieldType;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.compliance.FieldReadCallback;
@@ -78,6 +81,8 @@ import org.opensearch.security.support.ConfigConstants;
 
 class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
+    private static final Set<String> SEARCH_AS_YOU_TYPE_SUFFIXES = Set.of("._index_prefix", "._2gram", "._3gram", "._4gram");
+
     private final FieldInfos flsFieldInfos;
     private final IndexService indexService;
     private final ThreadContext threadContext;
@@ -87,6 +92,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
     private final FieldPrivileges.FlsRule flsRule;
     private final FieldMasking.FieldMaskingRule fmRule;
     private final Set<String> metaFields;
+    private final Set<String> maskedSearchAsYouTypeSubfields;
 
     private DlsGetEvaluator dge = null;
 
@@ -113,6 +119,25 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         this.flsRule = flsRule;
         this.fmRule = fmRule;
         this.metaFields = metaFields;
+        this.maskedSearchAsYouTypeSubfields = fmRule.isAllowAll() ? Collections.emptySet() : new HashSet<>();
+        if (!fmRule.isAllowAll()) {
+            for (FieldInfo fieldInfo : delegate.getFieldInfos()) {
+                int separator = fieldInfo.name.lastIndexOf('.');
+                if (separator < 0) {
+                    continue;
+                }
+                String suffix = fieldInfo.name.substring(separator);
+                if (!SEARCH_AS_YOU_TYPE_SUFFIXES.contains(suffix)) {
+                    continue;
+                }
+                String parent = fieldInfo.name.substring(0, separator);
+                MappedFieldType parentType = indexService.mapperService().fieldType(parent);
+                // Optimized queries read generated subfields instead of the masked parent.
+                if (parentType != null && "search_as_you_type".equals(parentType.typeName()) && fmRule.isMasked(parent)) {
+                    maskedSearchAsYouTypeSubfields.add(fieldInfo.name);
+                }
+            }
+        }
 
         try {
             if (!flsRule.isAllowAll()) {
@@ -405,7 +430,10 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
      * Exceptions are meta fields, which are always fully visible to a user, regardless of any configuration.
      */
     private boolean isAllowed(String fieldName) {
-        return this.metaFields.contains(fieldName) || (this.flsRule.isAllowedRecursive(fieldName) && !this.fmRule.isMasked(fieldName));
+        return this.metaFields.contains(fieldName)
+            || (this.flsRule.isAllowedRecursive(fieldName)
+                && !this.fmRule.isMasked(fieldName)
+                && !this.maskedSearchAsYouTypeSubfields.contains(fieldName));
     }
 
     /**
