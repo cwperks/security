@@ -61,6 +61,7 @@ import org.opensearch.security.privileges.IndicesRequestResolver;
 import org.opensearch.security.privileges.PrivilegesEvaluationContext;
 import org.opensearch.security.privileges.PrivilegesEvaluatorResponse;
 import org.opensearch.security.privileges.RoleMapper;
+import org.opensearch.security.privileges.SystemIndexRestoreAccessEvaluator;
 import org.opensearch.security.privileges.actionlevel.RoleBasedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.RuntimeOptimizedActionPrivileges;
 import org.opensearch.security.privileges.actionlevel.SubjectBasedActionPrivileges;
@@ -136,6 +137,7 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
     private final RoleMapper roleMapper;
     private final ThreadPool threadPool;
     private final RuntimeOptimizedActionPrivileges.SpecialIndexProtection specialIndexProtection;
+    private final SystemIndexRestoreAccessEvaluator systemIndexRestoreAccessEvaluator;
     private final ActionConfiguration actionConfiguration;
     private volatile boolean indexReductionEnabled = true;
 
@@ -146,10 +148,12 @@ public class PrivilegesEvaluatorImpl implements org.opensearch.security.privileg
         this.threadPool = coreDependencies.threadPool();
         this.clusterStateSupplier = coreDependencies.clusterStateSupplier();
         this.settings = coreDependencies.settings();
+        this.systemIndexRestoreAccessEvaluator = new SystemIndexRestoreAccessEvaluator(settings);
         this.specialIndexProtection = new RuntimeOptimizedActionPrivileges.SpecialIndexProtection(
             dynamicDependencies.specialIndices()::isUniversallyDeniedIndex,
             dynamicDependencies.specialIndices()::isSystemIndex,
-            indicesNeedingSpecialRoles(settings)
+            indicesNeedingSpecialRoles(settings),
+            systemIndexRestoreAccessEvaluator::isAllowed
         );
 
         this.actionConfiguration = new ActionConfiguration(settings);
