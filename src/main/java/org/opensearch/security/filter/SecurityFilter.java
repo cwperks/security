@@ -308,6 +308,8 @@ public class SecurityFilter implements ActionFilter {
 
             }
 
+            // Distinct authorization shortcuts, not a core ThreadContext.isSystemContext() check.
+            // See ARCHITECTURE.md: SecurityFilter bypasses and request context.
             if (userIsAdmin || confRequest || internalRequest || passThroughRequest) {
 
                 if (userIsAdmin && !confRequest && !internalRequest && !passThroughRequest) {
@@ -341,6 +343,8 @@ public class SecurityFilter implements ActionFilter {
 
             }
 
+            // Userless local work: preserve caller identity for actions performed on a user's behalf.
+            // Trusted remote-node status alone does not qualify for this shortcut.
             if (Origin.LOCAL.toString().equals(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN))
                 && (localClusterNodeRequest || HeaderHelper.isDirectRequest(threadContext))
                 && (injectedRoles == null)
@@ -401,6 +405,7 @@ public class SecurityFilter implements ActionFilter {
             }
 
             PrivilegesEvaluationContext context = eval.createContext(user, action, request, actionRequestMetadata, task);
+            // Early-return paths above do not populate this derived summary; it is not an authorization marker.
             this.threadContextUserInfo.setUserInfoInThreadContext(context);
 
             User finalUser = user;
