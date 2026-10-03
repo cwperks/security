@@ -196,6 +196,52 @@ public class SecurityFilter implements ActionFilter {
         return aliases.stream().map(a -> a.name()).collect(ImmutableSet.toImmutableSet());
     }
 
+    /**
+     * Applies action authorization using the effective identity and request provenance in ThreadContext.
+     * The early returns below are separate authorization shortcuts, not a single "system user" check.
+     * They skip this invocation's normal role evaluation, not authentication, transport admission,
+     * other action filters, or all downstream protections.
+     *
+     * <p>ThreadContext has distinct stores; putting a key in one does not populate the others:</p>
+     * <ul>
+     * <li>Transients hold the effective OPENDISTRO_SECURITY_USER, origin, channel type, node-request
+     * flags, and derived user-info summary. Context-aware executors can carry these values between
+     * threads, but arbitrary transient objects are not automatically serialized over transport.</li>
+     * <li>Request headers are strings that can cross transport, including serialized identity/origin
+     * and OPENDISTRO_SECURITY_CONF_REQUEST_HEADER. The Security interceptor selects which headers
+     * to forward. Presence alone does not establish trust.</li>
+     * <li>Persistent values survive stashContext(), including OPENDISTRO_SECURITY_AUTHENTICATED_USER,
+     * which retains the original authenticated subject separately from the effective user. Persistent
+     * does not mean automatically serialized: Security explicitly propagates this identity.</li>
+     * </ul>
+     *
+     * <p>SecurityInterceptor captures identity before stashing the outgoing context. TransportIdentityContext
+     * forwards transients for the same-node optimization and serialized headers for other sends, including
+     * stream transport. SecurityRequestHandler restores identity/origin and sets the channel type. Node
+     * certificate evaluation and the remote cluster-name header determine local/remote-node classification,
+     * separately from the forwarded user. Despite their legacy names, INTERCLUSTER_REQUEST denotes a
+     * local-cluster-node request and TRUSTED_CLUSTER_REQUEST denotes a remote-cluster-node request.</p>
+     *
+     * <p>Trusted remote-node status permits certain transport admission checks and safe security-header reads;
+     * it is not a blanket action-authorization bypass. Internal/shard transport admission and the internal-action
+     * shortcut below have different conditions. These markers belong to trusted infrastructure, not REST
+     * callers: SecurityRestFilter establishes REST origin and rejects reserved security headers. Plugins must
+     * not derive privileged context markers from arbitrary client input.</p>
+     *
+     * <p>This filter does not read ThreadContext.isSystemContext(). Core's markAsSystemContext() sets that
+     * flag and rebuilds transients through registered propagators, retaining request headers and persistent
+     * values but not necessarily the effective-user or provenance transients. It can therefore affect these
+     * checks indirectly; it is not merely a descriptive label. The flag itself is not serialized by
+     * ThreadContext.writeTo(). Replacing these checks with the core flag would require a coordinated contract
+     * for producers, stashing/restoration, transport propagation, admin identities, and cross-cluster requests.</p>
+     *
+     * <p>newStoredContext() saves/restores context without resetting it to an empty context. stashContext()
+     * instead installs a reset context, preserving persistent values and selected propagator-retained state,
+     * and restores the previous context on close. Preserve the caller's effective identity for work performed
+     * on their behalf, and restore the intended context in asynchronous callbacks too. Deliberately elevated
+     * work needs a narrowly scoped, reviewed execution path. SecurePluginSubject.runAs(), for example,
+     * stashes context but installs a plugin user; it is not the no-effective-user shortcut below.</p>
+     */
     private <Request extends ActionRequest, Response extends ActionResponse> void apply0(
         Task task,
         final String action,
@@ -308,8 +354,23 @@ public class SecurityFilter implements ActionFilter {
 
             }
 
-            // Distinct authorization shortcuts, not a core ThreadContext.isSystemContext() check.
-            // See ARCHITECTURE.md: SecurityFilter bypasses and request context.
+            /*
+             * These shortcuts return before both the immutable-index check and normal role evaluation:
+             *
+             * - userIsAdmin: an effective user recognized by AdminDNs, normally authenticated using a client
+             *   certificate whose DN is configured as an admin DN. The all_access role does not qualify.
+             *   Explicitly enabled injected-admin identities are also supported by AdminDNs.
+             * - confRequest: the configuration-request header is "true", read through getSafeFromHeader.
+             *   That helper accepts headers in local-node, trusted-remote-node, or direct context. This is
+             *   a privileged internal marker, not a public API option.
+             * - internalRequest: local-node or direct context AND an internal:* action, excluding
+             *   internal:transport/proxy*. A user may still be present. Trusted remote-node status alone
+             *   does not satisfy this condition, even when transport admission allowed the request.
+             * - passThroughRequest: explicit seq_no/WhoAmI action exceptions, not system-context detection.
+             *
+             * The explicit admin audit calls run only when admin is the sole matching condition. These
+             * shortcuts do not all have the same audit behavior, and none populate user-info below.
+             */
             if (userIsAdmin || confRequest || internalRequest || passThroughRequest) {
 
                 if (userIsAdmin && !confRequest && !internalRequest && !passThroughRequest) {
@@ -343,8 +404,18 @@ public class SecurityFilter implements ActionFilter {
 
             }
 
-            // Userless local work: preserve caller identity for actions performed on a user's behalf.
-            // Trusted remote-node status alone does not qualify for this shortcut.
+            /*
+             * Local system-generated work is recognized by all four conditions together: LOCAL origin,
+             * local-node or direct context, no injected roles, and no effective user. Unlike the shortcuts
+             * above, this path comes after the immutable-index check. Neither a null user nor trusted
+             * remote-node status alone grants this bypass.
+             *
+             * A missing origin was defaulted to LOCAL above; isDirectRequest also treats a missing channel
+             * type as direct. Clearing/stashing context around a local action can therefore satisfy this
+             * shortcut without markAsSystemContext(). A persistent authenticated user may still exist, but
+             * this check uses the effective-user transient, not the original authenticated subject.
+             * Removing the caller's identity is consequently a privilege change, not just context cleanup.
+             */
             if (Origin.LOCAL.toString().equals(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN))
                 && (localClusterNodeRequest || HeaderHelper.isDirectRequest(threadContext))
                 && (injectedRoles == null)
@@ -355,6 +426,8 @@ public class SecurityFilter implements ActionFilter {
             }
 
             if (user == null) {
+
+                // Separate bootstrap/compatibility exceptions; these do not define a general system identity.
 
                 if (action.startsWith("cluster:monitor/state")) {
                     chain.proceed(task, action, request, listener);
@@ -405,7 +478,18 @@ public class SecurityFilter implements ActionFilter {
             }
 
             PrivilegesEvaluationContext context = eval.createContext(user, action, request, actionRequestMetadata, task);
-            // Early-return paths above do not populate this derived summary; it is not an authorization marker.
+            /*
+             * This helper populates the USER_INFO_THREAD_CONTEXT transient only when it is absent. It is
+             * a derived summary of the user, roles, and tenant access, not the identity used to authorize
+             * the request. All early-return paths above skip this call: an admin-certificate request may
+             * have effective and authenticated users but no summary, while local system work may have
+             * neither an effective user nor a summary. An enclosing context may also already contain one.
+             *
+             * Presence does not prove this action passed role evaluation (which has not run yet), and
+             * absence does not prove the request is internal, unauthenticated, or denied. Writing this
+             * summary manually neither authenticates a user nor grants permissions; it is also not a
+             * transport request header just because it is sometimes described as a "transient header".
+             */
             this.threadContextUserInfo.setUserInfoInThreadContext(context);
 
             User finalUser = user;
