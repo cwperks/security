@@ -9,6 +9,7 @@
       - [Multiple Authorization Provider flow](#multiple-authorization-provider-flow)
       - [Rest vs Transport flow](#rest-vs-transport-flow)
       - [Plugin Authorization Flows](#plugin-authorization-flows)
+      - [SecurityFilter bypasses and request context](#securityfilter-bypasses-and-request-context)
       - [Extension On Behalf Of Authorization Flows](#extension-on-behalf-of-authorization-flows)
       - [Extension Service Account Authorization](#extension-service-account-authorization)
 
@@ -152,7 +153,7 @@ As in the normal authorization flow into the service the user is authenticated, 
 
 There are some actions run by plugins that do not reuse the authentication or authorization of the current user, such as to make changes to internal cluster state for cross cluster replication.  When requests come in for these actions they are run outside the user context.
 
-> Operating outside the user context means that no authorization checks are performed.  This is used to elevate plugin activities such as modifications to system indices, operations on the cluster configuration, and to ensure actions on the cluster are not associated with a singular user.
+> Certain system-generated requests run without an effective user and skip the normal role evaluation in `SecurityFilter`. Merely originating in a plugin or lacking user information does not guarantee this behavior. See [SecurityFilter bypasses and request context](#securityfilter-bypasses-and-request-context) for the actual conditions and context-propagation requirements.
 
 ```mermaid
 sequenceDiagram
@@ -188,6 +189,10 @@ sequenceDiagram
     SP-->>OS: Result
     OS-->>C: Result
 ```
+
+#### SecurityFilter bypasses and request context
+
+See the method documentation and inline comments in [`SecurityFilter.apply0`](src/main/java/org/opensearch/security/filter/SecurityFilter.java) for the authorization shortcuts, ThreadContext storage and transport propagation, and their relationship to core's system-context flag. The comments at the user-info call also explain why that summary can be absent on an authorized request.
 
 #### Extension On Behalf Of Authorization Flows
 
