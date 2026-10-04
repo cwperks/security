@@ -12,6 +12,7 @@
 package org.opensearch.security.tools.democonfig;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
@@ -23,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -37,8 +40,10 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
+import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.tools.Hasher;
+import org.opensearch.security.transport.DefaultInterClusterRequestEvaluator;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -260,7 +265,7 @@ public class SecuritySettingsConfigurerTests {
     public void testBuildSecurityConfigMap() {
         Map<String, Object> actual = securitySettingsConfigurer.buildSecurityConfigMap();
 
-        assertThat(actual.size(), is(17));
+        assertThat(actual.size(), is(18));
         assertThat(actual.get("plugins.security.ssl.transport.pemcert_filepath"), equalTo(Certificates.NODE_CERT.getFileName()));
         assertThat(actual.get("plugins.security.ssl.transport.pemkey_filepath"), equalTo(Certificates.NODE_KEY.getFileName()));
         assertThat(actual.get("plugins.security.ssl.transport.pemtrustedcas_filepath"), equalTo(Certificates.ROOT_CA.getFileName()));
@@ -273,6 +278,7 @@ public class SecuritySettingsConfigurerTests {
         assertThat(actual.containsKey(ConfigConstants.SECURITY_COMPLIANCE_SALT), equalTo(true));
         assertThat(((String) actual.get(ConfigConstants.SECURITY_COMPLIANCE_SALT)).length(), equalTo(16));
         assertThat(actual.get("plugins.security.authcz.admin_dn"), equalTo(List.of("CN=kirk,OU=client,O=client,L=test,C=de")));
+        assertThat(actual.get(ConfigConstants.SECURITY_NODES_DN), equalTo(List.of("CN=node-0.example.com,OU=node,O=node,L=test,C=de")));
         assertThat(actual.get("plugins.security.audit.type"), equalTo("internal_opensearch"));
         assertThat(actual.get("plugins.security.enable_snapshot_restore_privilege"), equalTo(true));
         assertThat(actual.get("plugins.security.check_snapshot_restore_write_privileges"), equalTo(true));
@@ -289,6 +295,33 @@ public class SecuritySettingsConfigurerTests {
         assertThat(actual.get("network.host"), equalTo("0.0.0.0"));
         assertThat(actual.get("node.name"), equalTo("smoketestnode"));
         assertThat(actual.get("cluster.initial_cluster_manager_nodes"), equalTo("smoketestnode"));
+    }
+
+    @Test
+    public void testDemoNodeRecognizedWithoutDefaultOid() throws Exception {
+        X509Certificate certificate;
+        try (var input = new ByteArrayInputStream(Certificates.NODE_CERT.getContent().getBytes(StandardCharsets.UTF_8))) {
+            certificate = (X509Certificate) CertificateFactory.getInstance("X.509").generateCertificate(input);
+        }
+        String principal = certificate.getSubjectX500Principal().getName();
+        for (boolean clusterMode : List.of(false, true)) {
+            installer.cluster_mode = clusterMode;
+            Map<String, Object> config = securitySettingsConfigurer.buildSecurityConfigMap();
+            @SuppressWarnings("unchecked")
+            List<String> nodesDn = (List<String>) config.get(ConfigConstants.SECURITY_NODES_DN);
+            // Select an OID absent from the demo certificate so acceptance must come from the DN.
+            Settings settings = Settings.builder()
+                .putList(ConfigConstants.SECURITY_NODES_DN, nodesDn)
+                .put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.6")
+                .build();
+            var evaluator = new DefaultInterClusterRequestEvaluator(settings);
+            X509Certificate[] certificates = { certificate };
+            assertThat(evaluator.isInterClusterRequest(null, certificates, certificates, principal), is(true));
+            var withoutNodesDn = new DefaultInterClusterRequestEvaluator(
+                Settings.builder().put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.6").build()
+            );
+            assertThat(withoutNodesDn.isInterClusterRequest(null, certificates, certificates, principal), is(false));
+        }
     }
 
     @Test

@@ -338,6 +338,8 @@ public class SecuritySettingsConfigurer {
         }
 
         configMap.put("plugins.security.authcz.admin_dn", List.of("CN=kirk,OU=client,O=client,L=test,C=de"));
+        // Demo nodes share this certificate; identify them explicitly instead of relying on the default SAN OID.
+        configMap.put(ConfigConstants.SECURITY_NODES_DN, List.of("CN=node-0.example.com,OU=node,O=node,L=test,C=de"));
 
         configMap.put("plugins.security.audit.type", "internal_opensearch");
         configMap.put("plugins.security.enable_snapshot_restore_privilege", true);
