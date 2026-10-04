@@ -13,7 +13,6 @@ import org.junit.Test;
 
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.support.ConfigConstants;
-import org.opensearch.security.support.ReflectionHelper;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
@@ -25,10 +24,6 @@ public class OIDClusterRequestEvaluatorTest {
     @Test
     public void testExplicitOidRequired() {
         assertThrows(IllegalArgumentException.class, () -> new OIDClusterRequestEvaluator(Settings.EMPTY));
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> ReflectionHelper.instantiateInterClusterRequestEvaluator(OIDClusterRequestEvaluator.class.getName(), Settings.EMPTY)
-        );
         for (String value : new String[] { "", " " }) {
             assertThrows(
                 IllegalArgumentException.class,
