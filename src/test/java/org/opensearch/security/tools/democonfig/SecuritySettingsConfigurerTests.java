@@ -309,17 +309,12 @@ public class SecuritySettingsConfigurerTests {
             Map<String, Object> config = securitySettingsConfigurer.buildSecurityConfigMap();
             @SuppressWarnings("unchecked")
             List<String> nodesDn = (List<String>) config.get(ConfigConstants.SECURITY_NODES_DN);
-            // Select an OID absent from the demo certificate so acceptance must come from the DN.
-            Settings settings = Settings.builder()
-                .putList(ConfigConstants.SECURITY_NODES_DN, nodesDn)
-                .put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.6")
-                .build();
+            // No OID is configured, so acceptance must come from the DN.
+            Settings settings = Settings.builder().putList(ConfigConstants.SECURITY_NODES_DN, nodesDn).build();
             var evaluator = new DefaultInterClusterRequestEvaluator(settings);
             X509Certificate[] certificates = { certificate };
             assertThat(evaluator.isInterClusterRequest(null, certificates, certificates, principal), is(true));
-            var withoutNodesDn = new DefaultInterClusterRequestEvaluator(
-                Settings.builder().put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.6").build()
-            );
+            var withoutNodesDn = new DefaultInterClusterRequestEvaluator(Settings.EMPTY);
             assertThat(withoutNodesDn.isInterClusterRequest(null, certificates, certificates, principal), is(false));
         }
     }

@@ -31,6 +31,18 @@ public class DefaultInterClusterRequestEvaluatorTest {
 
     private static final String NODE_OID = "1.2.3.4.5.5";
 
+    @Test
+    public void testLegacyOidRequiresExplicitConfiguration() throws Exception {
+        X509Certificate cert = mock(X509Certificate.class);
+        when(cert.getSubjectAlternativeNames()).thenReturn(List.of(Arrays.asList(8, NODE_OID)));
+        X509Certificate[] chain = { cert };
+        assertFalse(new DefaultInterClusterRequestEvaluator(Settings.EMPTY).isInterClusterRequest(null, chain, chain, "CN=node"));
+        assertTrue(newEvaluator().isInterClusterRequest(null, chain, chain, "CN=node"));
+        Settings dnSettings = Settings.builder().putList(ConfigConstants.SECURITY_NODES_DN, "CN=node").build();
+        assertTrue(new DefaultInterClusterRequestEvaluator(dnSettings).isInterClusterRequest(null, chain, chain, "CN=node"));
+        assertFalse(new DefaultInterClusterRequestEvaluator(dnSettings).isInterClusterRequest(null, chain, chain, "CN=other"));
+    }
+
     private DefaultInterClusterRequestEvaluator newEvaluator() {
         Settings settings = Settings.builder().put(ConfigConstants.SECURITY_CERT_OID, NODE_OID).build();
         return new DefaultInterClusterRequestEvaluator(settings);

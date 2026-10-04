@@ -56,7 +56,7 @@ public final class DefaultInterClusterRequestEvaluator implements InterClusterRe
     private volatile Map<String, WildcardMatcher> dynamicNodesDn;
 
     public DefaultInterClusterRequestEvaluator(final Settings settings) {
-        this.certOid = settings.get(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.5");
+        this.certOid = settings.get(ConfigConstants.SECURITY_CERT_OID);
         this.staticNodesDnFromEsYml = WildcardMatcher.from(settings.getAsList(ConfigConstants.SECURITY_NODES_DN, Collections.emptyList()))
             .ignoreCase();
         this.dynamicNodesDnConfigEnabled = settings.getAsBoolean(ConfigConstants.SECURITY_NODES_DN_DYNAMIC_CONFIG_ENABLED, false);
@@ -114,6 +114,11 @@ public final class DefaultInterClusterRequestEvaluator implements InterClusterRe
                     nodesDn
                 );
             }
+        }
+
+        // OID-based node recognition is opt-in; without it only configured node DNs are accepted.
+        if (certOid == null || certOid.isBlank()) {
+            return false;
         }
 
         try {

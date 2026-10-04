@@ -44,6 +44,7 @@ import org.opensearch.security.ssl.transport.DefaultPrincipalExtractor;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
 import org.opensearch.security.transport.DefaultInterClusterRequestEvaluator;
 import org.opensearch.security.transport.InterClusterRequestEvaluator;
+import org.opensearch.security.transport.OIDClusterRequestEvaluator;
 
 public class ReflectionHelper {
 
@@ -75,6 +76,12 @@ public class ReflectionHelper {
     }
 
     public static InterClusterRequestEvaluator instantiateInterClusterRequestEvaluator(final String clazz, final Settings settings) {
+        // Do not silently fall back to DN recognition when the built-in OID evaluator is misconfigured.
+        if (OIDClusterRequestEvaluator.class.getName().equals(clazz)) {
+            var evaluator = new OIDClusterRequestEvaluator(settings);
+            addLoadedModule(OIDClusterRequestEvaluator.class);
+            return evaluator;
+        }
         try {
             final Class<?> clazz0 = Class.forName(clazz);
             final InterClusterRequestEvaluator ret = (InterClusterRequestEvaluator) clazz0.getConstructor(Settings.class)
