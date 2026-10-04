@@ -301,6 +301,8 @@ public abstract class AbstractSecurityUnitTest extends RandomizedTest {
         }
 
         if (!sslOnly) {
+            // These test certificates use this SAN registered ID to identify nodes.
+            builder.put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.5");
             builder.putList("plugins.security.authcz.admin_dn", "CN=kirk,OU=client,O=client,l=tEst, C=De");
             builder.put(ConfigConstants.SECURITY_BACKGROUND_INIT_IF_SECURITYINDEX_NOT_EXIST, false);
         }

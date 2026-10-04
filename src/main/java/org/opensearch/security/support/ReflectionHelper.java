@@ -27,6 +27,7 @@
 package org.opensearch.security.support;
 
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -42,7 +43,6 @@ import org.opensearch.OpenSearchException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.ssl.transport.DefaultPrincipalExtractor;
 import org.opensearch.security.ssl.transport.PrincipalExtractor;
-import org.opensearch.security.transport.DefaultInterClusterRequestEvaluator;
 import org.opensearch.security.transport.InterClusterRequestEvaluator;
 
 public class ReflectionHelper {
@@ -81,12 +81,10 @@ public class ReflectionHelper {
                 .newInstance(settings);
             addLoadedModule(clazz0);
             return ret;
-        } catch (final Throwable e) {
-            log.warn("Unable to load inter cluster request evaluator '{}' due to {}", clazz, e.toString());
-            if (log.isDebugEnabled()) {
-                log.debug("Stacktrace: ", e);
-            }
-            return new DefaultInterClusterRequestEvaluator(settings);
+        } catch (ReflectiveOperationException | ClassCastException | LinkageError e) {
+            // An explicitly selected evaluator must not silently fall back to a different node-trust policy.
+            Throwable cause = e instanceof InvocationTargetException ? e.getCause() : e;
+            throw new OpenSearchException("Unable to initialize inter-cluster request evaluator [" + clazz + "]", cause);
         }
     }
 

@@ -84,6 +84,8 @@ public class MinimumSecuritySettingsSupplierFactory {
         );
         builder.put("plugins.security.ssl.http.pemkey_password", PRIVATE_KEY_HTTP_PASSWORD);
         if (sslOnly == false) {
+            // The generated node certificates carry this SAN registered ID.
+            builder.put(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.5");
             builder.put(ConfigConstants.SECURITY_BACKGROUND_INIT_IF_SECURITYINDEX_NOT_EXIST, false);
             builder.putList("plugins.security.authcz.admin_dn", testCertificates.getAdminDNs());
             builder.put("plugins.security.compliance.salt", "1234567890123456");

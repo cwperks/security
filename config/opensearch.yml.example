@@ -185,7 +185,9 @@ plugins.security.audit.type: internal_opensearch
 
 #plugins.security.config_index_name: .opendistro_security
 
-# This defines the OID of server node certificates
+# Optional SAN registered ID for recognizing node certificates. There is no default;
+# without this setting, configure plugins.security.nodes_dn instead.
+# Required when selecting OIDClusterRequestEvaluator, which compares certificate extension values instead of SANs.
 #plugins.security.cert.oid: '1.2.3.4.5.5'
 
 # This specifies the implementation of org.opensearch.security.transport.InterClusterRequestEvaluator

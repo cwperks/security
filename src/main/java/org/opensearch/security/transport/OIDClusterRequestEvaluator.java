@@ -42,7 +42,12 @@ public final class OIDClusterRequestEvaluator implements InterClusterRequestEval
     private final String certOid;
 
     public OIDClusterRequestEvaluator(final Settings settings) {
-        this.certOid = settings.get(ConfigConstants.SECURITY_CERT_OID, "1.2.3.4.5.5");
+        this.certOid = settings.get(ConfigConstants.SECURITY_CERT_OID);
+        if (certOid == null || certOid.isBlank()) {
+            throw new IllegalArgumentException(
+                ConfigConstants.SECURITY_CERT_OID + " must be configured when using OIDClusterRequestEvaluator"
+            );
+        }
     }
 
     @Override
