@@ -23,7 +23,7 @@ import static org.hamcrest.Matchers.startsWith;
 public class BCryptPasswordHasherTests extends AbstractPasswordHasherTests {
 
     @Before
-    public void setup() {
+    public void createHasher() {
         passwordHasher = new BCryptPasswordHasher(
             PasswordHasherFactory.BCRYPT_MINOR.getDefault(Settings.EMPTY),
             PasswordHasherFactory.BCRYPT_ROUNDS.getDefault(Settings.EMPTY)

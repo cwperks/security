@@ -1,0 +1,48 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * The OpenSearch Contributors require contributions made to
+ * this file be licensed under the Apache-2.0 license or a
+ * compatible open source license.
+ *
+ * Modifications Copyright OpenSearch Contributors. See
+ * GitHub history for details.
+ */
+
+package org.opensearch.security.dlic.rest.api;
+
+import org.apache.http.HttpStatus;
+import org.junit.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.opensearch.security.OpenSearchSecurityPlugin.PLUGINS_PREFIX;
+
+public class SecurityApiAccessTests extends AbstractRestApiUnitTest {
+    private final String ENDPOINT;
+
+    protected String getEndpointPrefix() {
+        return PLUGINS_PREFIX;
+    }
+
+    public SecurityApiAccessTests() {
+        ENDPOINT = getEndpointPrefix() + "/api/internalusers";
+    }
+
+    @Test
+    public void testRestApi() throws Exception {
+
+        setup();
+
+        // test with no cert, must fail
+        assertThat(rh.executeGetRequest(ENDPOINT).getStatusCode(), is(HttpStatus.SC_UNAUTHORIZED));
+        assertThat(rh.executeGetRequest(ENDPOINT, encodeBasicHeader("admin", "admin")).getStatusCode(), is(HttpStatus.SC_FORBIDDEN));
+
+        // test with non-admin cert, must fail
+        rh.keystore = "restapi/node-0-keystore";
+        rh.sendAdminCertificate = true;
+        assertThat(rh.executeGetRequest(ENDPOINT).getStatusCode(), is(HttpStatus.SC_UNAUTHORIZED));
+        assertThat(rh.executeGetRequest(ENDPOINT, encodeBasicHeader("admin", "admin")).getStatusCode(), is(HttpStatus.SC_FORBIDDEN));
+
+    }
+}

@@ -20,7 +20,7 @@ import org.junit.Test;
  * missing privileges on internal sub-requests, so this exercises the
  * DocumentAllowList bypass path more rigorously.
  */
-public class DlsTermLookupQueryV4EvaluatorTest extends DlsTermLookupQueryTest {
+public class DlsTermLookupQueryV4EvaluatorTest extends DlsTermLookupQueryTests {
 
     @Override
     protected String getSecurityConfigName() {

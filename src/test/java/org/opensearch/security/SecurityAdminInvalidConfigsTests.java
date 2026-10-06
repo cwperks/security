@@ -26,7 +26,6 @@
 
 package org.opensearch.security;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,7 +65,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
         argsAsList.add("-cn");
         argsAsList.add(clusterInfo.clustername);
         argsAsList.add("-cd");
-        argsAsList.add(new File("./src/test/resources/invalid_dupkey").getAbsolutePath());
+        argsAsList.add(TEST_RESOURCE_ABSOLUTE_PATH + "invalid_dupkey");
         argsAsList.add("-nhnv");
 
         int returnCode = SecurityAdmin.execute(argsAsList.toArray(new String[0]));
@@ -134,7 +133,7 @@ public class SecurityAdminInvalidConfigsTests extends SingleClusterTest {
         argsAsList.add("-cn");
         argsAsList.add(clusterInfo.clustername);
         argsAsList.add("-f");
-        argsAsList.add(new File("./src/test/resources/invalid_dupkey/roles_mapping.yml").getAbsolutePath());
+        argsAsList.add(TEST_RESOURCE_ABSOLUTE_PATH + "invalid_dupkey/roles_mapping.yml");
         argsAsList.add("-t");
         argsAsList.add("rolesmapping");
         argsAsList.add("-nhnv");

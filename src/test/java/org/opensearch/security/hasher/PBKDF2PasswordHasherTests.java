@@ -22,7 +22,7 @@ import static org.hamcrest.Matchers.is;
 public class PBKDF2PasswordHasherTests extends AbstractPasswordHasherTests {
 
     @Before
-    public void setup() {
+    public void createHasher() {
         passwordHasher = new PBKDF2PasswordHasher(
             PasswordHasherFactory.PBKDF2_FUNCTION.getDefault(Settings.EMPTY),
             PasswordHasherFactory.PBKDF2_ITERATIONS.getDefault(Settings.EMPTY),

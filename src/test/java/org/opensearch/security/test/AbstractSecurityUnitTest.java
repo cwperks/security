@@ -38,7 +38,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import javax.net.ssl.SSLContext;
 
-import com.carrotsearch.randomizedtesting.RandomizedTest;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope;
 import com.carrotsearch.randomizedtesting.annotations.ThreadLeakScope.Scope;
 import com.google.common.collect.ImmutableList;
@@ -57,6 +56,7 @@ import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.hc.core5.ssl.SSLContexts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -101,7 +101,8 @@ import static org.hamcrest.Matchers.is;
  * issues.
  */
 @ThreadLeakScope(Scope.NONE)
-public abstract class AbstractSecurityUnitTest extends RandomizedTest {
+@LuceneTestCase.SuppressSysoutChecks(bugUrl = "Security cluster tests log during embedded node startup and teardown")
+public abstract class AbstractSecurityUnitTest extends LuceneTestCase {
 
     private static final String NODE_ROLE_KEY = "node.roles";
     protected static final AtomicLong num = new AtomicLong();

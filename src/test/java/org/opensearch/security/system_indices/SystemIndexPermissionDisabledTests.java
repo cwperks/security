@@ -33,7 +33,7 @@ import static org.junit.Assert.assertFalse;
 public class SystemIndexPermissionDisabledTests extends AbstractSystemIndicesTests {
 
     @Before
-    public void setup() throws Exception {
+    public void initializeSystemIndexPermissionDisabledCluster() throws Exception {
         setupWithSsl(true, false);
         createTestIndicesAndDocs();
     }
