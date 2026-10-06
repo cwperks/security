@@ -7,13 +7,13 @@
  */
 package org.opensearch.security.dlic.rest.validation;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.opensearch.cluster.metadata.IndexMetadata;
 import org.opensearch.cluster.metadata.Metadata;
+import org.opensearch.security.DefaultObjectMapper;
 import org.opensearch.security.privileges.dlsfls.FieldMaskingDiagnostics;
 import org.opensearch.security.support.WildcardMatcher;
 
@@ -26,6 +26,11 @@ import tools.jackson.databind.JsonNode;
  * Mapping types cannot prove that source values are strings; runtime values are not inspected here.
  */
 public final class FieldMaskingMappingValidator {
+    // Work limits, not pagination: inspection stops when a limit is reached.
+    private static final int MAX_INDEX_EXPRESSION_PAIRS = 100;
+    private static final int MAX_PROPERTIES_INSPECTED = 10_000;
+    private static final int MAX_MAPPING_DEPTH = 50;
+
     private static final Set<String> NON_STRING_TYPES = Set.of(
         "byte",
         "short",
@@ -66,17 +71,17 @@ public final class FieldMaskingMappingValidator {
     }
 
     static void inspect(JsonNode role, Metadata metadata, Consumer<Finding> warning) {
-        int[] remaining = { 10000 };
+        int[] remaining = { MAX_PROPERTIES_INSPECTED };
         int indices = 0;
         for (JsonNode permission : role.path("index_permissions")) {
             for (JsonNode expression : permission.path("masked_fields")) {
                 WildcardMatcher fieldPattern = WildcardMatcher.from(expression.asText().split("::", 2)[0]);
                 for (IndexMetadata index : metadata.indices().values()) {
-                    if (++indices > 100 || remaining[0] <= 0) return;
+                    if (++indices > MAX_INDEX_EXPRESSION_PAIRS || remaining[0] <= 0) return;
                     if (index.mapping() == null || !matchesIndex(permission, index)) continue;
                     try {
                         inspectProperties(
-                            index.mapping().sourceAsMap(),
+                            DefaultObjectMapper.objectMapper().valueToTree(index.mapping().sourceAsMap()),
                             "",
                             fieldPattern,
                             remaining,
@@ -102,24 +107,23 @@ public final class FieldMaskingMappingValidator {
         return false;
     }
 
-    @SuppressWarnings("unchecked")
     static void inspectProperties(
-        Map<String, Object> mapping,
+        JsonNode mapping,
         String prefix,
         WildcardMatcher pattern,
         int[] remaining,
         int depth,
         BiConsumer<String, String> warning
     ) {
-        if (depth > 50 || remaining[0] <= 0) return;
-        Object properties = mapping.get("properties");
-        if (!(properties instanceof Map<?, ?>)) return;
-        for (Map.Entry<String, Object> entry : ((Map<String, Object>) properties).entrySet()) {
+        if (depth > MAX_MAPPING_DEPTH || remaining[0] <= 0) return;
+        JsonNode properties = mapping.path("properties");
+        if (!properties.isObject()) return;
+        for (var entry : properties.properties()) {
             if (--remaining[0] < 0) return;
-            if (!(entry.getValue() instanceof Map<?, ?>)) continue;
-            Map<String, Object> definition = (Map<String, Object>) entry.getValue();
+            JsonNode definition = entry.getValue();
+            if (!definition.isObject()) continue;
             String field = prefix + entry.getKey();
-            String type = String.valueOf(definition.getOrDefault("type", "object"));
+            String type = definition.path("type").asText("object");
             if (NON_STRING_TYPES.contains(type) && pattern.test(field)) warning.accept(field, type);
             inspectProperties(definition, field + ".", pattern, remaining, depth + 1, warning);
         }

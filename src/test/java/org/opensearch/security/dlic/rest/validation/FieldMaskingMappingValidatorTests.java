@@ -44,19 +44,14 @@ public class FieldMaskingMappingValidatorTests extends LuceneTestCase {
     }
 
     public void testMappedTypesAndNestedFields() {
-        Map<String, Object> mapping = Map.of(
-            "properties",
-            Map.of(
-                "text",
-                Map.of("type", "text"),
-                "keyword",
-                Map.of("type", "keyword"),
-                "number",
-                Map.of("type", "long"),
-                "object",
-                Map.of("properties", Map.of("flag", Map.of("type", "boolean")))
-            )
-        );
+        var mapping = DefaultObjectMapper.objectMapper().readTree("""
+            {"properties": {
+              "text": {"type": "text"},
+              "keyword": {"type": "keyword"},
+              "number": {"type": "long"},
+              "object": {"properties": {"flag": {"type": "boolean"}}}
+            }}
+            """);
         var warnings = new ArrayList<String>();
         FieldMaskingMappingValidator.inspectProperties(
             mapping,
@@ -74,14 +69,9 @@ public class FieldMaskingMappingValidatorTests extends LuceneTestCase {
 
     public void testInspectionIsBounded() {
         var warnings = new ArrayList<String>();
-        FieldMaskingMappingValidator.inspectProperties(
-            Map.of("properties", Map.of("number", Map.of("type", "long"))),
-            "",
-            WildcardMatcher.from("*"),
-            new int[] { 0 },
-            0,
-            (field, type) -> warnings.add(field)
-        );
+        FieldMaskingMappingValidator.inspectProperties(DefaultObjectMapper.objectMapper().readTree("""
+            {"properties": {"number": {"type": "long"}}}
+            """), "", WildcardMatcher.from("*"), new int[] { 0 }, 0, (field, type) -> warnings.add(field));
         assertTrue(warnings.isEmpty());
     }
 
