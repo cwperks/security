@@ -56,11 +56,12 @@ public final class FieldMaskingMappingValidator {
     private FieldMaskingMappingValidator() {}
 
     public static void inspect(JsonNode role, Metadata metadata) {
+        var diagnostics = new FieldMaskingDiagnostics();
         try {
             inspect(
                 role,
                 metadata,
-                finding -> FieldMaskingDiagnostics.warn(finding.index(), finding.field(), finding.type(), "role mapping inspection")
+                finding -> diagnostics.warn(finding.index(), finding.field(), finding.type(), "role mapping inspection")
             );
         } catch (RuntimeException e) {
             // Advisory only: incomplete metadata or unresolved patterns must not change role-write behavior.

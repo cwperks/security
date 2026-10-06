@@ -37,7 +37,7 @@ public class FieldMaskingDiagnosticsIntegrationTest {
                 "{\"index_permissions\":[{\"index_patterns\":[\"masking-diagnostic-*\"],\"allowed_actions\":[\"read\"],\"masked_fields\":[\"value\"]}]}";
             assertEquals(201, admin.putJson(rolePath, role).getStatusCode());
             logs.assertThatContainExactly(
-                "Field masking cannot guarantee protection for index [masking-diagnostic-long], field [value], type [long], detected by [role mapping inspection]. Only string values are masked; use FLS to hide unsupported values. Diagnostics are sampled."
+                "Field masking cannot guarantee protection for index [masking-diagnostic-long], field [value], type [long], detected by [role mapping inspection]. Only string values are masked; use FLS to hide unsupported values. At most 10 warnings are emitted per role validation."
             );
             assertEquals(200, admin.putJson(rolePath, role.replace("masking-diagnostic-*", "future-index-*")).getStatusCode());
             assertEquals(400, admin.putJson(rolePath, role.replace("\"value\"", "\"value::NO_SUCH_HASH\"")).getStatusCode());
