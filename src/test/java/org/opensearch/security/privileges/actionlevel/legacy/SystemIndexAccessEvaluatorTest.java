@@ -21,9 +21,9 @@ import java.util.TreeMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.logging.log4j.Logger;
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.get.MultiGetRequest;
@@ -59,7 +59,7 @@ import org.opensearch.security.util.MockIndexMetadataBuilder;
 import org.opensearch.tasks.Task;
 
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -71,8 +71,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
-public class SystemIndexAccessEvaluatorTest {
+public class SystemIndexAccessEvaluatorTest extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private AuditLog auditLog;
@@ -121,6 +122,7 @@ public class SystemIndexAccessEvaluatorTest {
         String index,
         boolean createIndexPatternWithSystemIndexPermission
     ) {
+        mocks = MockitoAnnotations.openMocks(this);
         ThreadContext threadContext = createThreadContext();
         indexNameExpressionResolver = createIndexNameExpressionResolver(threadContext);
 
@@ -191,8 +193,9 @@ public class SystemIndexAccessEvaluatorTest {
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         verifyNoMoreInteractions(auditLog, irr, request, task);
+        mocks.close();
     }
 
     @Test

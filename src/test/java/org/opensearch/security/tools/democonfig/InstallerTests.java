@@ -24,6 +24,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -41,7 +42,7 @@ import static org.opensearch.security.tools.democonfig.util.DemoConfigHelperUtil
 import static org.opensearch.security.tools.democonfig.util.DemoConfigHelperUtil.deleteDirectoryRecursive;
 import static org.junit.Assert.assertThrows;
 
-public class InstallerTests {
+public class InstallerTests extends LuceneTestCase {
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
     private final InputStream originalIn = System.in;
@@ -264,6 +265,19 @@ public class InstallerTests {
         String expectedOpensearchPluginDirPath = expectedBaseDirValue + "plugins" + File.separator;
         String expectedOpensearchLibDirPath = expectedBaseDirValue + "lib" + File.separator;
         String expectedOpensearchInstallType = installer.determineInstallType();
+
+        if (new File(expectedOpensearchConfFilePath).exists() == false) {
+            verifyStdOutContainsString("Unable to determine OpenSearch config file. Quit.");
+        }
+        if (new File(expectedOpensearchBinDirPath).exists() == false) {
+            verifyStdOutContainsString("Unable to determine OpenSearch bin directory. Quit.");
+        }
+        if (new File(expectedOpensearchPluginDirPath).exists() == false) {
+            verifyStdOutContainsString("Unable to determine OpenSearch plugins directory. Quit.");
+        }
+        if (new File(expectedOpensearchLibDirPath).exists() == false) {
+            verifyStdOutContainsString("Unable to determine OpenSearch lib directory. Quit.");
+        }
 
         assertThat(installer.OPENSEARCH_CONF_FILE, equalTo(expectedOpensearchConfFilePath));
         assertThat(installer.OPENSEARCH_BIN_DIR, equalTo(expectedOpensearchBinDirPath));

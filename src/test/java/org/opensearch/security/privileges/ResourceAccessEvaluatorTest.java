@@ -12,9 +12,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.action.ActionRequest;
 import org.opensearch.action.ActionRequestValidationException;
@@ -31,7 +32,7 @@ import org.opensearch.security.user.User;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -43,9 +44,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
 @SuppressWarnings("unchecked") // action listener mock
-public class ResourceAccessEvaluatorTest {
+public class ResourceAccessEvaluatorTest extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private ResourceAccessHandler resourceAccessHandler;
@@ -68,6 +70,7 @@ public class ResourceAccessEvaluatorTest {
 
     @Before
     public void setup() {
+        mocks = MockitoAnnotations.openMocks(this);
         threadContext = new ThreadContext(Settings.EMPTY);
         evaluator = new ResourceAccessEvaluator(
             resourcePluginInfo,
@@ -116,6 +119,11 @@ public class ResourceAccessEvaluatorTest {
         public List<String> ids() {
             return ids;
         }
+    }
+
+    @After
+    public void closeMocks() throws Exception {
+        mocks.close();
     }
 
     private void stubAuthenticatedUser() {

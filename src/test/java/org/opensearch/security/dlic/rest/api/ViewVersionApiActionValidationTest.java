@@ -32,7 +32,7 @@ public class ViewVersionApiActionValidationTest extends AbstractApiActionValidat
     private SecurityConfigVersionsLoader versionsLoader;
 
     @Before
-    public void setUp() {
+    public void setUpViewVersionApiAction() {
         versionsLoader = mock(SecurityConfigVersionsLoader.class);
 
         Settings settings = Settings.builder().put(EXPERIMENTAL_SECURITY_CONFIGURATIONS_VERSIONS_ENABLED, true).build();

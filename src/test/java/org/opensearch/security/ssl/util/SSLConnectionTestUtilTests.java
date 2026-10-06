@@ -17,6 +17,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ import org.mockito.Mockito;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class SSLConnectionTestUtilTests {
+public class SSLConnectionTestUtilTests extends LuceneTestCase {
     private Socket socket;
     private OutputStream outputStream;
     private InputStream inputStream;

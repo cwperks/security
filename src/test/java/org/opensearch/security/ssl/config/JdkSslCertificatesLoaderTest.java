@@ -61,6 +61,9 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_ALI
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_FILEPATH;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_TYPE;
 import static org.junit.Assert.assertThrows;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomAsciiAlphanumOfLength;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
+import static com.carrotsearch.randomizedtesting.RandomizedTest.randomFrom;
 
 public class JdkSslCertificatesLoaderTest extends SslCertificatesLoaderTest {
 

@@ -10,6 +10,7 @@
  */
 package org.opensearch.security.ssl.util;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 
 import static org.opensearch.transport.NettyAllocator.getAllocator;
 
-public class TLSUtilTests {
+public class TLSUtilTests extends LuceneTestCase {
 
     public static final int TLS_MAJOR_VERSION = 3;
     public static final int TLS_MINOR_VERSION = 0;

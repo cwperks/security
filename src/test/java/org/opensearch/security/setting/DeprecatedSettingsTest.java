@@ -7,10 +7,10 @@ package org.opensearch.security.setting;
 
 import java.io.IOException;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import org.opensearch.Version;
 import org.opensearch.common.logging.DeprecationLogger;
@@ -19,7 +19,7 @@ import org.opensearch.security.securityconf.impl.CType;
 import org.opensearch.security.support.ConfigHelper;
 
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import static org.opensearch.security.configuration.ConfigurationRepository.DEFAULT_CONFIG_VERSION;
 import static org.opensearch.security.setting.DeprecatedSettings.checkForDeprecatedSetting;
@@ -30,8 +30,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-@RunWith(MockitoJUnitRunner.class)
-public class DeprecatedSettingsTest {
+public class DeprecatedSettingsTest extends LuceneTestCase {
+
+    private AutoCloseable mocks;
 
     @Mock
     private DeprecationLogger logger;
@@ -40,14 +41,16 @@ public class DeprecatedSettingsTest {
 
     @Before
     public void before() {
+        mocks = MockitoAnnotations.openMocks(this);
         original = DeprecatedSettings.DEPRECATION_LOGGER;
         DeprecatedSettings.DEPRECATION_LOGGER = logger;
     }
 
     @After
-    public void after() {
+    public void after() throws Exception {
         DeprecatedSettings.DEPRECATION_LOGGER = original;
         verifyNoMoreInteractions(logger);
+        mocks.close();
     }
 
     @Test
