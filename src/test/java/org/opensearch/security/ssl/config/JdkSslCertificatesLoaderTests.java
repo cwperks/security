@@ -60,10 +60,10 @@ import static org.opensearch.security.ssl.util.SSLConfigConstants.SSL_TRANSPORT_
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_ALIAS;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_FILEPATH;
 import static org.opensearch.security.ssl.util.SSLConfigConstants.TRUSTSTORE_TYPE;
-import static org.junit.Assert.assertThrows;
 import static com.carrotsearch.randomizedtesting.RandomizedTest.randomAsciiAlphanumOfLength;
 import static com.carrotsearch.randomizedtesting.RandomizedTest.randomBoolean;
 import static com.carrotsearch.randomizedtesting.RandomizedTest.randomFrom;
+import static org.junit.Assert.assertThrows;
 
 public class JdkSslCertificatesLoaderTests extends SslCertificatesLoaderTest {
 

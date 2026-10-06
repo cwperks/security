@@ -20,10 +20,10 @@ package org.opensearch.security.auth.blocking;
 
 import java.util.Set;
 
+import org.apache.lucene.tests.util.LuceneTestCase;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import org.apache.lucene.tests.util.LuceneTestCase;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
