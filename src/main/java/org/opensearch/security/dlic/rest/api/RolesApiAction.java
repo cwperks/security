@@ -204,13 +204,7 @@ public class RolesApiAction extends AbstractApiAction {
                             .build();
                     }
                 });
-                validator.mappingDiagnostics = content -> {
-                    var state = clusterService.state();
-                    // Mapping diagnostics are optional when cluster metadata is unavailable.
-                    if (state != null) {
-                        FieldMaskingMappingValidator.inspect(content, state.metadata());
-                    }
-                };
+                validator.mappingDiagnostics = content -> FieldMaskingMappingValidator.inspect(content, clusterService.state().metadata());
                 return validator;
             }
         };

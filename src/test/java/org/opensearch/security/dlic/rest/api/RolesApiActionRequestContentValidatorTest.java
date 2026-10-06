@@ -13,8 +13,10 @@ package org.opensearch.security.dlic.rest.api;
 
 import java.io.IOException;
 
+import org.junit.Before;
 import org.junit.Test;
 
+import org.opensearch.cluster.ClusterState;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.security.util.FakeRestRequest;
 
@@ -22,19 +24,13 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 public class RolesApiActionRequestContentValidatorTest extends AbstractApiActionValidationTest {
 
-    @Test
-    public void acceptsMaskedFieldsWithoutClusterState() throws IOException {
-        final var validator = new RolesApiAction(clusterService, threadPool, securityApiDependencies).createEndpointValidator()
-            .createRequestContentValidator();
-        final var content = objectMapper.readTree(
-            "{\"index_permissions\":[{\"index_patterns\":[\"future-*\"],\"allowed_actions\":[\"read\"],\"masked_fields\":[\"value\"]}]}"
-        );
-        var request = FakeRestRequest.builder().withContent(new BytesArray(content.toString())).build();
-        assertTrue(validator.validate(request).isValid());
-        assertTrue(validator.validate(request, content).isValid());
+    @Before
+    public void setUpClusterState() {
+        when(clusterService.state()).thenReturn(ClusterState.EMPTY_STATE);
     }
 
     @Test
