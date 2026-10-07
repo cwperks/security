@@ -21,7 +21,7 @@ import tools.jackson.databind.JsonNode;
 
 /**
  * Best-effort diagnostics against existing mappings, never a condition for saving a role.
- * Inspects at most 100 index/expression pairs and 10,000 properties per role validation.
+ * Inspects at most 100 matching index/expression pairs and 10,000 properties for wildcard expressions per role validation.
  * Missing indices, user-dependent patterns, multi-fields, and unknown plugin field types are not diagnosed.
  * Mapping types cannot prove that source values are strings; runtime values are not inspected here.
  */
@@ -73,29 +73,51 @@ public final class FieldMaskingMappingValidator {
 
     static void inspect(JsonNode role, Metadata metadata, Consumer<Finding> warning) {
         int[] remaining = { MAX_PROPERTIES_INSPECTED };
-        int indices = 0;
+        int pairs = 0;
         for (JsonNode permission : role.path("index_permissions")) {
-            for (JsonNode expression : permission.path("masked_fields")) {
-                WildcardMatcher fieldPattern = WildcardMatcher.from(expression.asText().split("::", 2)[0]);
-                for (IndexMetadata index : metadata.indices().values()) {
-                    if (++indices > MAX_INDEX_EXPRESSION_PAIRS || remaining[0] <= 0) return;
-                    if (index.mapping() == null || !matchesIndex(permission, index)) continue;
-                    try {
-                        inspectProperties(
-                            DefaultObjectMapper.objectMapper().valueToTree(index.mapping().sourceAsMap()),
-                            "",
-                            fieldPattern,
-                            remaining,
-                            0,
-                            (field, type) -> warning.accept(new Finding(index.getIndex().getName(), field, type))
+            if (permission.path("masked_fields").isEmpty()) continue;
+            for (IndexMetadata index : metadata.indices().values()) {
+                if (index.mapping() == null || !matchesIndex(permission, index)) continue;
+                if (pairs >= MAX_INDEX_EXPRESSION_PAIRS) return;
+                try {
+                    // Decode once for all expressions in this permission block, not once per field.
+                    JsonNode mapping = DefaultObjectMapper.objectMapper().valueToTree(index.mapping().sourceAsMap());
+                    for (JsonNode expression : permission.path("masked_fields")) {
+                        if (++pairs > MAX_INDEX_EXPRESSION_PAIRS) return;
+                        String field = expression.asText().split("::", 2)[0];
+                        BiConsumer<String, String> report = (name, type) -> warning.accept(
+                            new Finding(index.getIndex().getName(), name, type)
                         );
-                    } catch (RuntimeException e) {
-                        // Mapping inspection is advisory; inability to inspect must not reject an otherwise valid role.
-                        return;
+                        if (WildcardMatcher.isExactPattern(field)) {
+                            inspectExactField(mapping, field, field, 0, report);
+                        } else {
+                            inspectProperties(mapping, "", WildcardMatcher.from(field), remaining, 0, report);
+                        }
                     }
+                } catch (RuntimeException e) {
+                    // Mapping inspection is advisory; inability to inspect must not reject an otherwise valid role.
+                    return;
                 }
             }
         }
+    }
+
+    static void inspectExactField(JsonNode mapping, String field, String remainingPath, int depth, BiConsumer<String, String> warning) {
+        if (depth > MAX_MAPPING_DEPTH) return;
+        JsonNode properties = mapping.path("properties");
+        JsonNode definition = properties.path(remainingPath);
+        if (definition.isObject()) {
+            String type = definition.path("type").asText("object");
+            if (NON_STRING_TYPES.contains(type)) warning.accept(field, type);
+        }
+        // Try dotted object prefixes as well as ordinary object paths; literal dots need not be separators.
+        for (int dot = remainingPath.indexOf('.'); dot >= 0; dot = remainingPath.indexOf('.', dot + 1)) {
+            JsonNode object = properties.path(remainingPath.substring(0, dot));
+            if (object.path("properties").isObject()) {
+                inspectExactField(object, field, remainingPath.substring(dot + 1), depth + 1, warning);
+            }
+        }
+        // Multi-fields and field aliases do not establish the shape of the corresponding source value.
     }
 
     private static boolean matchesIndex(JsonNode permission, IndexMetadata index) {
