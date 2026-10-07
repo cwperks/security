@@ -13,8 +13,10 @@ package org.opensearch.security.dlic.rest.api;
 
 import java.io.IOException;
 
+import org.junit.Before;
 import org.junit.Test;
 
+import org.opensearch.cluster.ClusterState;
 import org.opensearch.core.common.bytes.BytesArray;
 import org.opensearch.security.util.FakeRestRequest;
 
@@ -22,8 +24,14 @@ import tools.jackson.databind.node.ObjectNode;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 public class RolesApiActionRequestContentValidatorTest extends AbstractApiActionValidationTest {
+
+    @Before
+    public void setUpClusterState() {
+        when(clusterService.state()).thenReturn(ClusterState.EMPTY_STATE);
+    }
 
     @Test
     public void doesNotValidateMaskedFields() throws IOException {
