@@ -233,7 +233,7 @@ public class SecurityFilter implements ActionFilter {
             );
             final boolean passThroughRequest = action.startsWith("indices:admin/seq_no") || action.equals(WhoAmIAction.NAME);
 
-            final boolean internalRequest = (localClusterNodeRequest || HeaderHelper.isDirectRequest(threadContext))
+            final boolean internalRequest = (localClusterNodeRequest || HeaderHelper.isLocalExecution(threadContext))
                 && action.startsWith("internal:")
                 && !action.startsWith("internal:transport/proxy");
 
@@ -271,8 +271,8 @@ public class SecurityFilter implements ActionFilter {
                         + internalRequest
                         + "origin="
                         + threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN)
-                        + "/directRequest="
-                        + HeaderHelper.isDirectRequest(threadContext)
+                        + "/localExecution="
+                        + HeaderHelper.isLocalExecution(threadContext)
                         + "/remoteAddress="
                         + request.remoteAddress()
                 );
@@ -293,8 +293,8 @@ public class SecurityFilter implements ActionFilter {
                         + internalRequest
                         + "origin="
                         + threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN)
-                        + "/directRequest="
-                        + HeaderHelper.isDirectRequest(threadContext)
+                        + "/localExecution="
+                        + HeaderHelper.isLocalExecution(threadContext)
                         + "/remoteAddress="
                         + request.remoteAddress()
                         + " "
@@ -341,7 +341,7 @@ public class SecurityFilter implements ActionFilter {
             }
 
             if (Origin.LOCAL.toString().equals(threadContext.getTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN))
-                && (localClusterNodeRequest || HeaderHelper.isDirectRequest(threadContext))
+                && (localClusterNodeRequest || HeaderHelper.isLocalExecution(threadContext))
                 && (injectedRoles == null)
                 && (user == null)) {
 
