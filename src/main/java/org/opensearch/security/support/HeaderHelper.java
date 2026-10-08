@@ -39,10 +39,20 @@ public class HeaderHelper {
         return context.getTransient(ConfigConstants.OPENDISTRO_SECURITY_SSL_TRANSPORT_INTERCLUSTER_REQUEST) == Boolean.TRUE;
     }
 
-    public static boolean isDirectRequest(final ThreadContext context) {
-
+    /**
+     * Local execution includes core's same-node {@code direct} channel and calls with no transport
+     * channel marker. This tests channel context, not {@code Origin.LOCAL}, and does not by itself
+     * establish trust or system privileges.
+     */
+    public static boolean isLocalExecution(final ThreadContext context) {
         return "direct".equals(context.getTransient(ConfigConstants.OPENDISTRO_SECURITY_CHANNEL_TYPE))
             || context.getTransient(ConfigConstants.OPENDISTRO_SECURITY_CHANNEL_TYPE) == null;
+    }
+
+    /** @deprecated Use {@link #isLocalExecution(ThreadContext)} for the local-execution channel check. */
+    @Deprecated
+    public static boolean isDirectRequest(final ThreadContext context) {
+        return isLocalExecution(context);
     }
 
     public static boolean isExtensionRequest(final ThreadContext context) {
@@ -67,7 +77,7 @@ public class HeaderHelper {
             return null;
         }
 
-        if (isLocalClusterNodeRequest(context) || isRemoteClusterNodeRequest(context) || isDirectRequest(context)) {
+        if (isLocalClusterNodeRequest(context) || isRemoteClusterNodeRequest(context) || isLocalExecution(context)) {
             return context.getHeader(headerName);
         }
 
