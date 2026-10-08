@@ -115,6 +115,8 @@ public class AuditActionFilterTest {
 
         // Verify category
         assertThat(msg.getCategory(), equalTo(AuditCategory.REQUEST_AUDIT));
+        assertThat(fields.get(AuditMessage.ORIGIN), equalTo(AuditLog.Origin.REST));
+        assertThat(fields.get(AuditMessage.REQUEST_LAYER), equalTo(AuditLog.Origin.TRANSPORT));
 
         // Verify fields from request
         assertThat(msg.getPrivilege(), equalTo("indices:data/read/search"));

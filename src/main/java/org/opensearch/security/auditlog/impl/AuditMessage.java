@@ -101,6 +101,11 @@ public final class AuditMessage {
     public static final String NODE_HOST_NAME = "audit_node_host_name";
     public static final String NODE_NAME = "audit_node_name";
 
+    /**
+     * Request source recorded by the emitter: REST, TRANSPORT, LOCAL, or GRPC.
+     * Usually obtained from the security thread context; some emitters supply it explicitly.
+     * This is independent of the audit layer and is omitted when unknown.
+     */
     public static final String ORIGIN = "audit_request_origin";
     public static final String REMOTE_ADDRESS = "audit_request_remote_address";
 
@@ -135,6 +140,13 @@ public final class AuditMessage {
     // public static final String COMPLIANCE_DIFF_STORED_IS_NOOP = "audit_compliance_diff_stored_is_noop";
     // public static final String COMPLIANCE_STORED_FIELDS_CONTENT = "audit_compliance_stored_fields_content";
 
+    /**
+     * Audit path that recorded the event, not necessarily the request's network protocol.
+     * For example, REQUEST_AUDIT records REST origin with TRANSPORT layer, while gRPC
+     * authentication currently uses the REST audit path and records GRPC origin with REST layer.
+     * Emitters choose the layer independently of the category; some events, including
+     * compliance events, omit it. Neither field alone describes category-filtering behavior.
+     */
     public static final String REQUEST_LAYER = "audit_request_layer";
 
     public static final String COMPLIANCE_OPERATION = "audit_compliance_operation";

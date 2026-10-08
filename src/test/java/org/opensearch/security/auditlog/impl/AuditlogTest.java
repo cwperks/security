@@ -21,6 +21,8 @@ import org.opensearch.cluster.ClusterName;
 import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
+import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.auditlog.helper.RetrySink;
@@ -47,6 +49,25 @@ public class AuditlogTest {
         when(dn.getHostName()).thenReturn("hostaddress");
         when(cs.localNode()).thenReturn(dn);
         when(cs.getClusterName()).thenReturn(new ClusterName("cname"));
+    }
+
+    @Test
+    public void testGrpcAuthenticationUsesRestAuditLayer() throws Exception {
+        Settings settings = Settings.builder()
+            .put("plugins.security.audit.type", TestAuditlogImpl.class.getName())
+            .put(ConfigConstants.SECURITY_AUDIT_CONFIG_DISABLED_CATEGORIES, "NONE")
+            .put(ConfigConstants.OPENDISTRO_SECURITY_AUDIT_CONFIG_DISABLED_REST_CATEGORIES, "NONE")
+            .build();
+        try (ThreadContext.StoredContext ignored = AbstractSecurityUnitTest.MOCK_POOL.getThreadContext().stashContext()) {
+            AbstractSecurityUnitTest.MOCK_POOL.getThreadContext().putTransient(ConfigConstants.OPENDISTRO_SECURITY_ORIGIN, "GRPC");
+            try (AbstractAuditLog al = AuditTestUtils.createAuditLog(settings, null, null, AbstractSecurityUnitTest.MOCK_POOL, null, cs)) {
+                // Exercise the shared authentication emitter called by SecurityGrpcFilter.
+                var messages = TestAuditlogImpl.doThenWaitForMessages(() -> al.logSucceededLogin("user", false, null, null), 1);
+                assertThat(messages.get(0).getCategory(), is(AuditCategory.AUTHENTICATED));
+                assertThat(messages.get(0).getOrigin(), is(Origin.GRPC));
+                assertThat(messages.get(0).getAsMap().get(AuditMessage.REQUEST_LAYER), is(Origin.REST));
+            }
+        }
     }
 
     @Test

@@ -94,6 +94,13 @@ public class AuditMessageTest {
     }
 
     @Test
+    public void testUnspecifiedOriginAndLayerAreOmitted() {
+        var event = new AuditMessage(AuditCategory.COMPLIANCE_EXTERNAL_CONFIG, clusterServiceMock, null, null);
+        assertThat(event.getAsMap().containsKey(AuditMessage.ORIGIN), is(false));
+        assertThat(event.getAsMap().containsKey(AuditMessage.REQUEST_LAYER), is(false));
+    }
+
+    @Test
     public void testAuthorizationRestHeadersAreFiltered() {
         when(auditConfig.getFilter().shouldExcludeHeader("test-header")).thenReturn(false);
         message.addRestHeaders(TEST_REST_HEADERS, true, auditConfig.getFilter());
