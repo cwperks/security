@@ -402,22 +402,11 @@ public abstract class AbstractAuditLog implements AuditLog {
 
     @Override
     public void logRequestAudit(AuditMessage msg) {
-        if (auditConfigFilter != null
-            && (auditConfigFilter.getDisabledCategories().contains(msg.getCategory())
-                || auditConfigFilter.getDisabledTransportCategories().contains(msg.getCategory())
-                || auditConfigFilter.getDisabledRestCategories().contains(msg.getCategory()))) {
-            return;
-        }
         save(msg);
     }
 
     @Override
     public void logTransportAudit(AuditMessage msg) {
-        if (auditConfigFilter != null
-            && (auditConfigFilter.getDisabledCategories().contains(msg.getCategory())
-                || auditConfigFilter.getDisabledTransportCategories().contains(msg.getCategory()))) {
-            return;
-        }
         save(msg);
     }
 
@@ -1371,8 +1360,7 @@ public abstract class AbstractAuditLog implements AuditLog {
             return false;
         }
 
-        if (auditConfigFilter.getDisabledCategories().contains(category)
-            || auditConfigFilter.getDisabledTransportCategories().contains(category)) {
+        if (auditConfigFilter.isCategoryDisabled(category, Origin.TRANSPORT)) {
             if (isTraceEnabled) {
                 log.trace("Skipped audit log message because category {} not enabled", category);
             }
@@ -1465,8 +1453,7 @@ public abstract class AbstractAuditLog implements AuditLog {
             return false;
         }
 
-        if (auditConfigFilter.getDisabledCategories().contains(category)
-            || auditConfigFilter.getDisabledRestCategories().contains(category)) {
+        if (auditConfigFilter.isCategoryDisabled(category, Origin.REST)) {
             if (isTraceEnabled) {
                 log.trace("Skipped audit log message because category {} not enabled", category);
             }

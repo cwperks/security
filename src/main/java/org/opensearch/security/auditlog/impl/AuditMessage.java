@@ -621,6 +621,11 @@ public final class AuditMessage {
         return (Origin) this.auditInfo.get(ORIGIN);
     }
 
+    /** Returns where this event was recorded, or null if the emitter did not specify a layer. */
+    public Origin getLayer() {
+        return (Origin) this.auditInfo.get(REQUEST_LAYER);
+    }
+
     public String getPrivilege() {
         return (String) this.auditInfo.get(PRIVILEGE);
     }

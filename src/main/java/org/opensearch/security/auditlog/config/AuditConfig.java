@@ -33,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.opensearch.common.logging.DeprecationLogger;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.security.DefaultObjectMapper;
+import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.dlic.rest.support.Utils;
@@ -735,6 +736,13 @@ public class AuditConfig {
          */
         public Set<AuditCategory> getDisabledCategories() {
             return disabledCategories;
+        }
+
+        /** Tests category exclusions against the event's layer, never its request origin. */
+        public boolean isCategoryDisabled(AuditCategory category, Origin layer) {
+            return disabledCategories.contains(category)
+                || (layer == Origin.REST && disabledRestCategories.contains(category))
+                || (layer == Origin.TRANSPORT && disabledTransportCategories.contains(category));
         }
 
         // Dynamic setters for cluster settings updates

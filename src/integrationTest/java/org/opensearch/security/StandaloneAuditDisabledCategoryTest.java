@@ -15,6 +15,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
+import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditMessage;
 import org.opensearch.security.support.ConfigConstants;
@@ -85,14 +86,16 @@ public class StandaloneAuditDisabledCategoryTest {
         .build();
 
     @Test
-    public void shouldSuppressEventsWhenRequestAuditIsDisabledViaRestCategories() {
+    public void shouldKeepTransportEventsWhenOnlyRestCategoriesAreDisabled() {
         try (TestRestClient client = restCategoryCluster.getRestClient()) {
             client.get("_cluster/health");
-            client.putJson("rest-cat-test/_doc/1?refresh=true", "{\"field\": \"value\"}");
         }
 
-        // Wait then assert no REQUEST_AUDIT events were produced
-        auditLogsRule.waitForAuditLogs();
-        auditLogsRule.assertExactlyScanAll(0, (AuditMessage msg) -> msg.getCategory() == AuditCategory.REQUEST_AUDIT);
+        auditLogsRule.assertExactlyOne(
+            msg -> msg.getCategory() == AuditCategory.REQUEST_AUDIT
+                && "cluster:monitor/health".equals(msg.getPrivilege())
+                && msg.getOrigin() == Origin.REST
+                && msg.getLayer() == Origin.TRANSPORT
+        );
     }
 }

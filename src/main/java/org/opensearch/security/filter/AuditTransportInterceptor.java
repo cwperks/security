@@ -117,8 +117,7 @@ public class AuditTransportInterceptor implements TransportInterceptor {
                 }
 
                 // Skip if TRANSPORT_AUDIT is disabled
-                if (!filter.getDisabledTransportCategories().contains(AuditCategory.TRANSPORT_AUDIT)
-                    && !filter.getDisabledCategories().contains(AuditCategory.TRANSPORT_AUDIT)) {
+                if (!filter.isCategoryDisabled(AuditCategory.TRANSPORT_AUDIT, Origin.TRANSPORT)) {
                     // Skip ignored requests (action or class name). Match on the unwrapped request so an
                     // ignore_requests rule naming a request class still applies to shard-level replication.
                     final String requestTypeName = unwrapShardRequest(request).getClass().getSimpleName();

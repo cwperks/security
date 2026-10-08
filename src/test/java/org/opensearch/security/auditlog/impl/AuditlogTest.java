@@ -26,10 +26,12 @@ import org.opensearch.cluster.node.DiscoveryNode;
 import org.opensearch.cluster.service.ClusterService;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.index.shard.ShardId;
+import org.opensearch.security.auditlog.AuditLog.Origin;
 import org.opensearch.security.auditlog.AuditTestUtils;
 import org.opensearch.security.auditlog.config.AuditConfig;
 import org.opensearch.security.auditlog.helper.RetrySink;
 import org.opensearch.security.auditlog.integration.TestAuditlogImpl;
+import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.filter.SecurityRequestChannel;
 import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.test.AbstractSecurityUnitTest;
@@ -249,6 +251,43 @@ public class AuditlogTest {
                 al.getFilter().setDisabledCategories(List.of());
                 var message = TestAuditlogImpl.doThenWaitForMessage(() -> al.save(new AuditMessage(category, cs, null, null)));
                 assertThat(message.getCategory(), is(category));
+            }
+        }
+    }
+
+    @Test
+    public void testCategoryExclusionsUseEventLayerNotOrigin() throws IOException {
+        final Settings settings = Settings.builder().put("plugins.security.audit.type", TestAuditlogImpl.class.getName()).build();
+        try (
+            AuditLogImpl al = (AuditLogImpl) AuditTestUtils.createAuditLog(
+                settings,
+                null,
+                null,
+                AbstractSecurityUnitTest.MOCK_POOL,
+                null,
+                cs
+            )
+        ) {
+            Origin[] originsAndLayers = { null, Origin.REST, Origin.TRANSPORT, Origin.LOCAL, Origin.GRPC };
+            for (String field : List.of("disabled_categories", "disabled_rest_categories", "disabled_transport_categories")) {
+                al.setConfig(
+                    new AuditConfig(true, AuditConfig.Filter.from(Map.of(field, List.of("REQUEST_AUDIT"))), ComplianceConfig.DEFAULT)
+                );
+                for (Origin origin : originsAndLayers) {
+                    for (Origin layer : originsAndLayers) {
+                        boolean disabled = field.equals("disabled_categories")
+                            || (field.equals("disabled_rest_categories") && layer == Origin.REST)
+                            || (field.equals("disabled_transport_categories") && layer == Origin.TRANSPORT);
+                        var messages = TestAuditlogImpl.doThenWaitForMessages(
+                            () -> al.logRequestAudit(new AuditMessage(AuditCategory.REQUEST_AUDIT, cs, origin, layer)),
+                            disabled ? 0 : 1
+                        );
+                        if (!disabled) {
+                            assertThat(messages.get(0).getOrigin(), is(origin));
+                            assertThat(messages.get(0).getLayer(), is(layer));
+                        }
+                    }
+                }
             }
         }
     }

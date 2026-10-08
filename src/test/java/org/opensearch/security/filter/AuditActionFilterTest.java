@@ -10,6 +10,7 @@ package org.opensearch.security.filter;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.logging.log4j.Level;
@@ -87,6 +88,34 @@ public class AuditActionFilterTest {
         when(clusterService.getClusterName()).thenReturn(new ClusterName("test-cluster"));
 
         filter = new AuditActionFilter(auditLog, clusterService, threadPool, AuditConfig.Filter.DEFAULT, "security-auditlog");
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testCategoryFilterUsesTransportLayerForRestOriginRequest() throws Exception {
+        for (String field : List.of("disabled_categories", "disabled_rest_categories", "disabled_transport_categories")) {
+            AuditLog filteredAuditLog = mock(AuditLog.class);
+            AuditActionFilter categoryFilter = new AuditActionFilter(
+                filteredAuditLog,
+                clusterService,
+                threadPool,
+                AuditConfig.Filter.from(Map.of(field, List.of("REQUEST_AUDIT"))),
+                "security-auditlog"
+            );
+            ClusterHealthRequest request = new ClusterHealthRequest();
+            ActionFilterChain<ClusterHealthRequest, ActionResponse> chain = mock(ActionFilterChain.class);
+            ActionListener<ActionResponse> listener = mock(ActionListener.class);
+            categoryFilter.apply(null, "cluster:monitor/health", request, ActionRequestMetadata.empty(), listener, chain);
+            if (field.equals("disabled_rest_categories")) {
+                ArgumentCaptor<AuditMessage> captor = ArgumentCaptor.forClass(AuditMessage.class);
+                verify(filteredAuditLog).logRequestAudit(captor.capture());
+                assertThat(captor.getValue().getOrigin(), equalTo(AuditLog.Origin.REST));
+                assertThat(captor.getValue().getLayer(), equalTo(AuditLog.Origin.TRANSPORT));
+            } else {
+                verify(filteredAuditLog, never()).logRequestAudit(any());
+            }
+            verify(chain).proceed(null, "cluster:monitor/health", request, listener);
+        }
     }
 
     @SuppressWarnings("unchecked")

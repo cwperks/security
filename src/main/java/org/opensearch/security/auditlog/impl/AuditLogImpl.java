@@ -136,9 +136,9 @@ public class AuditLogImpl extends AbstractAuditLog {
     @Override
     protected void save(final AuditMessage msg) {
         if (enabled) {
-            // Apply unified exclusions to every event, including compliance and direct API-token events.
+            // Apply exclusions to the actual event, including compliance and direct API-token events.
             final AuditConfig.Filter filter = getFilter();
-            if (filter != null && filter.getDisabledCategories().contains(msg.getCategory())) {
+            if (filter != null && filter.isCategoryDisabled(msg.getCategory(), msg.getLayer())) {
                 return;
             }
             // Try transient first (coordinating node, already sanitized by SecurityRestFilter),
