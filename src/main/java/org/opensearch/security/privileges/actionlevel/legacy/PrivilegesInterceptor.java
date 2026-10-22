@@ -173,6 +173,23 @@ public class PrivilegesInterceptor {
                 return ACCESS_DENIED_REPLACE_RESULT;
             }
 
+            // For multi-document actions (_mget, _bulk, _msearch, _mtv), deny requests that
+            // directly reference another user's concrete tenant index without a securitytenant header.
+            if (!user.getName().equals(dashboardsServerUsername)
+                && !requestedResolved.isLocalAll()
+                && (request instanceof MultiGetRequest
+                    || request instanceof BulkRequest
+                    || request instanceof MultiSearchRequest
+                    || request instanceof MultiTermVectorsRequest)) {
+                final String userTenantIndex = toUserIndexName(dashboardsIndexName, user.getName());
+                final Set<String> indices = requestedResolved.getAllIndices();
+                for (String idx : indices) {
+                    if (idx.startsWith(dashboardsIndexName + "_") && !idx.startsWith(userTenantIndex)) {
+                        return ACCESS_DENIED_REPLACE_RESULT;
+                    }
+                }
+            }
+
             return CONTINUE_EVALUATION_REPLACE_RESULT;
         }
 
