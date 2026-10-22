@@ -1,0 +1,80 @@
+name: Test Resource Observer
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_OPTS: -Dhttp.keepAlive=false
+  CI_ENVIRONMENT: normal
+
+jobs:
+  Get-CI-Image-Tag:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-resource-regression')
+    uses: opensearch-project/opensearch-build/.github/workflows/get-ci-image-tag.yml@main
+    with:
+      product: opensearch
+
+  observe-dlic-rest-api-tests:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-resource-regression')
+    needs: [Get-CI-Image-Tag]
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-version-linux }}
+      options: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-start-options }}
+
+    steps:
+      - name: Run start commands
+        run: ${{ needs.Get-CI-Image-Tag.outputs.ci-image-start-command }}
+
+      - name: Set up JDK for build and test
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Check out security
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+
+      - name: Test resource monitor
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
+      - name: Observe dlicRestApiTest
+        id: observe
+        continue-on-error: true
+        run: >-
+          python3 scripts/test_resource_monitor.py
+          --output-dir build/test-resource-usage
+          --sample-interval 5
+          --grace-period 10
+          --
+          ./gradlew dlicRestApiTest --no-daemon -Dbuild.snapshot=false
+
+      - name: Add resource summary
+        if: always()
+        run: |
+          if [[ -f build/test-resource-usage/summary.md ]]; then
+            cat build/test-resource-usage/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload resource observations
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dlicRestApiTest-resource-observation
+          if-no-files-found: warn
+          path: |
+            build/test-resource-usage/
+            build/reports/tests/dlicRestApiTest/
+
+      - name: Propagate test failure
+        if: steps.observe.outcome == 'failure'
+        run: exit 1
