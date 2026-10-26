@@ -106,6 +106,9 @@ opensearch_version = System.getProperty("opensearch.version", "3.8.0-SNAPSHOT")
 
 ### Integration Tests
 
+- `LocalCluster` keeps Security configuration and clients; its `LocalOpenSearchCluster`
+  adapter delegates node lifecycle to core's `org.opensearch.test.cluster.LocalTestCluster`.
+  The companion core snapshot must be published locally until that fixture is released.
 - Located in `src/integrationTest/`
 - Subdomain suites: `api`, `auditlog`, `dlsfls`, `grpc`, `hash`, `http`, `privileges`, `rest`, `ssl`, `support`, `systemindex`, `user`, `util`
 - Run all integration tests: `./gradlew integrationTest`

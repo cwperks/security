@@ -46,7 +46,7 @@ import org.junit.rules.ExternalResource;
 
 import org.opensearch.action.admin.cluster.repositories.put.PutRepositoryRequest;
 import org.opensearch.common.settings.Settings;
-import org.opensearch.node.PluginAwareNode;
+import org.opensearch.node.Node;
 import org.opensearch.plugins.Plugin;
 import org.opensearch.plugins.PluginInfo;
 import org.opensearch.security.action.configupdate.ConfigUpdateAction;
@@ -244,7 +244,7 @@ public class LocalCluster extends ExternalResource implements AutoCloseable, Ope
     /**
     * Returns a random node of this cluster.
     */
-    public PluginAwareNode node() {
+    public Node node() {
         return this.localOpenSearchCluster.clusterManagerNode().esNode();
     }
 
