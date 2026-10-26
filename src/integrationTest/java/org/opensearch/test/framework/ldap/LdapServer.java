@@ -35,8 +35,8 @@ import javax.net.ssl.TrustManagerFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.test.cluster.SocketUtils;
 import org.opensearch.test.framework.certificate.CertificateData;
-import org.opensearch.test.framework.cluster.SocketUtils;
 
 import com.unboundid.ldap.listener.InMemoryDirectoryServer;
 import com.unboundid.ldap.listener.InMemoryDirectoryServerConfig;

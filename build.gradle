@@ -599,6 +599,10 @@ allprojects {
         if (project.configurations.findByName('integrationTestImplementation')) {
             dependencies {
                 integrationTestImplementation 'junit:junit:4.13.2'
+                integrationTestImplementation("org.opensearch.test:framework:${opensearch_version}") {
+                    // The shared cluster uses core dependencies already declared here, not Lucene's test runner.
+                    transitive = false
+                }
                 integrationTestImplementation("org.opensearch.plugin:reindex-client:${opensearch_version}") {
                     exclude(group: 'org.slf4j', module: 'slf4j-api')
                 }
@@ -708,11 +712,6 @@ check.dependsOn integrationTest
 
 dependencies {
     implementation project(path: ":${rootProject.name}-spi", configuration: 'shadow')
-    integrationTestImplementation("org.opensearch.test:framework:${opensearch_version}") {
-        // These tests use plain JUnit, without a RandomizedRunner context.
-        exclude group: 'com.carrotsearch.randomizedtesting', module: 'randomizedtesting-runner'
-        exclude group: 'org.apache.lucene', module: 'lucene-test-framework'
-    }
     implementation "org.opensearch.plugin:transport-netty4-client:${opensearch_version}"
     implementation "org.opensearch.client:opensearch-rest-client:${opensearch_version}"
     implementation "org.opensearch.plugin:lang-mustache-client:${opensearch_version}"
