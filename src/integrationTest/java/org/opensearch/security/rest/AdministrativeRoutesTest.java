@@ -43,8 +43,9 @@ import static org.junit.Assert.assertEquals;
 public class AdministrativeRoutesTest {
     private static final String BASE = "_plugins/_administrative_test";
     private static final String ACTION = "cluster:admin/dummy_plugin/dummy";
+    private static final String NAMED_ACTION = "cluster:admin/administrative_test/named";
     private static final User ACTION_ONLY = new User("action_only").roles(new Role("action_only").clusterPermissions(ACTION));
-    private static final User REST_ADMIN = new User("rest_admin").roles(new Role("rest_admin").clusterPermissions(ACTION));
+    private static final User REST_ADMIN = new User("rest_admin").roles(new Role("rest_admin").clusterPermissions(ACTION, NAMED_ACTION));
     private static final User ROLE_ONLY = new User("role_only").roles(new Role("role_only"));
     private static final User BACKEND_ROLE_ONLY = new User("backend_role_only").roles(new Role("action").clusterPermissions(ACTION))
         .backendRoles(REST_ADMIN.getRoleNames().iterator().next());
@@ -67,7 +68,15 @@ public class AdministrativeRoutesTest {
             TestRestClient.HttpResponse response = client.get(BASE + "/ordinary");
             assertEquals(response.getBody(), 200, response.getStatusCode());
             assertEquals(403, client.get(BASE + "/admin/one").getStatusCode());
-            assertEquals(403, client.get(BASE + "/named").getStatusCode());
+            assertEquals(403, client.get(BASE + "/named/one").getStatusCode());
+        }
+    }
+
+    @Test
+    public void encodedSlashInRouteParameterIsDenied() {
+        try (TestRestClient client = cluster.getRestClient(ACTION_ONLY)) {
+            assertEquals(403, client.get(BASE + "/admin/a%2Fb").getStatusCode());
+            assertEquals(403, client.get(BASE + "/named/a%2Fb").getStatusCode());
         }
     }
 
@@ -82,7 +91,7 @@ public class AdministrativeRoutesTest {
     public void restAdminCanAccessAdministrativeRoutes() {
         try (TestRestClient client = cluster.getRestClient(REST_ADMIN)) {
             assertEquals(200, client.get(BASE + "/admin/one").getStatusCode());
-            assertEquals(200, client.get(BASE + "/named").getStatusCode());
+            assertEquals(200, client.get(BASE + "/named/one").getStatusCode());
         }
     }
 
@@ -90,7 +99,7 @@ public class AdministrativeRoutesTest {
     public void restAdminStillNeedsActionPermissions() {
         try (TestRestClient client = cluster.getRestClient(ROLE_ONLY)) {
             assertEquals(403, client.get(BASE + "/admin/one").getStatusCode());
-            assertEquals(403, client.get(BASE + "/named").getStatusCode());
+            assertEquals(403, client.get(BASE + "/named/one").getStatusCode());
         }
     }
 
@@ -98,7 +107,7 @@ public class AdministrativeRoutesTest {
     public void adminCertificateRetainsAccess() {
         try (TestRestClient client = cluster.getAdminCertRestClient()) {
             assertEquals(200, client.get(BASE + "/admin/one").getStatusCode());
-            assertEquals(200, client.get(BASE + "/named").getStatusCode());
+            assertEquals(200, client.get(BASE + "/named/one").getStatusCode());
         }
     }
 
@@ -126,10 +135,9 @@ public class AdministrativeRoutesTest {
                         new Route(GET, "/" + BASE + "/ordinary"),
                         new Route(GET, "/" + BASE + "/admin/{id}", ADMINISTRATIVE),
                         new NamedRoute.Builder().method(GET)
-                            .path("/" + BASE + "/named")
-                            .uniqueName("cluster:admin/administrative_test/get")
-                            .legacyActionNames(Set.of(ACTION))
-                            .properties(ADMINISTRATIVE)
+                            .path("/" + BASE + "/named/{id}")
+                            .uniqueName(NAMED_ACTION)
+                            .legacyActionNames(Set.of(NAMED_ACTION))
                             .build()
                     );
                 }

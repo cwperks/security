@@ -33,6 +33,17 @@ public interface SecurityRequest {
     /** The path of the request */
     String path();
 
+    /**
+     * The raw, non-percent-decoded path used by OpenSearch core for REST route dispatch.
+     *
+     * <p>Existing non-REST implementations retain their path value. REST request implementations
+     * must override this method with the raw URI path so route authorization uses the same path
+     * segmentation as core.
+     */
+    default String rawPath() {
+        return path();
+    }
+
     /** The method type of this request */
     Method method();
 
