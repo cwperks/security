@@ -52,6 +52,13 @@ public class RestPathMatchesTests extends LuceneTestCase {
     }
 
     @Test
+    public void testNamedParameterMatchesEncodedSlashInRawPath() throws InvocationTargetException, IllegalAccessException {
+        String requestPath = "_plugins/security/api/a%2Fb/y";
+        String handlerPath = "_plugins/security/api/{id}/y";
+        assertTrue((Boolean) restPathMatches.invoke(securityRestFilter, requestPath, handlerPath));
+    }
+
+    @Test
     public void testDifferentPathLength() throws InvocationTargetException, IllegalAccessException {
         String requestPath = "_plugins/security/api/x/y/z";
         String handlerPath = "_plugins/security/api/x/y";

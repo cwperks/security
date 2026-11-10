@@ -60,6 +60,11 @@ public class OpenSearchRequest implements SecurityRequest {
     }
 
     @Override
+    public String rawPath() {
+        return underlyingRequest.rawPath();
+    }
+
+    @Override
     public Method method() {
         return underlyingRequest.method();
     }

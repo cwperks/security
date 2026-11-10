@@ -13,6 +13,7 @@ package org.opensearch.security.filter;
 
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.lucene.tests.util.LuceneTestCase;
@@ -45,8 +46,10 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class SecurityRestFilterUnitTests extends LuceneTestCase {
 
@@ -112,6 +115,74 @@ public class SecurityRestFilterUnitTests extends LuceneTestCase {
         wrappedRestHandler.handleRequest(mock(RestRequest.class), mock(RestChannel.class), mock(NodeClient.class));
 
         verify(testRestHandlerSpy).handleRequest(any(), any(), any());
+    }
+
+    @Test
+    public void testRejectsRequestWhenDeclaredRoutesDoNotMatchRawPath() {
+        SecurityRequestChannel request = request(RestRequest.Method.GET, "/_plugins/example/admin/a/b");
+        RestHandler handler = handler(
+            List.of(new RestHandler.Route(RestRequest.Method.GET, "/_plugins/example/admin/{id}")),
+            List.of(),
+            List.of()
+        );
+
+        sf.authorizeRequest(handler, request, null);
+
+        verify(request).queueForSending(any(SecurityResponse.class));
+    }
+
+    @Test
+    public void testMatchesDeprecatedRoute() {
+        SecurityRequestChannel request = request(RestRequest.Method.GET, "/_plugins/example/deprecated/a%2Fb");
+        RestHandler handler = handler(
+            List.of(),
+            List.of(new RestHandler.DeprecatedRoute(RestRequest.Method.GET, "/_plugins/example/deprecated/{id}", "deprecated")),
+            List.of()
+        );
+
+        sf.authorizeRequest(handler, request, null);
+
+        verify(request, never()).queueForSending(any(SecurityResponse.class));
+    }
+
+    @Test
+    public void testMatchesDeprecatedPathOfReplacedRoute() {
+        SecurityRequestChannel request = request(RestRequest.Method.GET, "/_plugins/example/old/a%2Fb");
+        RestHandler handler = handler(
+            List.of(),
+            List.of(),
+            List.of(
+                new RestHandler.ReplacedRoute(
+                    RestRequest.Method.GET,
+                    "/_plugins/example/current/{id}",
+                    RestRequest.Method.GET,
+                    "/_plugins/example/old/{id}"
+                )
+            )
+        );
+
+        sf.authorizeRequest(handler, request, null);
+
+        verify(request, never()).queueForSending(any(SecurityResponse.class));
+    }
+
+    private SecurityRequestChannel request(RestRequest.Method method, String rawPath) {
+        SecurityRequestChannel request = mock(SecurityRequestChannel.class);
+        when(request.method()).thenReturn(method);
+        when(request.rawPath()).thenReturn(rawPath);
+        return request;
+    }
+
+    private RestHandler handler(
+        List<RestHandler.Route> routes,
+        List<RestHandler.DeprecatedRoute> deprecatedRoutes,
+        List<RestHandler.ReplacedRoute> replacedRoutes
+    ) {
+        RestHandler handler = mock(RestHandler.class);
+        when(handler.routes()).thenReturn(routes);
+        when(handler.deprecatedRoutes()).thenReturn(deprecatedRoutes);
+        when(handler.replacedRoutes()).thenReturn(replacedRoutes);
+        return handler;
     }
 
     // unit tests for restPathMatches are in RestPathMatchesTests.java

@@ -72,6 +72,11 @@ public class NettyRequest implements SecurityRequest {
     }
 
     @Override
+    public String rawPath() {
+        return SecurityRestUtils.path(underlyingRequest.uri());
+    }
+
+    @Override
     public Method method() {
         return Method.valueOf(underlyingRequest.method().name());
     }

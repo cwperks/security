@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -309,11 +308,14 @@ public class SecurityRestFilter {
      * @param user authenticated user
      */
     void authorizeRequest(RestHandler original, SecurityRequestChannel request, User user) {
-        List<RestHandler.Route> restRoutes = original.routes();
-        Optional<RestHandler.Route> handler = restRoutes.stream()
-            .filter(rh -> rh.getMethod().equals(request.method()))
-            .filter(rh -> restPathMatches(request.path(), rh.getPath()))
-            .findFirst();
+        Optional<RestHandler.Route> handler = findMatchingRoute(original, request);
+        if (handler.isEmpty() && hasDeclaredRoutes(original)) {
+            auditLog.logMissingPrivileges(request.rawPath(), user == null ? null : user.getName(), request);
+            request.queueForSending(
+                new SecurityResponse(HttpStatus.SC_FORBIDDEN, "Request path did not match any registered route of the handler")
+            );
+            return;
+        }
         // Administrative metadata adds a role gate; it does not replace route or transport action permissions.
         if (handler.isPresent()
             && handler.get().hasProperty(RestHandler.Route.Property.ADMINISTRATIVE)
@@ -352,6 +354,33 @@ public class SecurityRestFilter {
                 request.queueForSending(new SecurityResponse(HttpStatus.SC_FORBIDDEN, err));
             }
         }
+    }
+
+    private boolean hasDeclaredRoutes(RestHandler handler) {
+        return !(handler.routes().isEmpty() && handler.deprecatedRoutes().isEmpty() && handler.replacedRoutes().isEmpty());
+    }
+
+    private Optional<RestHandler.Route> findMatchingRoute(RestHandler handler, SecurityRequest request) {
+        String rawPath = request.rawPath();
+        for (RestHandler.Route route : handler.routes()) {
+            if (route.getMethod().equals(request.method()) && restPathMatches(rawPath, route.getPath())) {
+                return Optional.of(route);
+            }
+        }
+        for (RestHandler.DeprecatedRoute route : handler.deprecatedRoutes()) {
+            if (route.getMethod().equals(request.method()) && restPathMatches(rawPath, route.getPath())) {
+                return Optional.of(route);
+            }
+        }
+        for (RestHandler.ReplacedRoute route : handler.replacedRoutes()) {
+            if (route.getMethod().equals(request.method()) && restPathMatches(rawPath, route.getPath())) {
+                return Optional.of(route);
+            }
+            if (route.getDeprecatedMethod().equals(request.method()) && restPathMatches(rawPath, route.getDeprecatedPath())) {
+                return Optional.of(route);
+            }
+        }
+        return Optional.empty();
     }
 
     public void checkAndAuthenticateRequest(SecurityRequestChannel requestChannel) throws Exception {
