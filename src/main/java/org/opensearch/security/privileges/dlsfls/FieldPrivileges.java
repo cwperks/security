@@ -18,6 +18,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.function.Function;
 import java.util.regex.PatternSyntaxException;
 
 import com.google.common.collect.ImmutableList;
@@ -280,6 +281,42 @@ public class FieldPrivileges extends AbstractRuleBasedPrivileges<FieldPrivileges
 
         public boolean isAllowAll() {
             return allowAll;
+        }
+
+        /**
+         * Adds restrictions inherited from mapper-declared owners without granting access to otherwise
+         * excluded fields. Bind the resolver to one mapping snapshot so source and indexed values agree.
+         */
+        public FlsRule withGeneratedFieldOwners(Function<String, String> ownerOf) {
+            if (isAllowAll()) {
+                return this;
+            }
+            FlsRule original = this;
+            return new FlsRule(patterns, objectOnlyPatterns, sourceRole) {
+                private boolean ownersAreAllowed(String field) {
+                    for (String owner = ownerOf.apply(normalizeFieldName(field)); owner != null; owner = ownerOf.apply(owner)) {
+                        if (!original.isAllowedRecursive(owner)) {
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+
+                @Override
+                public boolean isAllowedRecursive(String field) {
+                    return original.isAllowedRecursive(field) && ownersAreAllowed(field);
+                }
+
+                @Override
+                public boolean isAllowedAssumingParentsAreAllowed(String field) {
+                    return original.isAllowedAssumingParentsAreAllowed(field) && ownersAreAllowed(field);
+                }
+
+                @Override
+                public boolean isObjectAllowedAssumingParentsAreAllowed(String field) {
+                    return original.isObjectAllowedAssumingParentsAreAllowed(field) && ownersAreAllowed(field);
+                }
+            };
         }
 
         @Override

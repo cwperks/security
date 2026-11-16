@@ -119,7 +119,9 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         this.auditlog = auditlog;
 
         this.shardId = shardId;
-        this.flsRule = flsRule;
+        // Use the same ownership-aware rule for indexed values and the stored-source visitor.
+        var documentMapper = indexService == null ? null : indexService.mapperService().documentMapper();
+        this.flsRule = documentMapper == null ? flsRule : flsRule.withGeneratedFieldOwners(documentMapper.mappers()::generatedFieldOwner);
         this.fmRule = fmRule;
         this.metaFields = metaFields;
 
