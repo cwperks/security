@@ -578,7 +578,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
                     @Override
                     public Terms terms(final String field) throws IOException {
-                        if (FieldNamesFieldMapper.NAME.equals(field)) {
+                        if (FieldNamesFieldMapper.NAME.equals(field) || "_feature".equals(field)) {
                             return filteredFieldNameTerms(fields.terms(field));
                         }
 
@@ -772,7 +772,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
     @Override
     public Terms terms(String field) throws IOException {
-        if (FieldNamesFieldMapper.NAME.equals(field)) {
+        if (FieldNamesFieldMapper.NAME.equals(field) || "_feature".equals(field)) {
             return filteredFieldNameTerms(in.terms(field));
         }
 
@@ -784,6 +784,8 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
             return null;
         }
 
+        // rank_feature also stores logical field names as terms, sharing the internal _feature field.
+        // Filter individual names so permitted rank features remain usable.
         // The field _field_names is a special meta data field; it contains the names of all fields in the same
         // document that contains non-null values.
         // It can be used in "exists" queries, depending on the available doc_values or norm values in an index.
