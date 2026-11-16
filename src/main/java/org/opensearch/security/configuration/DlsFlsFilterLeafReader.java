@@ -18,6 +18,8 @@ package org.opensearch.security.configuration;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -75,6 +77,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.IndexService;
 import org.opensearch.index.mapper.FieldNamesFieldMapper;
+import org.opensearch.index.mapper.MappedFieldType;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.compliance.FieldReadCallback;
@@ -85,6 +88,7 @@ import org.opensearch.security.support.ConfigConstants;
 
 class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
+    private static final Set<String> SHINGLE_FIELD_SUFFIXES = Set.of("._2gram", "._3gram", "._4gram");
     private static final String KNN_FIELD_ATTRIBUTE = "knn_field";
 
     private final FieldInfos visibleFieldInfos;
@@ -96,6 +100,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
     private final FieldPrivileges.FlsRule flsRule;
     private final FieldMasking.FieldMaskingRule fmRule;
     private final Set<String> metaFields;
+    private final Set<String> maskedGeneratedSubfields;
 
     private DlsGetEvaluator dge = null;
 
@@ -122,6 +127,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         this.flsRule = flsRule;
         this.fmRule = fmRule;
         this.metaFields = metaFields;
+        this.maskedGeneratedSubfields = findMaskedGeneratedSubfields(delegate.getFieldInfos());
 
         try {
             this.visibleFieldInfos = buildVisibleFieldInfos(delegate.getFieldInfos());
@@ -129,6 +135,42 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         } catch (IOException e) {
             throw ExceptionsHelper.convertToOpenSearchException(e);
         }
+    }
+
+    private Set<String> findMaskedGeneratedSubfields(FieldInfos fieldInfos) {
+        if (fmRule.isAllowAll()) {
+            return Collections.emptySet();
+        }
+        Set<String> maskedFields = new HashSet<>();
+        for (FieldInfo fieldInfo : fieldInfos) {
+            int separator = fieldInfo.name.lastIndexOf('.');
+            if (separator < 0) {
+                continue;
+            }
+            String parent = fieldInfo.name.substring(0, separator);
+            if (!fmRule.isMasked(parent)) {
+                continue;
+            }
+            MappedFieldType parentType = indexService.mapperService().fieldType(parent);
+            MappedFieldType fieldType = indexService.mapperService().fieldType(fieldInfo.name);
+            if (parentType == null || fieldType == null) {
+                continue;
+            }
+            // Query optimizations read these generated fields instead of the masked parent.
+            // Check both mapping types so ordinary multi-fields keep their own masking rules.
+            String suffix = fieldInfo.name.substring(separator);
+            boolean generated = switch (parentType.typeName()) {
+                case "text" -> ("._index_prefix".equals(suffix) && "prefix".equals(fieldType.typeName()))
+                    || ("._index_phrase".equals(suffix) && "phrase".equals(fieldType.typeName()));
+                case "search_as_you_type" -> ("._index_prefix".equals(suffix) && "prefix".equals(fieldType.typeName()))
+                    || (SHINGLE_FIELD_SUFFIXES.contains(suffix) && "search_as_you_type".equals(fieldType.typeName()));
+                default -> false;
+            };
+            if (generated) {
+                maskedFields.add(fieldInfo.name);
+            }
+        }
+        return Set.copyOf(maskedFields);
     }
 
     private FieldInfos buildVisibleFieldInfos(FieldInfos originalFieldInfos) {
@@ -142,7 +184,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
             boolean masked = !metaFields.contains(fieldInfo.name) && fmRule.isMasked(fieldInfo.name);
             // Binary-backed k-NN fields have no Lucene vector dimension or supported masked vector representation.
             boolean maskedVector = masked && (fieldInfo.hasVectorValues() || "true".equals(fieldInfo.getAttribute(KNN_FIELD_ATTRIBUTE)));
-            if (!isAllowedButPossiblyMasked(fieldInfo.name) || maskedVector) {
+            if (!isAllowedButPossiblyMasked(fieldInfo.name) || maskedVector || maskedGeneratedSubfields.contains(fieldInfo.name)) {
                 changed = true;
                 continue;
             }
@@ -462,7 +504,10 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
      * Exceptions are meta fields, which are always fully visible to a user, regardless of any configuration.
      */
     private boolean isAllowed(String fieldName) {
-        return this.metaFields.contains(fieldName) || (this.flsRule.isAllowedRecursive(fieldName) && !this.fmRule.isMasked(fieldName));
+        return this.metaFields.contains(fieldName)
+            || (this.flsRule.isAllowedRecursive(fieldName)
+                && !this.fmRule.isMasked(fieldName)
+                && !this.maskedGeneratedSubfields.contains(fieldName));
     }
 
     /**
