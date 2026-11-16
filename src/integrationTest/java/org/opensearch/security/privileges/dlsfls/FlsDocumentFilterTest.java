@@ -22,6 +22,45 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class FlsDocumentFilterTest {
 
     @Test
+    public void generatedObjectsHonorExcludedOwners() throws Exception {
+        var rule = FieldPrivileges.FlsRule.of("~title").withGeneratedFieldOwners(field -> {
+            if (field.equals("custom") || field.startsWith("custom.")) return "title";
+            return null;
+        });
+        Assert.assertFalse(rule.isAllowedRecursive("custom.chunks.text"));
+        Assert.assertFalse(rule.isAllowedRecursive("custom.embedding.token"));
+        Assert.assertTrue(rule.isAllowedRecursive("custom_other"));
+        assertJsonStructurallyEquivalent("{\"public\":1}", FlsDocumentFilter.filter("""
+            {"title":"secret","custom":{"chunks":[{"text":"secret","embedding":{"token":1}}]},"public":1}
+            """.getBytes(UTF_8), rule, FieldMasking.FieldMaskingRule.ALLOW_ALL, ImmutableSet.of()));
+    }
+
+    @Test
+    public void generatedObjectInclusionRequiresItsOwner() throws Exception {
+        java.util.function.Function<String, String> owner = field -> field.equals("custom") || field.startsWith("custom.") ? "title" : null;
+        var denied = FieldPrivileges.FlsRule.of("custom.chunks.text").withGeneratedFieldOwners(owner);
+        Assert.assertFalse(denied.isAllowedRecursive("custom.chunks.text"));
+        assertJsonStructurallyEquivalent("{}", FlsDocumentFilter.filter("""
+            {"custom":{"chunks":[{"text":"secret"}]}}
+            """.getBytes(UTF_8), denied, FieldMasking.FieldMaskingRule.ALLOW_ALL, ImmutableSet.of()));
+        var allowed = FieldPrivileges.FlsRule.of("title", "custom.chunks.text").withGeneratedFieldOwners(owner);
+        Assert.assertTrue(allowed.isAllowedRecursive("custom.chunks.text"));
+        assertJsonStructurallyEquivalent("{\"custom\":{\"chunks\":[{\"text\":\"secret\"}]}}", FlsDocumentFilter.filter("""
+            {"custom":{"chunks":[{"text":"secret","embedding":{"token":1}}]}}
+            """.getBytes(UTF_8), allowed, FieldMasking.FieldMaskingRule.ALLOW_ALL, ImmutableSet.of()));
+    }
+
+    @Test
+    public void generatedFieldChecksEveryOwner() throws Exception {
+        var owners = java.util.Map.of("prefix", "custom.text", "custom.text", "title");
+        Assert.assertFalse(FieldPrivileges.FlsRule.of("~title").withGeneratedFieldOwners(owners::get).isAllowedRecursive("prefix"));
+        Assert.assertFalse(FieldPrivileges.FlsRule.of("~custom.text").withGeneratedFieldOwners(owners::get).isAllowedRecursive("prefix"));
+        Assert.assertFalse(FieldPrivileges.FlsRule.of("~prefix").withGeneratedFieldOwners(owners::get).isAllowedRecursive("prefix"));
+        Assert.assertTrue(FieldPrivileges.FlsRule.of("~other").withGeneratedFieldOwners(owners::get).isAllowedRecursive("prefix"));
+        Assert.assertSame(FieldPrivileges.FlsRule.ALLOW_ALL, FieldPrivileges.FlsRule.ALLOW_ALL.withGeneratedFieldOwners(owners::get));
+    }
+
+    @Test
     public void identity() throws Exception {
         String sourceDocument = """
             {
