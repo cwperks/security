@@ -18,6 +18,7 @@ package org.opensearch.security.configuration;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -75,6 +76,7 @@ import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.IndexService;
 import org.opensearch.index.mapper.FieldNamesFieldMapper;
+import org.opensearch.index.mapper.MappedFieldType;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.compliance.FieldReadCallback;
@@ -88,6 +90,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
     private static final String KNN_FIELD_ATTRIBUTE = "knn_field";
 
     private final FieldInfos visibleFieldInfos;
+    private final Set<String> flsHiddenJoinFields;
     private final IndexService indexService;
     private final ThreadContext threadContext;
     private final ClusterService clusterService;
@@ -122,6 +125,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         this.flsRule = flsRule;
         this.fmRule = fmRule;
         this.metaFields = metaFields;
+        this.flsHiddenJoinFields = findFlsHiddenJoinFields(delegate.getFieldInfos());
 
         try {
             this.visibleFieldInfos = buildVisibleFieldInfos(delegate.getFieldInfos());
@@ -129,6 +133,39 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         } catch (IOException e) {
             throw ExceptionsHelper.convertToOpenSearchException(e);
         }
+    }
+
+    private Set<String> findFlsHiddenJoinFields(FieldInfos fieldInfos) {
+        if (flsRule.isAllowAll()) {
+            return Set.of();
+        }
+        Set<String> candidates = new HashSet<>();
+        for (FieldInfo fieldInfo : fieldInfos) {
+            if (fieldInfo.name.indexOf('#') >= 0) {
+                candidates.add(fieldInfo.name);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> hidden = new HashSet<>();
+        for (MappedFieldType ownerType : indexService.mapperService().fieldTypes()) {
+            if (!"join".equals(ownerType.typeName()) || flsRule.isAllowedRecursive(ownerType.name())) {
+                continue;
+            }
+            // Join IDs use '#' rather than a dotted path. Resolve the owner from the mapping,
+            // since both field and relation names can themselves contain '#'.
+            String prefix = ownerType.name() + "#";
+            for (String fieldName : candidates) {
+                if (fieldName.startsWith(prefix)) {
+                    MappedFieldType fieldType = indexService.mapperService().fieldType(fieldName);
+                    if (fieldType != null && "parent".equals(fieldType.typeName())) {
+                        hidden.add(fieldName);
+                    }
+                }
+            }
+        }
+        return Set.copyOf(hidden);
     }
 
     private FieldInfos buildVisibleFieldInfos(FieldInfos originalFieldInfos) {
@@ -462,7 +499,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
      * Exceptions are meta fields, which are always fully visible to a user, regardless of any configuration.
      */
     private boolean isAllowed(String fieldName) {
-        return this.metaFields.contains(fieldName) || (this.flsRule.isAllowedRecursive(fieldName) && !this.fmRule.isMasked(fieldName));
+        return this.metaFields.contains(fieldName) || (isAllowedButPossiblyMasked(fieldName) && !this.fmRule.isMasked(fieldName));
     }
 
     /**
@@ -471,7 +508,8 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
      * Exceptions are meta fields, which are always fully visible to a user, regardless of any configuration.
      */
     private boolean isAllowedButPossiblyMasked(String fieldName) {
-        return this.metaFields.contains(fieldName) || this.flsRule.isAllowedRecursive(fieldName);
+        return this.metaFields.contains(fieldName)
+            || (this.flsRule.isAllowedRecursive(fieldName) && !this.flsHiddenJoinFields.contains(fieldName));
     }
 
     @Override
