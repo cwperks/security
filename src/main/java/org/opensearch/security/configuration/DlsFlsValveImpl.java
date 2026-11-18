@@ -72,6 +72,7 @@ import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.query.QuerySearchResult;
+import org.opensearch.search.suggest.term.TermSuggestionBuilder;
 import org.opensearch.secure_sm.AccessController;
 import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.privileges.DocumentAllowList;
@@ -240,6 +241,20 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
             if (!hasDlsRestrictions && !hasFlsRestrictions && !hasFieldMasking) {
                 return true;
+            }
+
+            if (request instanceof SearchRequest searchRequest
+                && searchRequest.source() != null
+                && searchRequest.source().suggest() != null
+                && searchRequest.source().suggest().getSuggestions().values().stream().anyMatch(TermSuggestionBuilder.class::isInstance)) {
+                // Term suggestions enumerate index vocabulary and statistics, not the user's permitted documents or fields.
+                listener.onFailure(
+                    new OpenSearchSecurityException(
+                        "Term suggestions are not supported when DLS, FLS, or field masking is activated",
+                        RestStatus.FORBIDDEN
+                    )
+                );
+                return false;
             }
 
             if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE) != null
