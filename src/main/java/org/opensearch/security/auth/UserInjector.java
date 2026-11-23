@@ -38,8 +38,10 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.core.common.transport.TransportAddress;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.filter.SecurityRequestChannel;
 import org.opensearch.security.http.XFFResolver;
@@ -91,6 +93,11 @@ public class UserInjector {
         if (Strings.isNullOrEmpty(userName)) {
             log.error("Username must not be null, user string was '{}.' User injection failed.", injectedUserString);
             return null;
+        }
+
+        // Reserved identities must only be established by their dedicated authentication paths.
+        if (User.hasReservedPrefix(userName)) {
+            throw new OpenSearchSecurityException("Cannot inject a user with a reserved username prefix", RestStatus.FORBIDDEN);
         }
 
         // backend roles

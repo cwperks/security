@@ -23,8 +23,10 @@ import java.util.Set;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.node.Node;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.support.ConfigConstants;
@@ -35,6 +37,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.opensearch.security.support.ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
 public class RolesInjectorTest {
@@ -47,6 +52,23 @@ public class RolesInjectorTest {
     public void setup() {
         auditLog = mock(AuditLog.class);
         threadPool = new ThreadPool(Settings.builder().put(Node.NODE_NAME_SETTING.getKey(), "name").build());
+    }
+
+    @Test
+    public void testReservedUsernameIsRejected() {
+        ThreadContext context = threadPool.getThreadContext();
+        for (String username : Arrays.asList("plugin:example", "token:example")) {
+            try (ThreadContext.StoredContext ignored = context.stashContext()) {
+                context.putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_ROLES, username + "|role1");
+                OpenSearchSecurityException exception = assertThrows(
+                    OpenSearchSecurityException.class,
+                    () -> new RolesInjector(auditLog).injectUserAndRoles(threadPool)
+                );
+                assertEquals(RestStatus.FORBIDDEN, exception.status());
+                assertNull(context.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER));
+                assertNull(context.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER));
+            }
+        }
     }
 
     @Test

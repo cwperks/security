@@ -42,7 +42,7 @@ import org.opensearch.threadpool.ThreadPool;
  * roles using REST api. Using this we can enforce fine-grained-access-control for the transport layer calls plugins make.
  *
  * Format for the injected string: user_name|role_1,role_2
- * User name is ignored. And roles are opendistro-roles.
+ * User name identifies the simulated user and must not use a reserved prefix. Roles are opendistro-roles.
  */
 final public class RolesInjector {
     private final Logger log = LogManager.getLogger(RolesInjector.class);
@@ -76,6 +76,9 @@ final public class RolesInjector {
         if (strs.length < 2 || StringUtils.isEmpty(StringUtils.trim(strs[0]))) {
             log.error("Roles must be provided, injected string was '{}.' Roles injection failed.", injectedUserAndRoles);
             return null;
+        }
+        if (User.hasReservedPrefix(strs[0])) {
+            throw new OpenSearchSecurityException("Cannot inject a user with a reserved username prefix", RestStatus.FORBIDDEN);
         }
         Set<String> roles = ImmutableSet.copyOf(strs[1].split(","));
 
