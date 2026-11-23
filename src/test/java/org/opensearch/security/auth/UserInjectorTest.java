@@ -18,8 +18,10 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 
+import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.support.ConfigConstants;
@@ -31,8 +33,10 @@ import org.mockito.Mockito;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.mock;
 
 public class UserInjectorTest {
@@ -52,6 +56,23 @@ public class UserInjectorTest {
         transportRequest = mock(TransportRequest.class);
         task = mock(Task.class);
         userInjector = new UserInjector(settings, threadPool, mock(AuditLog.class), mock(XFFResolver.class));
+    }
+
+    @Test
+    public void testReservedUsernameIsRejected() {
+        ThreadContext context = threadPool.getThreadContext();
+        for (String username : Arrays.asList("plugin:example", "token:example")) {
+            try (ThreadContext.StoredContext ignored = context.stashContext()) {
+                context.putTransient(ConfigConstants.OPENDISTRO_SECURITY_INJECTED_USER, username + "|role1");
+                OpenSearchSecurityException exception = assertThrows(
+                    OpenSearchSecurityException.class,
+                    () -> userInjector.getInjectedUser()
+                );
+                assertEquals(RestStatus.FORBIDDEN, exception.status());
+                assertNull(context.getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER));
+                assertNull(context.getPersistent(ConfigConstants.OPENDISTRO_SECURITY_AUTHENTICATED_USER));
+            }
+        }
     }
 
     @Test

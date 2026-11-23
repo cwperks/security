@@ -858,6 +858,10 @@ public class BackendRegistry {
             throw new OpenSearchSecurityException("Could not check for impersonation because OpenSearch Security is not yet initialized");
         }
 
+        if (User.hasReservedPrefix(impersonatedUserHeader)) {
+            throw new OpenSearchSecurityException("Cannot impersonate a user with a reserved username prefix", RestStatus.FORBIDDEN);
+        }
+
         if (adminDns.isAdminDN(impersonatedUserHeader)) {
             throw new OpenSearchSecurityException(
                 "It is not allowed to impersonate as an adminuser  '" + impersonatedUserHeader + "'",

@@ -32,6 +32,7 @@ import org.opensearch.OpenSearchSecurityException;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.util.concurrent.ThreadContext;
 import org.opensearch.core.common.transport.TransportAddress;
+import org.opensearch.core.rest.RestStatus;
 import org.opensearch.rest.RestRequest;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.auth.limiting.AddressBasedRateLimiter;
@@ -42,6 +43,7 @@ import org.opensearch.security.filter.SecurityResponse;
 import org.opensearch.security.http.HTTPBasicAuthenticator;
 import org.opensearch.security.http.XFFResolver;
 import org.opensearch.security.securityconf.DynamicConfigModel;
+import org.opensearch.security.support.ConfigConstants;
 import org.opensearch.security.user.AuthCredentials;
 import org.opensearch.security.user.User;
 import org.opensearch.threadpool.ThreadPool;
@@ -52,6 +54,8 @@ import org.mockito.MockitoAnnotations;
 import static org.opensearch.security.auth.http.saml.HTTPSamlAuthenticator.SAML_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -110,6 +114,25 @@ public class BackendRegistryTest {
             Settings.builder().put("allowed_tries", 1).put("time_window_seconds", 60).put("block_expiry_seconds", 180).build(),
             null
         );
+    }
+
+    @Test
+    public void testReservedImpersonationUsernameIsRejected() throws Exception {
+        configureAuthDomains(basicAuthDomain(acceptingBackend("testuser"), false, 1));
+        when(adminDns.isRestImpersonationAllowed(eq("testuser"), any())).thenReturn(true);
+        for (String username : List.of("plugin:example", "token:example")) {
+            try (ThreadContext.StoredContext ignored = threadPool.getThreadContext().stashContext()) {
+                TestSecurityRequestChannel request = requestWithBasicAuth("testuser", "correct-password");
+                request.headers.put("opendistro_security_impersonate_as", List.of(username));
+                OpenSearchSecurityException exception = assertThrows(
+                    OpenSearchSecurityException.class,
+                    () -> backendRegistry.authenticate(request)
+                );
+                assertEquals(RestStatus.FORBIDDEN, exception.status());
+                assertEquals("Cannot impersonate a user with a reserved username prefix", exception.getMessage());
+                assertNull(threadPool.getThreadContext().getTransient(ConfigConstants.OPENDISTRO_SECURITY_USER));
+            }
+        }
     }
 
     @Test
