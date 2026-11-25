@@ -123,12 +123,14 @@ import org.opensearch.index.IndexModule;
 import org.opensearch.index.cache.query.QueryCache;
 import org.opensearch.indices.IndicesService;
 import org.opensearch.indices.SystemIndexDescriptor;
+import org.opensearch.indices.breaker.CircuitBreakerTripNotifier;
 import org.opensearch.plugins.ClusterPlugin;
 import org.opensearch.plugins.ExtensiblePlugin;
 import org.opensearch.plugins.ExtensionAwarePlugin;
 import org.opensearch.plugins.IdentityPlugin;
 import org.opensearch.plugins.MapperPlugin;
 import org.opensearch.plugins.Plugin;
+import org.opensearch.plugins.PluginComponentRegistry;
 import org.opensearch.plugins.SecureHttpTransportSettingsProvider;
 import org.opensearch.plugins.SecureSettingsFactory;
 import org.opensearch.plugins.SecureTransportSettingsProvider;
@@ -163,6 +165,7 @@ import org.opensearch.security.auditlog.config.AuditConfig.Filter.FilterEntries;
 import org.opensearch.security.auditlog.impl.AbstractAuditLog;
 import org.opensearch.security.auditlog.impl.AuditCategory;
 import org.opensearch.security.auditlog.impl.AuditLogImpl;
+import org.opensearch.security.auditlog.impl.CircuitBreakerAuditListener;
 import org.opensearch.security.auth.BackendRegistry;
 import org.opensearch.security.auth.RolesInjector;
 import org.opensearch.security.authtoken.jwt.LegacyRolesClaimFormat;
@@ -329,6 +332,7 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
     private volatile ClusterService cs;
     private volatile AtomicReference<DiscoveryNode> localNode = new AtomicReference<>();
     private volatile AuditLog auditLog;
+    private CircuitBreakerAuditListener circuitBreakerAuditListener;
     private volatile BackendRegistry backendRegistry;
     private volatile SslExceptionHandler sslExceptionHandler;
     private volatile Client localClient;
@@ -366,6 +370,9 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
 
     @Override
     public void close() throws IOException {
+        if (circuitBreakerAuditListener != null) {
+            circuitBreakerAuditListener.close();
+        }
         super.close();
         if (auditLog != null) {
             auditLog.close();
@@ -1510,6 +1517,48 @@ public final class OpenSearchSecurityPlugin extends OpenSearchSecuritySSLPlugin
             }
         }
         return Collections.emptyMap();
+    }
+
+    @Override
+    public Collection<Object> createComponents(
+        Client localClient,
+        ClusterService clusterService,
+        ThreadPool threadPool,
+        ResourceWatcherService resourceWatcherService,
+        ScriptService scriptService,
+        NamedXContentRegistry xContentRegistry,
+        Environment environment,
+        NodeEnvironment nodeEnvironment,
+        NamedWriteableRegistry namedWriteableRegistry,
+        IndexNameExpressionResolver indexNameExpressionResolver,
+        Supplier<RepositoriesService> repositoriesServiceSupplier,
+        PluginComponentRegistry pluginComponentRegistry
+    ) {
+        Collection<Object> components = createComponents(
+            localClient,
+            clusterService,
+            threadPool,
+            resourceWatcherService,
+            scriptService,
+            xContentRegistry,
+            environment,
+            nodeEnvironment,
+            namedWriteableRegistry,
+            indexNameExpressionResolver,
+            repositoriesServiceSupplier
+        );
+        if (auditLog instanceof AuditLogImpl auditLogImpl) {
+            pluginComponentRegistry.getComponent(CircuitBreakerTripNotifier.class)
+                .ifPresent(
+                    notifier -> circuitBreakerAuditListener = new CircuitBreakerAuditListener(
+                        notifier,
+                        auditLogImpl,
+                        clusterService,
+                        threadPool
+                    )
+                );
+        }
+        return components;
     }
 
     @Override

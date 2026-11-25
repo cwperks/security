@@ -136,6 +136,11 @@ public final class AuditMessage {
     // public static final String COMPLIANCE_STORED_FIELDS_CONTENT = "audit_compliance_stored_fields_content";
 
     public static final String REQUEST_LAYER = "audit_request_layer";
+    public static final String BREAKER_NAME = "audit_circuit_breaker_name";
+    public static final String BREAKER_LABEL = "audit_circuit_breaker_label";
+    public static final String BREAKER_BYTES_WANTED = "audit_circuit_breaker_bytes_wanted";
+    public static final String BREAKER_BYTES_LIMIT = "audit_circuit_breaker_bytes_limit";
+    public static final String BREAKER_DURABILITY = "audit_circuit_breaker_durability";
 
     public static final String COMPLIANCE_OPERATION = "audit_compliance_operation";
     public static final String COMPLIANCE_DOC_VERSION = "audit_compliance_doc_version";
@@ -222,6 +227,18 @@ public final class AuditMessage {
     public void addRequestId(String requestId) {
         if (requestId != null && !requestId.isEmpty()) {
             auditInfo.put(REQUEST_ID, requestId);
+        }
+    }
+
+    public void addCircuitBreakerDetails(String name, String label, long bytesWanted, long bytesLimit, String durability) {
+        auditInfo.put(BREAKER_NAME, name);
+        if (label != null) {
+            auditInfo.put(BREAKER_LABEL, label);
+        }
+        auditInfo.put(BREAKER_BYTES_WANTED, bytesWanted);
+        auditInfo.put(BREAKER_BYTES_LIMIT, bytesLimit);
+        if (durability != null) {
+            auditInfo.put(BREAKER_DURABILITY, durability);
         }
     }
 

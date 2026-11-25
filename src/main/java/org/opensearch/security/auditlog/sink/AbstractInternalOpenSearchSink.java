@@ -73,6 +73,7 @@ public abstract class AbstractInternalOpenSearchSink extends AuditLogSink {
 
         try (StoredContext ctx = threadPool.getThreadContext().stashContext()) {
             try {
+                threadPool.getThreadContext().putHeader(ConfigConstants.SECURITY_AUDIT_SINK_REQUEST_HEADER, "true");
                 boolean ok = createIndexIfAbsent(indexName);
                 if (!ok) {
                     log.error("Failed to create index {}", indexName);

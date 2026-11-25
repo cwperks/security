@@ -144,9 +144,37 @@ public class AuditLogImpl extends AbstractAuditLog {
                 if (rawHeader != null && !rawHeader.isEmpty()) {
                     requestId = SecurityRestFilter.sanitizeRequestId(rawHeader);
                 }
+
             }
             msg.addRequestId(requestId);
             messageRouter.route(msg);
+        }
+    }
+
+    public boolean isCircuitBreakerAuditEnabled(String user, Origin origin) {
+        AuditConfig.Filter filter = getFilter();
+        if (!enabled
+            || filter == null
+            || filter.getDisabledCategories().contains(AuditCategory.CIRCUIT_BREAKER_TRIPPED)
+            || !filter.isAuditEnabled(user)) {
+            return false;
+        }
+        boolean restEnabled = filter.isRestApiAuditEnabled()
+            && !filter.getDisabledRestCategories().contains(AuditCategory.CIRCUIT_BREAKER_TRIPPED);
+        boolean transportEnabled = filter.isTransportApiAuditEnabled()
+            && !filter.getDisabledTransportCategories().contains(AuditCategory.CIRCUIT_BREAKER_TRIPPED);
+        if (origin == Origin.REST) {
+            return restEnabled;
+        }
+        if (origin == Origin.TRANSPORT || origin == Origin.GRPC) {
+            return transportEnabled;
+        }
+        return restEnabled || transportEnabled;
+    }
+
+    public void logCircuitBreakerTrip(AuditMessage message) {
+        if (enabled) {
+            save(message);
         }
     }
 
