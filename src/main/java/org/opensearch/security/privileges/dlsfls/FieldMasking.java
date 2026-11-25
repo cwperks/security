@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.regex.PatternSyntaxException;
@@ -170,6 +171,45 @@ public class FieldMasking extends AbstractRuleBasedPrivileges<FieldMasking.Field
                 }
 
                 return result.build();
+            }
+        }
+
+        /**
+         * Applies the masking of a source field to the fields derived from it, such as multi-fields and copy_to targets. These
+         * fields hold the values of their source field, but their names do not match the masking expression of the source.
+         */
+        public static class WithDerivedFields extends FieldMaskingRule {
+            private final FieldMaskingRule delegate;
+            private final Map<String, String> derivedToSource;
+
+            /**
+             * @param delegate the rule of the user
+             * @param derivedToSource maps the name of a derived field to the name of the masked field it is derived from
+             */
+            public WithDerivedFields(FieldMaskingRule delegate, Map<String, String> derivedToSource) {
+                this.delegate = delegate;
+                this.derivedToSource = Map.copyOf(derivedToSource);
+            }
+
+            @Override
+            public Field get(String field) {
+                final String source = derivedToSource.get(field);
+                return delegate.get(source != null ? source : field);
+            }
+
+            @Override
+            public boolean isAllowAll() {
+                return delegate.isAllowAll();
+            }
+
+            @Override
+            public List<String> getSource() {
+                return delegate.getSource();
+            }
+
+            @Override
+            public String toString() {
+                return delegate + " with derived fields " + derivedToSource;
             }
         }
 

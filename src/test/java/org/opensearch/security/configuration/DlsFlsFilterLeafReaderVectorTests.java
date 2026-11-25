@@ -139,7 +139,18 @@ public class DlsFlsFilterLeafReaderVectorTests {
         FieldMasking.FieldMaskingRule masking,
         Set<String> metaFields
     ) {
-        return new DlsFlsFilterLeafReader(leaf, fls, null, null, null, null, null, masking, null, metaFields);
+        return new DlsFlsFilterLeafReader(
+            leaf,
+            fls,
+            null,
+            MockIndexServices.withoutDerivedFields(),
+            null,
+            null,
+            null,
+            masking,
+            null,
+            metaFields
+        );
     }
 
     @Test
