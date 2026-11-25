@@ -164,6 +164,17 @@ public class DlsFlsFilterLeafReaderDocValuesSkipperTest {
     }
 
     private static DlsFlsFilterLeafReader wrap(LeafReader leaf, FieldPrivileges.FlsRule fls, FieldMasking.FieldMaskingRule fm) {
-        return new DlsFlsFilterLeafReader(leaf, fls, null, null, null, null, null, fm, null, Collections.emptySet());
+        return new DlsFlsFilterLeafReader(
+            leaf,
+            fls,
+            null,
+            MockIndexServices.withoutDerivedFields(),
+            null,
+            null,
+            null,
+            fm,
+            null,
+            Collections.emptySet()
+        );
     }
 }

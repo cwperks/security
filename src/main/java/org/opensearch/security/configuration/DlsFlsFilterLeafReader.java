@@ -19,9 +19,11 @@ package org.opensearch.security.configuration;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Iterators;
@@ -78,6 +80,7 @@ import org.opensearch.core.index.shard.ShardId;
 import org.opensearch.index.IndexService;
 import org.opensearch.index.mapper.FieldNamesFieldMapper;
 import org.opensearch.index.mapper.MappedFieldType;
+import org.opensearch.index.mapper.MapperService;
 import org.opensearch.security.auditlog.AuditLog;
 import org.opensearch.security.compliance.ComplianceConfig;
 import org.opensearch.security.compliance.FieldReadCallback;
@@ -125,7 +128,7 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
 
         this.shardId = shardId;
         this.flsRule = flsRule;
-        this.fmRule = fmRule;
+        this.fmRule = withMaskedDerivedFields(fmRule, delegate.getFieldInfos(), indexService);
         this.metaFields = metaFields;
         this.maskedGeneratedSubfields = findMaskedGeneratedSubfields(delegate.getFieldInfos());
 
@@ -135,6 +138,37 @@ class DlsFlsFilterLeafReader extends SequentialStoredFieldsLeafReader {
         } catch (IOException e) {
             throw ExceptionsHelper.convertToOpenSearchException(e);
         }
+    }
+
+    /**
+     * Multi-fields and copy_to targets hold the values of the field they are derived from, but their names do not match the
+     * masking expressions of that field. This returns a rule which masks them like the masked field they are derived from, so that
+     * their doc values are hashed in the same way and their terms are not exposed.
+     */
+    private static FieldMasking.FieldMaskingRule withMaskedDerivedFields(
+        final FieldMasking.FieldMaskingRule rule,
+        final FieldInfos fieldInfos,
+        final IndexService indexService
+    ) {
+        if (rule.isAllowAll()) {
+            return rule;
+        }
+        final MapperService mapperService = indexService.mapperService();
+        final Map<String, String> derivedToSource = new HashMap<>();
+        for (FieldInfo fieldInfo : fieldInfos) {
+            final String field = fieldInfo.name;
+            if (rule.isMasked(field)) {
+                continue;
+            }
+            // The sources are sorted so that the choice is deterministic if a field is derived from several masked fields
+            mapperService.sourcePath(field)
+                .stream()
+                .filter(source -> !source.equals(field) && rule.isMasked(source))
+                .sorted()
+                .findFirst()
+                .ifPresent(source -> derivedToSource.put(field, source));
+        }
+        return derivedToSource.isEmpty() ? rule : new FieldMasking.FieldMaskingRule.WithDerivedFields(rule, derivedToSource);
     }
 
     private Set<String> findMaskedGeneratedSubfields(FieldInfos fieldInfos) {

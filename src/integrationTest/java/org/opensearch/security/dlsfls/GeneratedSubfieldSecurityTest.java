@@ -196,13 +196,14 @@ public class GeneratedSubfieldSecurityTest {
     }
 
     @Test
-    public void ordinaryMultiFieldsKeepTheirOwnMaskingRules() throws IOException {
+    public void ordinaryMultiFieldsAreMaskedWithTheirSource() throws IOException {
+        // These multi-fields only share a suffix with generated fields, but they still hold the values of the masked field
         List<String> queries = List.of(
             "{\"term\":{\"ordinary._index_prefix\":\"quick brown fox jumps\"}}",
             "{\"term\":{\"ordinary._2gram\":\"quick brown fox jumps\"}}"
         );
         assertSearches(ADMIN, 2, queries);
-        assertSearches(MASK_ORDINARY, 2, queries);
+        assertSearches(MASK_ORDINARY, 0, queries);
     }
 
 }
