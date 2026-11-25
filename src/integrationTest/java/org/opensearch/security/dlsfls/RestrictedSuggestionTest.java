@@ -108,7 +108,7 @@ public class RestrictedSuggestionTest {
         }
     }
 
-    private static String suggestion(String field) {
+    private static String termSuggestion(String field) {
         return """
             {"size":0,"suggest":{"spelling":{"text":"confidentialwore","term":{
               "field":"%s","suggest_mode":"always","min_doc_freq":0,"max_term_freq":1}}}}
@@ -132,7 +132,7 @@ public class RestrictedSuggestionTest {
             var hits = client.postJson(INDEX + "/_search", "{\"query\":{\"match_all\":{}}}");
             assertEquals(200, hits.getStatusCode());
             assertThat(hits.getBody(), not(containsString("confidentialword")));
-            var response = client.postJson(INDEX + "/_search", suggestion("title"));
+            var response = client.postJson(INDEX + "/_search", termSuggestion("title"));
             assertEquals(response.getBody(), 403, response.getStatusCode());
             assertThat(response.getBody(), containsString("Term and phrase suggestions are not supported"));
         }
@@ -142,7 +142,7 @@ public class RestrictedSuggestionTest {
     public void unrestrictedUsersCanSuggestTerms() {
         for (User user : new User[] { ADMIN, READER }) {
             try (TestRestClient client = cluster.getRestClient(user)) {
-                var response = client.postJson(INDEX + "/_search", suggestion("title"));
+                var response = client.postJson(INDEX + "/_search", termSuggestion("title"));
                 assertEquals(response.getBody(), 200, response.getStatusCode());
                 assertThat(response.getBody(), containsString("confidentialword"));
             }
@@ -154,7 +154,7 @@ public class RestrictedSuggestionTest {
         for (User user : new User[] { FLS, MASKED }) {
             for (String field : new String[] { "title", "title_alias" }) {
                 try (TestRestClient client = cluster.getRestClient(user)) {
-                    var response = client.postJson(INDEX + "/_search", suggestion(field));
+                    var response = client.postJson(INDEX + "/_search", termSuggestion(field));
                     assertEquals(response.getBody(), 403, response.getStatusCode());
                     assertThat(response.getBody(), containsString("Term and phrase suggestions are not supported"));
                 }
@@ -166,7 +166,7 @@ public class RestrictedSuggestionTest {
     public void fieldRestrictionsRejectSuggestionsEvenOnOtherFields() {
         for (User user : new User[] { FLS, MASKED }) {
             try (TestRestClient client = cluster.getRestClient(user)) {
-                var response = client.postJson(INDEX + "/_search", suggestion("public"));
+                var response = client.postJson(INDEX + "/_search", termSuggestion("public"));
                 assertEquals(response.getBody(), 403, response.getStatusCode());
                 assertThat(response.getBody(), containsString("Term and phrase suggestions are not supported"));
             }
@@ -178,7 +178,7 @@ public class RestrictedSuggestionTest {
         try (TestRestClient client = cluster.getRestClient(DLS)) {
             var response = client.postJson(
                 INDEX + "/_msearch",
-                "{}\n" + suggestion("title").replace("\n", "") + "\n{}\n{\"query\":{\"match_all\":{}}}\n"
+                "{}\n" + termSuggestion("title").replace("\n", "") + "\n{}\n{\"query\":{\"match_all\":{}}}\n"
             );
             assertEquals(response.getBody(), 200, response.getStatusCode());
             assertThat(response.getBody(), containsString("\"status\":403"));
@@ -191,12 +191,12 @@ public class RestrictedSuggestionTest {
     public void restrictionsAreScopedToTheRequestedIndices() {
         for (User user : new User[] { DLS, FLS, MASKED }) {
             try (TestRestClient client = cluster.getRestClient(user)) {
-                var allowed = client.postJson(UNRESTRICTED_INDEX + "/_search", suggestion("title"));
+                var allowed = client.postJson(UNRESTRICTED_INDEX + "/_search", termSuggestion("title"));
                 assertEquals(allowed.getBody(), 200, allowed.getStatusCode());
                 assertThat(allowed.getBody(), containsString("confidentialword"));
                 var mixed = client.postJson(
                     INDEX + "," + UNRESTRICTED_INDEX + "/_search?allow_partial_search_results=true",
-                    suggestion("title")
+                    termSuggestion("title")
                 );
                 assertEquals(mixed.getBody(), 403, mixed.getStatusCode());
                 assertThat(mixed.getBody(), containsString("Term and phrase suggestions are not supported"));
