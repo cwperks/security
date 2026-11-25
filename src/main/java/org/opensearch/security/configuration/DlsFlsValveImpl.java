@@ -72,6 +72,8 @@ import org.opensearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.opensearch.search.builder.SearchSourceBuilder;
 import org.opensearch.search.internal.SearchContext;
 import org.opensearch.search.query.QuerySearchResult;
+import org.opensearch.search.suggest.phrase.PhraseSuggestionBuilder;
+import org.opensearch.search.suggest.term.TermSuggestionBuilder;
 import org.opensearch.secure_sm.AccessController;
 import org.opensearch.security.OpenSearchSecurityPlugin;
 import org.opensearch.security.privileges.DocumentAllowList;
@@ -240,6 +242,18 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
 
             if (!hasDlsRestrictions && !hasFlsRestrictions && !hasFieldMasking) {
                 return true;
+            }
+
+            if (request instanceof SearchRequest searchRequest && containsVocabularySuggestion(searchRequest)) {
+                // Term and phrase suggestions draw candidates from the index's term dictionary and statistics, not from the
+                // documents or fields the user is permitted to see.
+                listener.onFailure(
+                    new OpenSearchSecurityException(
+                        "Term and phrase suggestions are not supported when DLS, FLS, or field masking is activated",
+                        RestStatus.FORBIDDEN
+                    )
+                );
+                return false;
             }
 
             if (threadContext.getHeader(ConfigConstants.OPENDISTRO_SECURITY_FILTER_LEVEL_DLS_DONE) != null
@@ -731,6 +745,22 @@ public class DlsFlsValveImpl implements DlsFlsRequestValve {
         } else {
             return null;
         }
+    }
+
+    /**
+     * Returns true if the search contains a term or phrase suggestion. These suggesters read candidates from the index's term
+     * dictionary, which includes terms from documents and fields that DLS, FLS and field masking hide from the user.
+     */
+    private static boolean containsVocabularySuggestion(final SearchRequest searchRequest) {
+        if (searchRequest.source() == null || searchRequest.source().suggest() == null) {
+            return false;
+        }
+        return searchRequest.source()
+            .suggest()
+            .getSuggestions()
+            .values()
+            .stream()
+            .anyMatch(suggestion -> suggestion instanceof TermSuggestionBuilder || suggestion instanceof PhraseSuggestionBuilder);
     }
 
     /**
