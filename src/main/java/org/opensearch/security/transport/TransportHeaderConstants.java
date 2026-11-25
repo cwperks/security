@@ -18,6 +18,7 @@ final class TransportHeaderConstants {
     static final String SOURCE_FIELD_CONTEXT_HEADER = ConfigConstants.OPENDISTRO_SECURITY_SOURCE_FIELD_CONTEXT;
     static final Set<String> SECURITY_HEADERS_TO_COPY = Set.of(
         ConfigConstants.OPENDISTRO_SECURITY_CONF_REQUEST_HEADER,
+        ConfigConstants.SECURITY_AUDIT_SINK_REQUEST_HEADER,
         ConfigConstants.OPENDISTRO_SECURITY_ORIGIN_HEADER,
         ConfigConstants.OPENDISTRO_SECURITY_REMOTE_ADDRESS_HEADER,
         ConfigConstants.OPENDISTRO_SECURITY_USER_HEADER,

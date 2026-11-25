@@ -81,6 +81,7 @@ public class ConfigConstants {
     public static final String OPENDISTRO_SECURITY_MASKED_FIELD_CCS = OPENDISTRO_SECURITY_CONFIG_PREFIX + "masked_fields_ccs";
 
     public static final String OPENDISTRO_SECURITY_CONF_REQUEST_HEADER = OPENDISTRO_SECURITY_CONFIG_PREFIX + "conf_request";
+    public static final String SECURITY_AUDIT_SINK_REQUEST_HEADER = OPENDISTRO_SECURITY_CONFIG_PREFIX + "audit_sink_request";
     public static final String OPENSEARCH_SECURITY_REQUEST_HEADERS = OPENSEARCH_SECURITY_CONFIG_PREFIX + "request_headers";
 
     public static final String SECURITY_AUDIT_REST_HEADERS = OPENSEARCH_SECURITY_CONFIG_PREFIX + "audit_rest_headers";
@@ -213,6 +214,7 @@ public class ConfigConstants {
         AuditCategory.GRANTED_PRIVILEGES.toString(),
         AuditCategory.CLUSTER_SETTINGS_CHANGED.toString(),
         AuditCategory.INDEX_SETTINGS_CHANGED.toString(),
+        AuditCategory.CIRCUIT_BREAKER_TRIPPED.toString(),
         AuditCategory.RESOURCE_ACCESS_GRANTED.toString(),
         AuditCategory.RESOURCE_ACCESS_DENIED.toString(),
         AuditCategory.RESOURCE_SHARING_CHANGED.toString()
